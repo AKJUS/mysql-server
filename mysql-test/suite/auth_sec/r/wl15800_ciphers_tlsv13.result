@@ -6,7 +6,6 @@ CREATE USER arthurdent@localhost;
 GRANT SERVICE_CONNECTION_ADMIN ON *.* TO arthurdent@localhost;
 CREATE DATABASE cipher_data;
 CREATE TABLE cipher_data.acceptable(ciphers JSON);
-CREATE TABLE cipher_data.deprecated(ciphers JSON);
 CREATE TABLE cipher_data.blocked(ciphers JSON);
 
 #=======================================================================
@@ -29,30 +28,6 @@ INSERT INTO cipher_data.acceptable VALUES ('["ECDHE-RSA-AES128-GCM-SHA256",
                                              "DHE-RSA-AES256-CCM",
                                              "DHE-RSA-AES128-CCM",
                                              "DHE-RSA-CHACHA20-POLY1305"]');
-INSERT INTO cipher_data.deprecated VALUES ('["DHE-RSA-AES256-CCM8",
-                                             "DHE-RSA-AES128-CCM8",
-                                             "ECDHE-RSA-AES128-SHA256",
-                                             "ECDHE-RSA-AES256-SHA384",
-                                             "DHE-RSA-AES256-SHA256",
-                                             "DHE-RSA-AES128-SHA256",
-                                             "DHE-RSA-CAMELLIA256-SHA256",
-                                             "DHE-RSA-CAMELLIA128-SHA256",
-                                             "DHE-RSA-AES128-SHA",
-                                             "DHE-RSA-AES256-SHA",
-                                             "DHE-RSA-CAMELLIA256-SHA",
-                                             "DHE-RSA-CAMELLIA128-SHA",
-                                             "AES128-GCM-SHA256",
-                                             "AES128-CCM",
-                                             "AES128-CCM8",
-                                             "AES256-GCM-SHA384",
-                                             "AES256-CCM",
-                                             "AES256-CCM8",
-                                             "AES128-SHA256",
-                                             "AES256-SHA256",
-                                             "AES128-SHA",
-                                             "AES256-SHA",
-                                             "CAMELLIA256-SHA",
-                                             "CAMELLIA128-SHA"]');
 INSERT INTO cipher_data.blocked VALUES ('["AECDH-NULL-SHA",
                                           "ECDHE-RSA-NULL-SHA",
                                           "ECDHE-ECDSA-NULL-SHA",
@@ -210,206 +185,6 @@ Ssl_cipher	DHE-RSA-CHACHA20-POLY1305
 # Expecting connection success with cipher: DHE-RSA-CHACHA20-POLY1305 on admin channel
 Variable_name	Value
 Ssl_cipher	DHE-RSA-CHACHA20-POLY1305
-
-#-----------------------------------------------------------------------
-
-
-#-----------------------------------------------------------------------
-
-# Checking deprecated ciphers
-# Setting server ciphers: DHE-RSA-AES256-CCM8:DHE-RSA-AES128-CCM8:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA384:DHE-RSA-AES256-SHA256:DHE-RSA-AES128-SHA256:DHE-RSA-CAMELLIA256-SHA256:DHE-RSA-CAMELLIA128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:DHE-RSA-CAMELLIA256-SHA:DHE-RSA-CAMELLIA128-SHA:AES128-GCM-SHA256:AES128-CCM:AES128-CCM8:AES256-GCM-SHA384:AES256-CCM:AES256-CCM8:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:CAMELLIA256-SHA:CAMELLIA128-SHA
-Pattern "Value for option 'ssl_cipher' contains cipher 'DHE-RSA-AES256-CCM8' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'DHE-RSA-AES256-CCM8' that is either blocked or deprecated" found
-# Expecting connection success with cipher: DHE-RSA-AES256-CCM8 on main channel
-Variable_name	Value
-Ssl_cipher	DHE-RSA-AES256-CCM8
-# Expecting connection success with cipher: DHE-RSA-AES256-CCM8 on admin channel
-Variable_name	Value
-Ssl_cipher	DHE-RSA-AES256-CCM8
-Pattern "Value for option 'ssl_cipher' contains cipher 'DHE-RSA-AES128-CCM8' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'DHE-RSA-AES128-CCM8' that is either blocked or deprecated" found
-# Expecting connection success with cipher: DHE-RSA-AES128-CCM8 on main channel
-Variable_name	Value
-Ssl_cipher	DHE-RSA-AES128-CCM8
-# Expecting connection success with cipher: DHE-RSA-AES128-CCM8 on admin channel
-Variable_name	Value
-Ssl_cipher	DHE-RSA-AES128-CCM8
-Pattern "Value for option 'ssl_cipher' contains cipher 'ECDHE-RSA-AES128-SHA256' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'ECDHE-RSA-AES128-SHA256' that is either blocked or deprecated" found
-# Expecting connection success with cipher: ECDHE-RSA-AES128-SHA256 on main channel
-Variable_name	Value
-Ssl_cipher	ECDHE-RSA-AES128-SHA256
-# Expecting connection success with cipher: ECDHE-RSA-AES128-SHA256 on admin channel
-Variable_name	Value
-Ssl_cipher	ECDHE-RSA-AES128-SHA256
-Pattern "Value for option 'ssl_cipher' contains cipher 'ECDHE-RSA-AES256-SHA384' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'ECDHE-RSA-AES256-SHA384' that is either blocked or deprecated" found
-# Expecting connection success with cipher: ECDHE-RSA-AES256-SHA384 on main channel
-Variable_name	Value
-Ssl_cipher	ECDHE-RSA-AES256-SHA384
-# Expecting connection success with cipher: ECDHE-RSA-AES256-SHA384 on admin channel
-Variable_name	Value
-Ssl_cipher	ECDHE-RSA-AES256-SHA384
-Pattern "Value for option 'ssl_cipher' contains cipher 'DHE-RSA-AES256-SHA256' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'DHE-RSA-AES256-SHA256' that is either blocked or deprecated" found
-# Expecting connection success with cipher: DHE-RSA-AES256-SHA256 on main channel
-Variable_name	Value
-Ssl_cipher	DHE-RSA-AES256-SHA256
-# Expecting connection success with cipher: DHE-RSA-AES256-SHA256 on admin channel
-Variable_name	Value
-Ssl_cipher	DHE-RSA-AES256-SHA256
-Pattern "Value for option 'ssl_cipher' contains cipher 'DHE-RSA-AES128-SHA256' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'DHE-RSA-AES128-SHA256' that is either blocked or deprecated" found
-# Expecting connection success with cipher: DHE-RSA-AES128-SHA256 on main channel
-Variable_name	Value
-Ssl_cipher	DHE-RSA-AES128-SHA256
-# Expecting connection success with cipher: DHE-RSA-AES128-SHA256 on admin channel
-Variable_name	Value
-Ssl_cipher	DHE-RSA-AES128-SHA256
-Pattern "Value for option 'ssl_cipher' contains cipher 'DHE-RSA-CAMELLIA256-SHA256' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'DHE-RSA-CAMELLIA256-SHA256' that is either blocked or deprecated" found
-# Expecting connection success with cipher: DHE-RSA-CAMELLIA256-SHA256 on main channel
-Variable_name	Value
-Ssl_cipher	DHE-RSA-CAMELLIA256-SHA256
-# Expecting connection success with cipher: DHE-RSA-CAMELLIA256-SHA256 on admin channel
-Variable_name	Value
-Ssl_cipher	DHE-RSA-CAMELLIA256-SHA256
-Pattern "Value for option 'ssl_cipher' contains cipher 'DHE-RSA-CAMELLIA128-SHA256' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'DHE-RSA-CAMELLIA128-SHA256' that is either blocked or deprecated" found
-# Expecting connection success with cipher: DHE-RSA-CAMELLIA128-SHA256 on main channel
-Variable_name	Value
-Ssl_cipher	DHE-RSA-CAMELLIA128-SHA256
-# Expecting connection success with cipher: DHE-RSA-CAMELLIA128-SHA256 on admin channel
-Variable_name	Value
-Ssl_cipher	DHE-RSA-CAMELLIA128-SHA256
-Pattern "Value for option 'ssl_cipher' contains cipher 'DHE-RSA-AES128-SHA' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'DHE-RSA-AES128-SHA' that is either blocked or deprecated" found
-# Expecting connection success with cipher: DHE-RSA-AES128-SHA on main channel
-Variable_name	Value
-Ssl_cipher	DHE-RSA-AES128-SHA
-# Expecting connection success with cipher: DHE-RSA-AES128-SHA on admin channel
-Variable_name	Value
-Ssl_cipher	DHE-RSA-AES128-SHA
-Pattern "Value for option 'ssl_cipher' contains cipher 'DHE-RSA-AES256-SHA' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'DHE-RSA-AES256-SHA' that is either blocked or deprecated" found
-# Expecting connection success with cipher: DHE-RSA-AES256-SHA on main channel
-Variable_name	Value
-Ssl_cipher	DHE-RSA-AES256-SHA
-# Expecting connection success with cipher: DHE-RSA-AES256-SHA on admin channel
-Variable_name	Value
-Ssl_cipher	DHE-RSA-AES256-SHA
-Pattern "Value for option 'ssl_cipher' contains cipher 'DHE-RSA-CAMELLIA256-SHA' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'DHE-RSA-CAMELLIA256-SHA' that is either blocked or deprecated" found
-# Expecting connection success with cipher: DHE-RSA-CAMELLIA256-SHA on main channel
-Variable_name	Value
-Ssl_cipher	DHE-RSA-CAMELLIA256-SHA
-# Expecting connection success with cipher: DHE-RSA-CAMELLIA256-SHA on admin channel
-Variable_name	Value
-Ssl_cipher	DHE-RSA-CAMELLIA256-SHA
-Pattern "Value for option 'ssl_cipher' contains cipher 'DHE-RSA-CAMELLIA128-SHA' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'DHE-RSA-CAMELLIA128-SHA' that is either blocked or deprecated" found
-# Expecting connection success with cipher: DHE-RSA-CAMELLIA128-SHA on main channel
-Variable_name	Value
-Ssl_cipher	DHE-RSA-CAMELLIA128-SHA
-# Expecting connection success with cipher: DHE-RSA-CAMELLIA128-SHA on admin channel
-Variable_name	Value
-Ssl_cipher	DHE-RSA-CAMELLIA128-SHA
-Pattern "Value for option 'ssl_cipher' contains cipher 'AES128-GCM-SHA256' that is either blocked or deprecated" not found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'AES128-GCM-SHA256' that is either blocked or deprecated" not found
-# Expecting connection success with cipher: AES128-GCM-SHA256 on main channel
-Variable_name	Value
-Ssl_cipher	AES128-GCM-SHA256
-# Expecting connection success with cipher: AES128-GCM-SHA256 on admin channel
-Variable_name	Value
-Ssl_cipher	AES128-GCM-SHA256
-Pattern "Value for option 'ssl_cipher' contains cipher 'AES128-CCM' that is either blocked or deprecated" not found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'AES128-CCM' that is either blocked or deprecated" not found
-# Expecting connection success with cipher: AES128-CCM on main channel
-Variable_name	Value
-Ssl_cipher	AES128-CCM
-# Expecting connection success with cipher: AES128-CCM on admin channel
-Variable_name	Value
-Ssl_cipher	AES128-CCM
-Pattern "Value for option 'ssl_cipher' contains cipher 'AES128-CCM8' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'AES128-CCM8' that is either blocked or deprecated" found
-# Expecting connection success with cipher: AES128-CCM8 on main channel
-Variable_name	Value
-Ssl_cipher	AES128-CCM8
-# Expecting connection success with cipher: AES128-CCM8 on admin channel
-Variable_name	Value
-Ssl_cipher	AES128-CCM8
-Pattern "Value for option 'ssl_cipher' contains cipher 'AES256-GCM-SHA384' that is either blocked or deprecated" not found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'AES256-GCM-SHA384' that is either blocked or deprecated" not found
-# Expecting connection success with cipher: AES256-GCM-SHA384 on main channel
-Variable_name	Value
-Ssl_cipher	AES256-GCM-SHA384
-# Expecting connection success with cipher: AES256-GCM-SHA384 on admin channel
-Variable_name	Value
-Ssl_cipher	AES256-GCM-SHA384
-Pattern "Value for option 'ssl_cipher' contains cipher 'AES256-CCM' that is either blocked or deprecated" not found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'AES256-CCM' that is either blocked or deprecated" not found
-# Expecting connection success with cipher: AES256-CCM on main channel
-Variable_name	Value
-Ssl_cipher	AES256-CCM
-# Expecting connection success with cipher: AES256-CCM on admin channel
-Variable_name	Value
-Ssl_cipher	AES256-CCM
-Pattern "Value for option 'ssl_cipher' contains cipher 'AES256-CCM8' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'AES256-CCM8' that is either blocked or deprecated" found
-# Expecting connection success with cipher: AES256-CCM8 on main channel
-Variable_name	Value
-Ssl_cipher	AES256-CCM8
-# Expecting connection success with cipher: AES256-CCM8 on admin channel
-Variable_name	Value
-Ssl_cipher	AES256-CCM8
-Pattern "Value for option 'ssl_cipher' contains cipher 'AES128-SHA256' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'AES128-SHA256' that is either blocked or deprecated" found
-# Expecting connection success with cipher: AES128-SHA256 on main channel
-Variable_name	Value
-Ssl_cipher	AES128-SHA256
-# Expecting connection success with cipher: AES128-SHA256 on admin channel
-Variable_name	Value
-Ssl_cipher	AES128-SHA256
-Pattern "Value for option 'ssl_cipher' contains cipher 'AES256-SHA256' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'AES256-SHA256' that is either blocked or deprecated" found
-# Expecting connection success with cipher: AES256-SHA256 on main channel
-Variable_name	Value
-Ssl_cipher	AES256-SHA256
-# Expecting connection success with cipher: AES256-SHA256 on admin channel
-Variable_name	Value
-Ssl_cipher	AES256-SHA256
-Pattern "Value for option 'ssl_cipher' contains cipher 'AES128-SHA' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'AES128-SHA' that is either blocked or deprecated" found
-# Expecting connection success with cipher: AES128-SHA on main channel
-Variable_name	Value
-Ssl_cipher	AES128-SHA
-# Expecting connection success with cipher: AES128-SHA on admin channel
-Variable_name	Value
-Ssl_cipher	AES128-SHA
-Pattern "Value for option 'ssl_cipher' contains cipher 'AES256-SHA' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'AES256-SHA' that is either blocked or deprecated" found
-# Expecting connection success with cipher: AES256-SHA on main channel
-Variable_name	Value
-Ssl_cipher	AES256-SHA
-# Expecting connection success with cipher: AES256-SHA on admin channel
-Variable_name	Value
-Ssl_cipher	AES256-SHA
-Pattern "Value for option 'ssl_cipher' contains cipher 'CAMELLIA256-SHA' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'CAMELLIA256-SHA' that is either blocked or deprecated" found
-# Expecting connection success with cipher: CAMELLIA256-SHA on main channel
-Variable_name	Value
-Ssl_cipher	CAMELLIA256-SHA
-# Expecting connection success with cipher: CAMELLIA256-SHA on admin channel
-Variable_name	Value
-Ssl_cipher	CAMELLIA256-SHA
-Pattern "Value for option 'ssl_cipher' contains cipher 'CAMELLIA128-SHA' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'CAMELLIA128-SHA' that is either blocked or deprecated" found
-# Expecting connection success with cipher: CAMELLIA128-SHA on main channel
-Variable_name	Value
-Ssl_cipher	CAMELLIA128-SHA
-# Expecting connection success with cipher: CAMELLIA128-SHA on admin channel
-Variable_name	Value
-Ssl_cipher	CAMELLIA128-SHA
 
 #-----------------------------------------------------------------------
 
@@ -1052,13 +827,11 @@ ERROR 2026 (HY000): SSL connection error: Failed to set ciphers to use
 # Cert type: RSA | TLS version: 1.3
 
 TRUNCATE TABLE cipher_data.acceptable;
-TRUNCATE TABLE cipher_data.deprecated;
 TRUNCATE TABLE cipher_data.blocked;
 INSERT INTO cipher_data.acceptable VALUES ('["TLS_AES_128_GCM_SHA256",
                                              "TLS_AES_256_GCM_SHA384",
                                              "TLS_CHACHA20_POLY1305_SHA256",
                                              "TLS_AES_128_CCM_SHA256"]');
-INSERT INTO cipher_data.deprecated VALUES ('["TLS_AES_128_CCM_8_SHA256"]');
 
 #-----------------------------------------------------------------------
 
@@ -1092,22 +865,6 @@ Ssl_cipher	TLS_AES_128_CCM_SHA256
 #-----------------------------------------------------------------------
 
 
-#-----------------------------------------------------------------------
-
-# Checking deprecated ciphers
-# Setting server ciphers: TLS_AES_128_CCM_8_SHA256
-Pattern "Value for option 'tls_ciphersuites' contains cipher 'TLS_AES_128_CCM_8_SHA256' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_tls_ciphersuites' contains cipher 'TLS_AES_128_CCM_8_SHA256' that is either blocked or deprecated" found
-# Expecting connection success with cipher: TLS_AES_128_CCM_8_SHA256 on main channel
-Variable_name	Value
-Ssl_cipher	TLS_AES_128_CCM_8_SHA256
-# Expecting connection success with cipher: TLS_AES_128_CCM_8_SHA256 on admin channel
-Variable_name	Value
-Ssl_cipher	TLS_AES_128_CCM_8_SHA256
-
-#-----------------------------------------------------------------------
-
-
 #=======================================================================
 
 # Cert type: ECDSA | TLS Version: 1.2
@@ -1121,19 +878,12 @@ SET @@global.admin_ssl_cert='MYSQL_TEST_DIR/std_data/ecdsa_certs/server-cert.pem
 SET @@global.admin_ssl_key='MYSQL_TEST_DIR/std_data/ecdsa_certs/server-key.pem';
 ALTER INSTANCE RELOAD TLS FOR CHANNEL mysql_admin;
 TRUNCATE TABLE cipher_data.acceptable;
-TRUNCATE TABLE cipher_data.deprecated;
 TRUNCATE TABLE cipher_data.blocked;
 INSERT INTO cipher_data.acceptable VALUES ('["ECDHE-ECDSA-AES128-GCM-SHA256",
                                              "ECDHE-ECDSA-AES256-GCM-SHA384",
                                              "ECDHE-ECDSA-CHACHA20-POLY1305",
                                              "ECDHE-ECDSA-AES256-CCM",
                                              "ECDHE-ECDSA-AES128-CCM"]');
-INSERT INTO cipher_data.deprecated VALUES ('["ECDHE-ECDSA-AES256-CCM8",
-                                             "ECDHE-ECDSA-AES128-CCM8",
-                                             "ECDHE-ECDSA-AES128-SHA256",
-                                             "ECDHE-ECDSA-AES256-SHA384",
-                                             "ECDHE-ECDSA-AES128-SHA",
-                                             "ECDHE-ECDSA-AES256-SHA"]');
 INSERT INTO cipher_data.blocked VALUES ('["AECDH-NULL-SHA",
                                           "ECDHE-RSA-NULL-SHA",
                                           "ECDHE-ECDSA-NULL-SHA",
@@ -1273,62 +1023,6 @@ Ssl_cipher	ECDHE-ECDSA-AES128-CCM
 # Expecting connection success with cipher: ECDHE-ECDSA-AES128-CCM on admin channel
 Variable_name	Value
 Ssl_cipher	ECDHE-ECDSA-AES128-CCM
-
-#-----------------------------------------------------------------------
-
-
-#-----------------------------------------------------------------------
-
-# Checking deprecated ciphers
-# Setting server ciphers: ECDHE-ECDSA-AES256-CCM8:ECDHE-ECDSA-AES128-CCM8:ECDHE-ECDSA-AES128-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA
-Pattern "Value for option 'ssl_cipher' contains cipher 'ECDHE-ECDSA-AES256-CCM8' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'ECDHE-ECDSA-AES256-CCM8' that is either blocked or deprecated" found
-# Expecting connection success with cipher: ECDHE-ECDSA-AES256-CCM8 on main channel
-Variable_name	Value
-Ssl_cipher	ECDHE-ECDSA-AES256-CCM8
-# Expecting connection success with cipher: ECDHE-ECDSA-AES256-CCM8 on admin channel
-Variable_name	Value
-Ssl_cipher	ECDHE-ECDSA-AES256-CCM8
-Pattern "Value for option 'ssl_cipher' contains cipher 'ECDHE-ECDSA-AES128-CCM8' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'ECDHE-ECDSA-AES128-CCM8' that is either blocked or deprecated" found
-# Expecting connection success with cipher: ECDHE-ECDSA-AES128-CCM8 on main channel
-Variable_name	Value
-Ssl_cipher	ECDHE-ECDSA-AES128-CCM8
-# Expecting connection success with cipher: ECDHE-ECDSA-AES128-CCM8 on admin channel
-Variable_name	Value
-Ssl_cipher	ECDHE-ECDSA-AES128-CCM8
-Pattern "Value for option 'ssl_cipher' contains cipher 'ECDHE-ECDSA-AES128-SHA256' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'ECDHE-ECDSA-AES128-SHA256' that is either blocked or deprecated" found
-# Expecting connection success with cipher: ECDHE-ECDSA-AES128-SHA256 on main channel
-Variable_name	Value
-Ssl_cipher	ECDHE-ECDSA-AES128-SHA256
-# Expecting connection success with cipher: ECDHE-ECDSA-AES128-SHA256 on admin channel
-Variable_name	Value
-Ssl_cipher	ECDHE-ECDSA-AES128-SHA256
-Pattern "Value for option 'ssl_cipher' contains cipher 'ECDHE-ECDSA-AES256-SHA384' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'ECDHE-ECDSA-AES256-SHA384' that is either blocked or deprecated" found
-# Expecting connection success with cipher: ECDHE-ECDSA-AES256-SHA384 on main channel
-Variable_name	Value
-Ssl_cipher	ECDHE-ECDSA-AES256-SHA384
-# Expecting connection success with cipher: ECDHE-ECDSA-AES256-SHA384 on admin channel
-Variable_name	Value
-Ssl_cipher	ECDHE-ECDSA-AES256-SHA384
-Pattern "Value for option 'ssl_cipher' contains cipher 'ECDHE-ECDSA-AES128-SHA' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'ECDHE-ECDSA-AES128-SHA' that is either blocked or deprecated" found
-# Expecting connection success with cipher: ECDHE-ECDSA-AES128-SHA on main channel
-Variable_name	Value
-Ssl_cipher	ECDHE-ECDSA-AES128-SHA
-# Expecting connection success with cipher: ECDHE-ECDSA-AES128-SHA on admin channel
-Variable_name	Value
-Ssl_cipher	ECDHE-ECDSA-AES128-SHA
-Pattern "Value for option 'ssl_cipher' contains cipher 'ECDHE-ECDSA-AES256-SHA' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_ssl_cipher' contains cipher 'ECDHE-ECDSA-AES256-SHA' that is either blocked or deprecated" found
-# Expecting connection success with cipher: ECDHE-ECDSA-AES256-SHA on main channel
-Variable_name	Value
-Ssl_cipher	ECDHE-ECDSA-AES256-SHA
-# Expecting connection success with cipher: ECDHE-ECDSA-AES256-SHA on admin channel
-Variable_name	Value
-Ssl_cipher	ECDHE-ECDSA-AES256-SHA
 
 #-----------------------------------------------------------------------
 
@@ -1971,13 +1665,11 @@ ERROR 2026 (HY000): SSL connection error: Failed to set ciphers to use
 # Cert type: ECDSA | TLS version: 1.3
 
 TRUNCATE TABLE cipher_data.acceptable;
-TRUNCATE TABLE cipher_data.deprecated;
 TRUNCATE TABLE cipher_data.blocked;
 INSERT INTO cipher_data.acceptable VALUES ('["TLS_AES_128_GCM_SHA256",
                                              "TLS_AES_256_GCM_SHA384",
                                              "TLS_CHACHA20_POLY1305_SHA256",
                                              "TLS_AES_128_CCM_SHA256"]');
-INSERT INTO cipher_data.deprecated VALUES ('["TLS_AES_128_CCM_8_SHA256"]');
 
 #-----------------------------------------------------------------------
 
@@ -2007,22 +1699,6 @@ Ssl_cipher	TLS_AES_128_CCM_SHA256
 # Expecting connection success with cipher: TLS_AES_128_CCM_SHA256 on admin channel
 Variable_name	Value
 Ssl_cipher	TLS_AES_128_CCM_SHA256
-
-#-----------------------------------------------------------------------
-
-
-#-----------------------------------------------------------------------
-
-# Checking deprecated ciphers
-# Setting server ciphers: TLS_AES_128_CCM_8_SHA256
-Pattern "Value for option 'tls_ciphersuites' contains cipher 'TLS_AES_128_CCM_8_SHA256' that is either blocked or deprecated" found
-Pattern "Value for option 'admin_tls_ciphersuites' contains cipher 'TLS_AES_128_CCM_8_SHA256' that is either blocked or deprecated" found
-# Expecting connection success with cipher: TLS_AES_128_CCM_8_SHA256 on main channel
-Variable_name	Value
-Ssl_cipher	TLS_AES_128_CCM_8_SHA256
-# Expecting connection success with cipher: TLS_AES_128_CCM_8_SHA256 on admin channel
-Variable_name	Value
-Ssl_cipher	TLS_AES_128_CCM_8_SHA256
 
 #-----------------------------------------------------------------------
 

@@ -26,6 +26,8 @@
 #ifndef TLS_CIPHERS_INCLUDED
 #define TLS_CIPHERS_INCLUDED
 
+#include <openssl/opensslv.h>
+
 namespace {
 
 /**
@@ -117,6 +119,9 @@ const char blocked_tls12_ciphers[] = {
     "!RC2:"
     "!RC4:"
     "!PSK:"
+#if (OPENSSL_VERSION_NUMBER >= 0x30500000L)
+    "!kDH"};
+#else
     "!DH-RSA-AES128-SHA256:"
     "!DH-RSA-AES256-SHA256:"
     "!DH-DSS-AES128-SHA256:"
@@ -129,6 +134,7 @@ const char blocked_tls12_ciphers[] = {
     "!DH-DSS-AES256-GCM-SHA384:"
     "!DH-RSA-AES128-GCM-SHA256:"
     "!DH-RSA-AES256-GCM-SHA384"};
+#endif
 
 /*
   Following ciphers are added to the list of permissible ciphers
