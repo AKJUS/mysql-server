@@ -199,7 +199,7 @@ int table_data_lock_waits::rnd_pos(const void *pos) {
   */
   static_assert(COUNT_DATA_LOCK_ENGINES == 1,
                 "We don't support multiple engines yet.");
-  const unsigned int index = 0;
+  constexpr unsigned int index = 0;
 
   if (m_iterator[index] == nullptr) {
     if (g_data_lock_inspector[index] == nullptr) {
