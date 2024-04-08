@@ -6148,7 +6148,8 @@ void Dbtc::commit020Lab(Signal *signal,
       if (Tcount < 16 &&
           !(ERROR_INSERTED(8057) || ERROR_INSERTED(8073) ||
             ERROR_INSERTED(8089) ||
-            (ERROR_INSERTED(8123) && ((apiConnectptr.i & 0x1) == 0)))) {
+            (ERROR_INSERTED(8123) && ((apiConnectptr.i & 0x1) == 0)) ||
+            ERROR_INSERTED(8127))) {
         jam();
         continue;
       } else {
@@ -6167,7 +6168,8 @@ void Dbtc::commit020Lab(Signal *signal,
         signal->theData[0] = TcContinueB::ZSEND_COMMIT_LOOP;
         signal->theData[1] = apiConnectptr.i;
         signal->theData[2] = localTcConnectptr.i;
-        if (ERROR_INSERTED(8089) || ERROR_INSERTED(8123)) {
+        if (ERROR_INSERTED(8089) || ERROR_INSERTED(8123) ||
+            ERROR_INSERTED(8127)) {
           sendSignalWithDelay(cownref, GSN_CONTINUEB, signal, 100, 3);
           return;
         }
@@ -6581,7 +6583,8 @@ void Dbtc::complete010Lab(Signal *signal,
     Tcount += sendCompleteLqh(signal, localTcConnectptr.p, apiConnectptr.p);
     if (tcConList.next(localTcConnectptr)) {
       if (Tcount < 16 && !ERROR_INSERTED(8112) &&
-          !(ERROR_INSERTED(8123) && ((apiConnectptr.i & 0x1) != 0))) {
+          !(ERROR_INSERTED(8123) && ((apiConnectptr.i & 0x1) != 0)) &&
+          !ERROR_INSERTED(8127)) {
         jamDebug();
         continue;
       } else {
@@ -6593,7 +6596,8 @@ void Dbtc::complete010Lab(Signal *signal,
         signal->theData[0] = TcContinueB::ZSEND_COMPLETE_LOOP;
         signal->theData[1] = apiConnectptr.i;
         signal->theData[2] = localTcConnectptr.i;
-        if (ERROR_INSERTED(8112) || ERROR_INSERTED(8123)) {
+        if (ERROR_INSERTED(8112) || ERROR_INSERTED(8123) ||
+            ERROR_INSERTED(8127)) {
           sendSignalWithDelay(cownref, GSN_CONTINUEB, signal, 100, 3);
           return;
         }
@@ -8398,7 +8402,8 @@ ABORT020:
   if (tcConnectptr.p->nextList != RNIL) {
     jam();
     tcConnectptr.i = tcConnectptr.p->nextList;
-    if (TloopCount < 1024 && !ERROR_INSERTED(8089) && !ERROR_INSERTED(8105)) {
+    if (TloopCount < 1024 && !ERROR_INSERTED(8089) && !ERROR_INSERTED(8105) &&
+        !ERROR_INSERTED(8127)) {
       goto ABORT020;
     } else {
       jam();
@@ -8414,7 +8419,7 @@ ABORT020:
       signal->theData[2] = apiConnectptr.i;
       signal->theData[3] = apiConnectptr.p->transid[0];
       signal->theData[4] = apiConnectptr.p->transid[1];
-      if (ERROR_INSERTED(8089)) {
+      if (ERROR_INSERTED(8089) || ERROR_INSERTED(8127)) {
         sendSignalWithDelay(cownref, GSN_CONTINUEB, signal, 100, 3);
         return;
       }
