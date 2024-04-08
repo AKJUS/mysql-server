@@ -1421,6 +1421,11 @@ class Dbtc : public SimulatedBlock {
       NF_BLOCK_HANDLE = 0x8,
       NF_NODE_FAIL_BITS = 0xF  // All bits...
     };
+    enum NF_CHECK_TRANSACTION_PHASES {
+      NF_CT_TIMEOUT_TRANSACTIONS = 0,
+      NF_CT_WAIT_TRANSACTIONS = 1
+    };
+
     Uint32 m_nf_bits; /* Node fail handling state */
     NdbNodeBitmask _m_lqh_trans_conf;
     /**
@@ -2340,7 +2345,7 @@ class Dbtc : public SimulatedBlock {
   void checkScanActiveInFailedLqh(Signal *signal, Uint32 scanPtrI,
                                   Uint32 failedNodeId);
 
-  void nodeFailCheckTransactions(Signal *, Uint32 transPtrI,
+  void nodeFailCheckTransactions(Signal *, Uint32 phase, Uint32 transPtrI,
                                  Uint32 failedNodeId);
   void ndbdFailBlockCleanupCallback(Signal *signal, Uint32 failedNodeId,
                                     Uint32 ignoredRc);
