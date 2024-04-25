@@ -9705,6 +9705,11 @@ PSI_data_lock_service_v1 pfs_data_lock_service_v1 = {
 PSI_tls_channel_service_v1 pfs_tls_channel_service_v1 = {
     pfs_register_tls_channel_v1, pfs_unregister_tls_channel_v1};
 
+PSI_metric_service_v1 pfs_metric_service_v1 = {
+    pfs_register_meters_v1, pfs_unregister_meters_v1,
+    pfs_register_change_notification_v1, pfs_unregister_change_notification_v1,
+    pfs_send_change_notification_v1};
+
 static void *get_system_interface(int version) {
   switch (version) {
     case PSI_SYSTEM_VERSION_1:
@@ -9916,6 +9921,15 @@ static void *get_tls_channel_interface(int version) {
   }
 }
 
+static void *get_metric_interface(int version) {
+  switch (version) {
+    case PSI_METRIC_VERSION_1:
+      return &pfs_metric_service_v1;
+    default:
+      return nullptr;
+  }
+}
+
 struct PSI_cond_bootstrap pfs_cond_bootstrap = {get_cond_interface};
 
 struct PSI_data_lock_bootstrap pfs_data_lock_bootstrap = {
@@ -9955,6 +9969,8 @@ struct PSI_thread_bootstrap pfs_thread_bootstrap = {get_thread_interface};
 
 struct PSI_tls_channel_bootstrap pfs_tls_channel_bootstrap = {
     get_tls_channel_interface};
+
+struct PSI_metric_bootstrap pfs_metric_bootstrap = {get_metric_interface};
 
 struct PSI_transaction_bootstrap pfs_transaction_bootstrap = {
     get_transaction_interface};
