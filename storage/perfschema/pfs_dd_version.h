@@ -264,8 +264,13 @@
    - Bug#31763497 PERFORMANCE DEGRADATION CAUSED BY MONITORING
      SYS.INNODB_LOCK_WAITS IN MYSQL 8.0
      - Table performance_schema.data_lock_waits, add PRIMARY KEY.
+
+  80409:
+
+   - WL#15201 PERFORMANCE_SCHEMA, OTEL INTERFACE: LOG
+     - New table performance_schema.setup_logger.
 */
 
-static const uint PFS_DD_VERSION = 80403;
+static const uint PFS_DD_VERSION = 80409;
 
 #endif /* PFS_DD_VERSION_H */
