@@ -2124,10 +2124,41 @@ static bool show_diff(DYNAMIC_STRING *ds, const char *filename1,
                                "2>&1", nullptr);
           if (exit_code > 1) diff_name = nullptr;
         }
-      } else if (exit_code == 1 && hypergraph_is_active() &&
-                 is_diff_clean_except_hypergraph(&ds_diff)) {
-        dynstr_free(&ds_diff);
-        return true;
+      } else if (exit_code == 1 && hypergraph_is_active()) {
+        // Hypergraph mode is active. First check if the only differences
+        // are from unsupported statements or skipped statements, which we
+        // treat as acceptable for hypergraph tests.
+        if (is_diff_clean_except_hypergraph(&ds_diff)) {
+          dynstr_free(&ds_diff);
+          return true;
+        } else {
+          // The diff is not in the expected "ignored hypergraph error" form.
+          // This may indicate a genuine test failure, or it may be a false
+          // positive caused by CRLF vs LF line ending differences on some
+          // platforms.
+#ifdef __APPLE__
+          // On macOS, retry the diff using --strip-trailing-cr to normalize
+          // line endings before we decide that the test has really failed.
+          dynstr_set(&ds_diff, "");
+          exit_code = run_tool(diff_name, &ds_diff, "-u --strip-trailing-cr",
+                               filename1, filename2, "2>&1", nullptr);
+          if (exit_code == 1 && is_diff_clean_except_hypergraph(&ds_diff)) {
+            dynstr_free(&ds_diff);
+            return true;
+          }
+          if (exit_code != 0) {
+            // If we still get a non-zero exit code, keep the diff output, but
+            // also give the user a hint about using a diff implementation that
+            // handles CRLF vs LF robustly on macOS.
+            dynstr_append(
+                &ds_diff,
+                "\n"
+                "The two files differ. To get the right diff, you should use "
+                "diffutils from homebrew.\n"
+                "\n");
+          }
+#endif
+        }
       }
     }
   }
