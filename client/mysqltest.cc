@@ -2157,6 +2157,14 @@ static bool show_diff(DYNAMIC_STRING *ds, const char *filename1,
                 "diffutils from homebrew.\n"
                 "\n");
           }
+#elif defined(_WIN32)
+          dynstr_append(&ds_diff,
+                        "\n"
+                        "The two files differ. To get the correct diff, "
+                        "you should use\n"
+                        "Git bash. You can get it from \n"
+                        "https://git-scm.com/\n"
+                        "\n");
 #endif
         }
       }
@@ -2179,6 +2187,7 @@ static bool show_diff(DYNAMIC_STRING *ds, const char *filename1,
         "http://www.gnu.org/software/diffutils/diffutils.html\n"
 #ifdef _WIN32
         "or http://gnuwin32.sourceforge.net/packages/diffutils.htm\n"
+        "or get Git bash from https://git-scm.com/\n"
 #endif
         "\n");
 
