@@ -6825,7 +6825,30 @@ bool Query_block::transform_grouped_to_derived(THD *thd, bool *break_off) {
       query expressions go to the new derived table [1]:
     */
     Item_subselect::Collect_subq_info subqueries(this);
+    Mem_root_array<Item_exists_subselect *> *sj_candidates_in_select = nullptr;
     for (Item *item : fields) {
+      if (new_derived->has_sj_candidates() && item->has_subquery()) {
+        for (Item_exists_subselect *subquery : (*new_derived->sj_candidates)) {
+          /*
+           Some semijoin candidates transferred to the derived table may
+           actually belong to expressions staying in this query block's SELECT
+           list (e.g., non-aggregate items). Move those candidates back to the
+           outer query, ensuring the derived table only retains candidates that
+           it still references (WHERE conditions).
+          */
+          if (item->walk(&Item::contains_item, enum_walk::PREFIX,
+                         pointer_cast<uchar *>(&subquery))) {
+            if (sj_candidates_in_select == nullptr) {
+              sj_candidates_in_select = new (thd->mem_root)
+                  Mem_root_array<Item_exists_subselect *>(thd->mem_root);
+              set_sj_candidates(sj_candidates_in_select);
+            }
+            add_subquery_transform_candidate(subquery);
+            new_derived->sj_candidates->erase_value(subquery);
+            break;
+          }
+        }
+      }
       if (item->walk(&Item::collect_subqueries, enum_walk::PREFIX,
                      pointer_cast<uchar *>(&subqueries)))
         return true; /* purecov: inspected */
