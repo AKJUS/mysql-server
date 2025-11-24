@@ -77,7 +77,7 @@ MACRO(COULD_NOT_FIND_PROTOBUF)
 ENDMACRO()
 
 SET(BUNDLED_GRPC_SRCDIR
-  "${CMAKE_SOURCE_DIR}/internal/extra/grpc/grpc-1.60.0")
+  "${CMAKE_SOURCE_DIR}/internal/extra/grpc/grpc-1.76.0")
 SET(BUNDLED_PROTO_SRCDIR ${CMAKE_SOURCE_DIR}/extra/protobuf/protobuf-24.4/src)
 SET(BUNDLED_ABSEIL_SRCDIR ${CMAKE_SOURCE_DIR}/extra/abseil/abseil-cpp-20230802.1)
 
