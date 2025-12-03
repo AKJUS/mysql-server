@@ -13371,6 +13371,9 @@ ER_AUDIT_LOG_JSON_INVALID_FILTER_CANNOT_BE_USED
 ER_WARN_AUDIT_LOG_FILTER_RECOVERY_LOGGING_DISABLED_LOG
   eng "The '%s' variable is set to LOG_NOTHING_IF_INVALID_FILTER_DETECTED, meaning audit events will not be logged if the filter is invalid. Consider changing this variable to LOG_ALL_IF_INVALID_FILTER_DETECTED to ensure that all events are logged, even when the filter is invalid."
 
+ER_RPL_REPLICA_VERSION_INCOMPATIBLE
+  eng "Replication from higher version source (%s) to lower version replica (%s) is disallowed due to replica_allow_higher_version_source=OFF."
+
 ################################################################################
 # Error numbers 50000 to 51999 are reserved. Please do not use them for
 # other error messages.

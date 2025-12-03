@@ -83,6 +83,8 @@ regexp_time_limit
 regexp_time_limit
 replica_allow_batching
 replica_allow_batching
+replica_allow_higher_version_source
+replica_allow_higher_version_source
 replica_checkpoint_group
 replica_checkpoint_group
 replica_checkpoint_period

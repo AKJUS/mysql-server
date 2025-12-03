@@ -343,6 +343,7 @@ enum enum_binlog_error_action {
 };
 extern const char *binlog_error_action_list[];
 extern char *opt_authentication_policy;
+extern bool opt_replica_allow_higher_version_source;
 
 extern ulong stored_program_cache_size;
 extern ulong back_log;

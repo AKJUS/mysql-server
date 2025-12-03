@@ -376,6 +376,31 @@ static bool check_session_admin_or_replication_applier(sys_var *self
 }
 
 /**
+  Checks if user has an additional REPLICATION_SLAVE_ADMIN privilege, needed
+  to modify REPLICA_ALLOW_HIGHER_VERSION_SOURCE system variable (unless having
+  SUPER).
+
+  @retval true failure
+  @retval false success
+
+  @param self the system variable to set value for
+  @param thd  the session context
+  @param setv the SET operations metadata
+*/
+static bool check_replica_allow_higher_version_source(
+    sys_var *self [[maybe_unused]], THD *thd, set_var *setv [[maybe_unused]]) {
+  Security_context *sctx = thd->security_context();
+  if (!sctx->has_global_grant(STRING_WITH_LEN("REPLICATION_SLAVE_ADMIN"))
+           .first &&
+      !sctx->check_access(SUPER_ACL)) {
+    my_error(ER_SPECIFIC_ACCESS_DENIED_ERROR, MYF(0),
+             "SYSTEM_VARIABLES_ADMIN plus REPLICATION_SLAVE_ADMIN, or SUPER");
+    return true;
+  }
+  return false;
+}
+
+/**
   Utility method that checks if user has correct session administrative
   dynamic privileges.
   @return 0 on success, 1 on failure.
@@ -7467,6 +7492,14 @@ static Sys_var_bool Sys_skip_replica_start(
     READ_ONLY GLOBAL_VAR(opt_skip_replica_start), CMD_LINE(OPT_ARG),
     DEFAULT(false), NO_MUTEX_GUARD, NOT_IN_BINLOG, ON_CHECK(nullptr),
     ON_UPDATE(nullptr));
+
+static Sys_var_bool Sys_replica_allow_higher_version_source(
+    "replica_allow_higher_version_source",
+    "If disabled - replica rejects any attempt to connect to a higher-version "
+    "source server. If enabled - no compatibility check.",
+    GLOBAL_VAR(opt_replica_allow_higher_version_source), CMD_LINE(OPT_ARG),
+    DEFAULT(true), NO_MUTEX_GUARD, NOT_IN_BINLOG,
+    ON_CHECK(check_replica_allow_higher_version_source), ON_UPDATE(nullptr));
 
 static bool check_authentication_policy(sys_var *, THD *, set_var *var) {
   if (!(var->save_result.string_value.str)) return true;

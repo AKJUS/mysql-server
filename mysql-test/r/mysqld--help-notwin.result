@@ -1139,6 +1139,11 @@ The following options may be given as the first argument:
  Allow this replica to batch requests when using the NDB
  storage engine.
  (Defaults to on; use --skip-replica-allow-batching to disable.)
+ --replica-allow-higher-version-source 
+ If disabled - replica rejects any attempt to connect to a
+ higher-version source server. If enabled - no
+ compatibility check.
+ (Defaults to on; use --skip-replica-allow-higher-version-source to disable.)
  --replica-checkpoint-group=# 
  Applier worker threads progress status is updated
  periodically. This option specifies the maximum number of
@@ -1941,6 +1946,7 @@ relay-log-purge TRUE
 relay-log-recovery FALSE
 relay-log-space-limit 0
 replica-allow-batching TRUE
+replica-allow-higher-version-source TRUE
 replica-checkpoint-group 512
 replica-checkpoint-period 300
 replica-compressed-protocol FALSE

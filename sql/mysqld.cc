@@ -1279,6 +1279,7 @@ bool opt_log_replica_updates = false;
 char *opt_replica_skip_errors;
 bool opt_replica_allow_batching = true;
 bool opt_collect_replica_applier_metrics = false;
+bool opt_replica_allow_higher_version_source = true;
 
 /*
   Legacy global handlerton. These will be removed (please do not add more).
