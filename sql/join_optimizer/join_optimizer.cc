@@ -308,7 +308,7 @@ using AccessPathArray = Prealloced_array<AccessPath *, 4>;
  */
 class CostingReceiver {
   friend class RefAccessBuilder;
-  /// Descriptive reason for using ZERO_ROW paths.
+  /// Descriptive reason for using ZERO_ROWS paths.
   static constexpr const char *kWhereAlwaysFalse{
       "WHERE condition is always false"};
 
@@ -748,9 +748,24 @@ class CostingReceiver {
                                       AccessPath *path,
                                       const char *description_for_trace);
 
-  /// Propose a ZERO_ROW access path (because the WHERE-condition is
-  /// always false).
-  void ProposeZeroRowsAccessPath(int node_idx);
+  /// Propose a ZERO_ROWS access path for a single table.
+  ///
+  /// @param node_idx Index of the table in the nodes array.
+  /// @param cause Explanation of why no rows from this table qualify.
+  /// @retval false Successfully proposed a ZERO_ROWS access path.
+  /// @retval true If planning should stop; either because of an error, or
+  /// because it was detected that the entire join will be empty.
+  bool ProposeZeroRowsAccessPath(int node_idx, const char *cause);
+
+  /// Return type for MakeMaterializePath.
+  struct MakeMaterializePathResult {
+    /// The created MATERIALIZE access path, or nullptr if none was created
+    /// because the input path will always be empty.
+    AccessPath *path = nullptr;
+    /// The reason why the input path is always empty, or nullptr if it is not
+    /// always empty.
+    const char *always_empty_cause = nullptr;
+  };
 
   /**
      Make a path that materializes 'table'.
@@ -758,7 +773,8 @@ class CostingReceiver {
      @param table The table to materialize.
      @returns The path that materializes 'table'.
   */
-  AccessPath *MakeMaterializePath(const AccessPath &path, TABLE *table) const;
+  MakeMaterializePathResult MakeMaterializePath(const AccessPath &path,
+                                                TABLE *table) const;
 
   bool ProposeTableScan(TABLE *table, int node_idx,
                         double force_num_output_rows_after_filter);
@@ -1514,38 +1530,39 @@ ProposeResult RefAccessBuilder::ProposePath() const {
 
     ApplySecondaryEngineNrowsHook(secondary_engine_nrows_params);
 
-    AccessPath *const materialize_path{
-        m_receiver->MakeMaterializePath(path, m_table)};
-
+    const auto [materialize_path, always_empty_cause] =
+        m_receiver->MakeMaterializePath(path, m_table);
+    assert((materialize_path == nullptr) != (always_empty_cause == nullptr));
     if (materialize_path == nullptr) {
-      return ProposeResult::kError;
+      if (m_receiver->ProposeZeroRowsAccessPath(m_node_idx,
+                                                always_empty_cause)) {
+        return ProposeResult::kError;
+      }
+      return ProposeResult::kPathsFound;
     }
 
     secondary_engine_nrows_params.access_path = materialize_path;
     bool found_materialize_nrows_cached =
         ApplySecondaryEngineNrowsHook(secondary_engine_nrows_params);
 
-    if (materialize_path->type == AccessPath::MATERIALIZE) {
-      auto &materialize{materialize_path->materialize()};
+    assert(materialize_path->type == AccessPath::MATERIALIZE);
+    const auto &materialize = materialize_path->materialize();
 
-      double rows{found_materialize_nrows_cached
-                      ? materialize_path->num_output_rows()
-                      : materialize.subquery_rows *
-                            predicate_analysis.value().selectivity};
+    const double rows =
+        found_materialize_nrows_cached
+            ? materialize_path->num_output_rows()
+            : materialize.subquery_rows * predicate_analysis->selectivity;
 
-      materialize.table_path->set_cost(
-          EstimateRefAccessCost(m_table, m_key_idx, rows));
+    materialize.table_path->set_cost(
+        EstimateRefAccessCost(m_table, m_key_idx, rows));
 
-      materialize.table_path->set_cost_before_filter(
-          materialize.table_path->cost());
+    materialize.table_path->set_cost_before_filter(
+        materialize.table_path->cost());
 
-      materialize.table_path->set_num_output_rows(rows);
-      materialize.table_path->num_output_rows_before_filter = rows;
-      materialize_path->set_num_output_rows(rows);
-      materialize_path->num_output_rows_before_filter = rows;
-    } else {
-      assert(materialize_path->type == AccessPath::ZERO_ROWS);
-    }
+    materialize.table_path->set_num_output_rows(rows);
+    materialize.table_path->num_output_rows_before_filter = rows;
+    materialize_path->set_num_output_rows(rows);
+    materialize_path->num_output_rows_before_filter = rows;
 
     path = *materialize_path;
   }
@@ -1592,15 +1609,9 @@ CostingReceiver::FindRangeScansResult CostingReceiver::FindRangeScans(
                                               : FindRangeScansResult::kOk};
   }
 
-  if (!IsBitSet(node_idx, m_graph->nodes_inner_to_outer_join |
-                              m_graph->nodes_inner_to_antijoin)) {
-    // The entire top-level join is going to be empty, so we can abort the
-    // planning and return a zero rows plan.
-    m_query_block->join->zero_result_cause = kWhereAlwaysFalse;
+  if (ProposeZeroRowsAccessPath(node_idx, kWhereAlwaysFalse)) {
     return {kUnknownRowCount, FindRangeScansResult::kError};
   }
-
-  ProposeZeroRowsAccessPath(node_idx);
 
   if (TraceStarted(m_thd)) {
     TraceAccessPaths(TableBitmap(node_idx));
@@ -1708,30 +1719,28 @@ std::optional<CostingReceiver::ProposeRefsResult> CostingReceiver::ProposeRefs(
   return result;
 }
 
-void CostingReceiver::ProposeZeroRowsAccessPath(int node_idx) {
+bool CostingReceiver::ProposeZeroRowsAccessPath(int node_idx,
+                                                const char *cause) {
+  assert(cause != nullptr);
+  if (!IsBitSet(node_idx, m_graph->nodes_inner_to_outer_join |
+                              m_graph->nodes_inner_to_antijoin)) {
+    // If the empty table is not on the inner side of an outer join or an
+    // antijoin, the entire join result will be empty. So we can stop planning
+    // and return a ZERO_ROWS access path for the entire join. By setting
+    // JOIN::zero_result_cause, we signal to the higher layers that this was the
+    // reason why the planning stopped, and they can call
+    // CreateZeroRowsForEmptyJoin() to create the join plan.
+    m_query_block->join->zero_result_cause = cause;
+    return true;
+  }
+
   AccessPath *const table_path = NewTableScanAccessPath(
       m_thd, m_graph->nodes[node_idx].table(), /*count_examined_rows=*/false);
 
-  AccessPath *const zero_path =
-      NewZeroRowsAccessPath(m_thd, table_path, kWhereAlwaysFalse);
+  AccessPath *const zero_path = NewZeroRowsAccessPath(m_thd, table_path, cause);
 
-  // We need to get the set of functional dependencies right,
-  // even though we don't need to actually apply any filters.
-  FunctionalDependencySet new_fd_set;
-  ApplyPredicatesForBaseTable(
-      node_idx,
-      NoAppliedPredicates(m_thd->mem_root, m_graph->predicates.size()),
-      /*materialize_subqueries=*/false, kUnknownRowCount, zero_path,
-      &new_fd_set);
-
-  zero_path->filter_predicates =
-      OverflowBitset::EmptySet(m_thd->mem_root, m_graph->predicates.size());
-
-  zero_path->ordering_state =
-      m_orderings->ApplyFDs(zero_path->ordering_state, new_fd_set);
-
-  ProposeAccessPathWithOrderings(TableBitmap(node_idx), new_fd_set,
-                                 /*obsolete_orderings=*/0, zero_path, "");
+  ProposeAccessPathForBaseTable(node_idx, kUnknownRowCount, "", zero_path);
+  return false;
 }
 
 /**
@@ -3726,8 +3735,8 @@ void CostingReceiver::ProposeAccessPathForIndex(
   }
 }
 
-AccessPath *CostingReceiver::MakeMaterializePath(const AccessPath &path,
-                                                 TABLE *table) const {
+CostingReceiver::MakeMaterializePathResult CostingReceiver::MakeMaterializePath(
+    const AccessPath &path, TABLE *table) const {
   Table_ref *const tl{table->pos_in_table_list};
   assert(tl->uses_materialization());
   // Move the path to stable storage, since we'll be referring to it.
@@ -3736,7 +3745,6 @@ AccessPath *CostingReceiver::MakeMaterializePath(const AccessPath &path,
   // TODO(sgunders): We don't need to allocate materialize_path on the
   // MEM_ROOT.
   AccessPath *materialize_path;
-  const char *always_empty_cause = nullptr;
   if (tl->is_table_function()) {
     materialize_path = NewMaterializedTableFunctionAccessPath(
         m_thd, table, tl->table_function, stable_path);
@@ -3756,22 +3764,13 @@ AccessPath *CostingReceiver::MakeMaterializePath(const AccessPath &path,
       materialize_path->parameter_tables |= RAND_TABLE_BIT;
     }
   } else {
-    // If the derived table is known to be always empty, we may be able to
-    // optimize away parts of the outer query block too.
+    // If the derived table is known to be always empty, we don't need to
+    // materialize it.
     if (const AccessPath *derived_table_path =
             tl->derived_query_expression()->root_access_path();
         derived_table_path != nullptr &&
         derived_table_path->type == AccessPath::ZERO_ROWS) {
-      always_empty_cause = derived_table_path->zero_rows().cause;
-    }
-
-    if (always_empty_cause != nullptr &&
-        !IsBitSet(m_graph->table_num_to_node_num[tl->tableno()],
-                  m_graph->nodes_inner_to_outer_join |
-                      m_graph->nodes_inner_to_antijoin)) {
-      // The entire query block can be optimized away. Stop planning.
-      m_query_block->join->zero_result_cause = always_empty_cause;
-      return nullptr;
+      return {.always_empty_cause = derived_table_path->zero_rows().cause};
     }
 
     const bool rematerialize{
@@ -3796,15 +3795,7 @@ AccessPath *CostingReceiver::MakeMaterializePath(const AccessPath &path,
   stable_path->delayed_predicates.Clear();
   assert(materialize_path->cost() >= 0.0);
 
-  if (always_empty_cause != nullptr) {
-    // The entire query block cannot be optimized away, only the inner block
-    // for the derived table. But the materialization step is unnecessary, so
-    // return a ZERO_ROWS path directly for the derived table. This also
-    // allows subtrees of this query block to be removed (if the derived table
-    // is inner-joined to some other tables).
-    return NewZeroRowsAccessPath(m_thd, materialize_path, always_empty_cause);
-  }
-  return materialize_path;
+  return {.path = materialize_path};
 }
 
 bool CostingReceiver::ProposeTableScan(
@@ -3882,29 +3873,31 @@ bool CostingReceiver::ProposeTableScan(
     if (ApplySecondaryEngineNrowsHook(secondary_engine_nrows_params)) {
       num_output_rows = path.num_output_rows();
     }
-    AccessPath *const materialize_path{MakeMaterializePath(path, table)};
 
+    const auto [materialize_path, always_empty_cause] =
+        MakeMaterializePath(path, table);
+    assert((materialize_path == nullptr) != (always_empty_cause == nullptr));
     if (materialize_path == nullptr) {
-      return true;
-    } else {
-      secondary_engine_nrows_params.access_path = materialize_path;
-      bool applied_nrows_hook =
-          ApplySecondaryEngineNrowsHook(secondary_engine_nrows_params);
-      if (materialize_path->type == AccessPath::MATERIALIZE) {
-        EstimateMaterializeCost(m_thd, materialize_path);
-        materialize_path->materialize().table_path->signature =
-            materialize_path->signature;
-        if (applied_nrows_hook) {
-          materialize_path->materialize().table_path->set_num_output_rows(
-              materialize_path->num_output_rows());
-        }
-      }
-      assert(materialize_path->type != AccessPath::MATERIALIZE ||
-             materialize_path->materialize().table_path->type ==
-                 AccessPath::TABLE_SCAN);
-
-      path = *materialize_path;
+      return ProposeZeroRowsAccessPath(node_idx, always_empty_cause);
     }
+
+    secondary_engine_nrows_params.access_path = materialize_path;
+    bool applied_nrows_hook =
+        ApplySecondaryEngineNrowsHook(secondary_engine_nrows_params);
+    if (materialize_path->type == AccessPath::MATERIALIZE) {
+      EstimateMaterializeCost(m_thd, materialize_path);
+      materialize_path->materialize().table_path->signature =
+          materialize_path->signature;
+      if (applied_nrows_hook) {
+        materialize_path->materialize().table_path->set_num_output_rows(
+            materialize_path->num_output_rows());
+      }
+    }
+    assert(materialize_path->type != AccessPath::MATERIALIZE ||
+           materialize_path->materialize().table_path->type ==
+               AccessPath::TABLE_SCAN);
+
+    path = *materialize_path;
   }
   assert(path.cost() >= 0.0);
 

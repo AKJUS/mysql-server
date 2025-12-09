@@ -2079,4 +2079,37 @@ GROUP BY i;
 
 DROP TABLE t;
 
+--echo #
+--echo # Bug#38704535: Assertion `std::cmp_less(pred_idx,
+--echo #               m_graph->num_where_predicates)' failed.
+--echo #
+
+CREATE TABLE t(a INT, KEY(a));
+INSERT INTO t VALUES (1), (2), (3);
+ANALYZE TABLE t;
+
+let $query =
+    SELECT *
+    FROM
+       t AS t1 LEFT JOIN
+       t AS t2 INNER JOIN
+       (SELECT DISTINCT a FROM t WHERE a <> a) AS t3
+       ON t3.a = t2.a
+       ON TRUE
+    WHERE t3.a = 1 OR t1.a = 2;
+
+# The inner join between t2 and t3 should be pruned and replaced by "Zero rows".
+# This query used to trigger an assert failure.
+--replace_regex $elide_costs
+--eval EXPLAIN FORMAT=TREE $query
+--sorted_result
+--eval $query
+
+# Also check that the entire query is optimized away when the empty
+# derived table is inner-joined to the outer tables.
+--let $query = `SELECT REPLACE('$query', 'LEFT JOIN', 'INNER JOIN')`
+--eval EXPLAIN FORMAT=TREE $query
+
+DROP TABLE t;
+
 --source include/disable_hypergraph.inc

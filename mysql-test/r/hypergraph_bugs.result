@@ -2492,3 +2492,48 @@ WHERE i IN (SELECT i FROM t AS t2)
 GROUP BY i;
 LAG (i) OVER ()
 DROP TABLE t;
+#
+# Bug#38704535: Assertion `std::cmp_less(pred_idx,
+#               m_graph->num_where_predicates)' failed.
+#
+CREATE TABLE t(a INT, KEY(a));
+INSERT INTO t VALUES (1), (2), (3);
+ANALYZE TABLE t;
+Table	Op	Msg_type	Msg_text
+test.t	analyze	status	OK
+EXPLAIN FORMAT=TREE SELECT *
+FROM
+t AS t1 LEFT JOIN
+t AS t2 INNER JOIN
+(SELECT DISTINCT a FROM t WHERE a <> a) AS t3
+ON t3.a = t2.a
+ON TRUE
+WHERE t3.a = 1 OR t1.a = 2;
+EXPLAIN
+-> Filter: ((t3.a = 1) or (t1.a = 2))  (rows=3)
+    -> Nested loop left join  (rows=3)
+        -> Covering index scan on t1 using a  (rows=3)
+        -> Zero rows (impossible WHERE)  (rows=0)
+
+SELECT *
+FROM
+t AS t1 LEFT JOIN
+t AS t2 INNER JOIN
+(SELECT DISTINCT a FROM t WHERE a <> a) AS t3
+ON t3.a = t2.a
+ON TRUE
+WHERE t3.a = 1 OR t1.a = 2;
+a	a	a
+2	NULL	NULL
+EXPLAIN FORMAT=TREE SELECT *
+FROM
+t AS t1 INNER JOIN
+t AS t2 INNER JOIN
+(SELECT DISTINCT a FROM t WHERE a <> a) AS t3
+ON t3.a = t2.a
+ON TRUE
+WHERE t3.a = 1 OR t1.a = 2;
+EXPLAIN
+-> Zero rows (Impossible WHERE)  (cost=0..0 rows=0)
+
+DROP TABLE t;
