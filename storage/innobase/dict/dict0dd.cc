@@ -7776,35 +7776,6 @@ void convert_to_space(std::string &dict_name) {
   ut_ad(dict_name.length() < dict_name::MAX_SPACE_NAME_LEN);
 }
 
-void rebuild_space(const std::string &dict_name, std::string &space_name) {
-  std::string schema;
-  std::string table;
-  std::string partition;
-  bool is_tmp = false;
-
-  /* Get all table parts converted to system cs. */
-  get_table_parts(dict_name, schema, table, partition, is_tmp);
-
-  if (is_tmp) {
-    partition.append(TMP_POSTFIX);
-  }
-
-  auto part_len = partition.length();
-  auto space_len = space_name.length();
-
-  ut_ad(space_len > part_len);
-
-  if (space_len > part_len) {
-    auto part_pos = space_len - part_len;
-
-    std::string space_part = space_name.substr(part_pos);
-    if (space_part.compare(partition) == 0) {
-      return;
-    }
-    space_name.replace(part_pos, std::string::npos, partition);
-  }
-}
-
 void rebuild(std::string &dict_name) {
   std::string schema;
   std::string table;

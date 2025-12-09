@@ -3626,34 +3626,6 @@ void Validate_files::check(const Const_iter &begin, const Const_iter &end,
       new_path.assign(dd_path);
     }
 
-    std::string space_str(space_name);
-
-    std::string old_space;
-    bool file_name_changed = false;
-    bool file_path_changed = (state == Fil_state::MOVED);
-
-    if (state == Fil_state::MATCHES || state == Fil_state::MOVED ||
-        state == Fil_state::MOVED_PREV) {
-      /* We need to update space name and table name for partitioned tables
-      if letter case is different. */
-      if (fil_update_partition_name(space_id, fsp_flags, true, space_str,
-                                    new_path)) {
-        file_name_changed = true;
-        if (state != Fil_state::MOVED_PREV) {
-          state = Fil_state::MOVED;
-        }
-      }
-
-      /* Update DD if tablespace name is corrected. */
-      if (space_str.compare(space_name) != 0) {
-        old_space.assign(space_name);
-        space_name = space_str.c_str();
-        if (state != Fil_state::MOVED_PREV) {
-          state = Fil_state::MOVED;
-        }
-      }
-    }
-
     switch (state) {
       case Fil_state::COMPARE_ERROR:
         ut_error;
@@ -3694,25 +3666,10 @@ void Validate_files::check(const Const_iter &begin, const Const_iter &end,
           break;
         }
 
-        if (!old_space.empty()) {
-          ib::info(ER_IB_MSG_FIL_STATE_MOVED_CORRECTED, prefix.c_str(),
-                   static_cast<unsigned long long>(dd_tablespace->id()),
-                   static_cast<unsigned int>(space_id), old_space.c_str(),
-                   space_name);
-        }
-
-        if (file_path_changed) {
-          ib::info(ER_IB_MSG_FIL_STATE_MOVED_CHANGED_PATH, prefix.c_str(),
-                   static_cast<unsigned long long>(dd_tablespace->id()),
-                   static_cast<unsigned int>(space_id), space_name,
-                   dd_path.c_str(), new_path.c_str());
-
-        } else if (file_name_changed) {
-          ib::info(ER_IB_MSG_FIL_STATE_MOVED_CHANGED_NAME, prefix.c_str(),
-                   static_cast<unsigned long long>(dd_tablespace->id()),
-                   static_cast<unsigned int>(space_id), space_name,
-                   dd_path.c_str(), new_path.c_str());
-        }
+        ib::info(ER_IB_MSG_FIL_STATE_MOVED_CHANGED_PATH, prefix.c_str(),
+                 static_cast<unsigned long long>(dd_tablespace->id()),
+                 static_cast<unsigned int>(space_id), space_name,
+                 dd_path.c_str(), new_path.c_str());
 
         filename = new_path.c_str();
 

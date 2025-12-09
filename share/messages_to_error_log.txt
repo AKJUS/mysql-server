@@ -10615,16 +10615,16 @@ ER_IB_MSG_DOWNGRADE_PARTITION_FILE
 ER_IB_MSG_UPGRADE_PARTITION_FILE_IMPORT
   eng "Updating partition file name '%s' to '%s' for import"
 
-ER_IB_WARN_OPEN_PARTITION_FILE
+OBSOLETE_ER_IB_WARN_OPEN_PARTITION_FILE
   eng "Unable to open partition file with new name '%s'. Please check if innodb_directories is set to include all external file paths"
 
-ER_IB_MSG_FIL_STATE_MOVED_CORRECTED
+OBSOLETE_ER_IB_MSG_FIL_STATE_MOVED_CORRECTED
   eng "%s DD ID: %llu - Partition tablespace %u, name '%s' is corrected to '%s'"
 
 ER_IB_MSG_FIL_STATE_MOVED_CHANGED_PATH
   eng "%s DD ID: %llu - Tablespace %u, name '%s', '%s' is moved to '%s'"
 
-ER_IB_MSG_FIL_STATE_MOVED_CHANGED_NAME
+OBSOLETE_ER_IB_MSG_FIL_STATE_MOVED_CHANGED_NAME
   eng "%s DD ID: %llu - Partition tablespace %u, name '%s', '%s' is updated to '%s'"
 
 ER_IB_MSG_FIL_STATE_MOVED_TOO_MANY

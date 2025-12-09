@@ -9731,16 +9731,8 @@ dberr_t fil_open_for_business(bool read_only_mode) {
   return fil_system->prepare_open_for_business(read_only_mode);
 }
 
-/** Replay a file rename operation for ddl replay.
-@param[in]      page_id         Space ID and first page number in the file
-@param[in]      old_name        old file name
-@param[in]      new_name        new file name
-@return whether the operation was successfully applied (the name did not
-exist, or new_name did not exist and name was successfully renamed to
-new_name)  */
-bool fil_op_replay_rename_for_ddl(const page_id_t &page_id,
+bool fil_op_replay_rename_for_ddl(const space_id_t space_id,
                                   const char *old_name, const char *new_name) {
-  space_id_t space_id = page_id.space();
   fil_space_t *space = fil_space_get(space_id);
 
   if (space == nullptr && !fil_system->open_for_recovery(space_id)) {
@@ -9752,7 +9744,7 @@ bool fil_op_replay_rename_for_ddl(const page_id_t &page_id,
     return true;
   }
 
-  return fil_op_replay_rename(page_id, old_name, new_name);
+  return fil_op_replay_rename({space_id, 0}, old_name, new_name);
 }
 
 /** Lookup the tablespace ID for recovery and DDL log apply.
@@ -10038,71 +10030,6 @@ void fil_add_moved_space(dd::Object_id dd_object_id, space_id_t space_id,
                     dd_flag_missing);
 }
 
-bool fil_update_partition_name(space_id_t space_id, uint32_t fsp_flags,
-                               bool update_space, std::string &space_name,
-                               std::string &dd_path) {
-#ifdef _WIN32
-  /* Safe check. Never needed on Windows for path. */
-  if (!update_space) {
-    return false;
-  }
-#endif /* WIN32 */
-
-  /* Never needed in case insensitive file system for path. */
-  if (!update_space && lower_case_file_system) {
-    return false;
-  }
-
-  /* Only needed for file per table. */
-  if (update_space && !fsp_is_file_per_table(space_id, fsp_flags)) {
-    return false;
-  }
-
-  /* Extract dictionary name schema_name/table_name from dd path. */
-  std::string table_name;
-
-  if (!Fil_path::parse_file_path(dd_path, IBD, table_name)) {
-    /* Not a valid file-per-table IBD path */
-    return false;
-  }
-  ut_ad(!table_name.empty());
-
-  /* Only needed for partition file. */
-  if (!dict_name::is_partition(table_name)) {
-    return false;
-  }
-
-  /* Rebuild dictionary name to convert partition names to lower case. */
-  dict_name::rebuild(table_name);
-
-  if (update_space) {
-    /* Rebuild space name if required. */
-    dict_name::rebuild_space(table_name, space_name);
-  }
-
-  /* No need to update file name for lower case file system. */
-  if (lower_case_file_system) {
-    return false;
-  }
-
-  /* Rebuild path and compare. */
-  std::string table_path = Fil_path::make_new_path(dd_path, table_name, IBD);
-  ut_ad(!table_path.empty());
-
-  if (dd_path.compare(table_path) != 0) {
-    /* Validate that the file exists. */
-    if (os_file_exists(table_path.c_str())) {
-      dd_path.assign(table_path);
-      return true;
-
-    } else {
-      ib::warn(ER_IB_WARN_OPEN_PARTITION_FILE, table_path.c_str());
-    }
-  }
-
-  return false;
-}
-
 #endif /* !UNIV_HOTBACKUP */
 
 /** This function should be called after recovery has completed.
@@ -10272,12 +10199,8 @@ const byte *fil_tablespace_redo_create(const byte *ptr, const byte *end,
     return ptr;
   }
 
-  /* Update filename with correct partition case, if needed. */
-  std::string space_name;
-  fil_update_partition_name(page_id.space(), 0, false, space_name, name);
-
   /* Duplicates should have been sorted out before we get here. */
-  ut_a(result.second->size() == 1);
+  ut_a_eq(result.second->size(), 1);
 #endif /* UNIV_HOTBACKUP */
 
   return ptr;
@@ -10562,11 +10485,7 @@ const byte *fil_tablespace_redo_delete(const byte *ptr, const byte *end,
 
   /* Space_id_set should have been sorted out before we get here. */
 
-  ut_a(result.second->size() == 1);
-
-  /* Update filename with correct partition case, if needed. */
-  std::string space_name;
-  fil_update_partition_name(page_id.space(), 0, false, space_name, name);
+  ut_a_eq(result.second->size(), 1);
 
   fil_space_free(page_id.space(), false);
 

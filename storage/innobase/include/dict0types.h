@@ -198,11 +198,6 @@ names within a dictionary table name.
 @param[in,out]  dict_name       table name in dictionary */
 void convert_to_space(std::string &dict_name);
 
-/* Rebuild space name by replacing partition string from dictionary table name.
-@param[in]      dict_name       table name in dictionary
-@param[in,out]  space_name      space name to be rebuilt */
-void rebuild_space(const std::string &dict_name, std::string &space_name);
-
 /** Rebuild table name to convert from 5.7 format to 8.0.
 @param[in,out]  dict_name       table name in dictionary */
 void rebuild(std::string &dict_name);
