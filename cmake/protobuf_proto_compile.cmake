@@ -287,6 +287,9 @@ FUNCTION(MYSQL_PROTOBUF_GENERATE_CPP_LIBRARY TARGET_NAME)
       STRING_APPEND(MY_PUBLIC_PROTOBUF_FLAGS " /wd4251")
       # __declspec(dllimport): ignored on left of ...  VS16 only
       STRING_APPEND(MY_PUBLIC_PROTOBUF_FLAGS " /wd4091")
+      # The pointer is dangling because it points at a temporary
+      # instance which was destroyed
+      STRING_APPEND(MY_PUBLIC_PROTOBUF_FLAGS " /wd26815")
 
       # We must propagate those dll-related flags to users of this library.
       STRING(REPLACE " " ";" public_flags "${MY_PUBLIC_PROTOBUF_FLAGS}")
