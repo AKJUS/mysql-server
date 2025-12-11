@@ -145,7 +145,7 @@ function(absl_cc_library)
       # Building a DLL, but this target is not part of the DLL
       set(_build_type "dll_dep")
     endif()
-  elseif(BUILD_SHARED_LIBS)
+  elseif(absl_BUILD_SHARED_LIBS)
     set(_build_type "shared")
   else()
     set(_build_type "static")
@@ -256,15 +256,29 @@ Cflags: -I\${includedir}${PC_CFLAGS}\n")
       )
 
     elseif(_build_type STREQUAL "static" OR _build_type STREQUAL "shared")
-      add_library(${_NAME} "")
-      target_sources(${_NAME} PRIVATE ${ABSL_CC_LIB_SRCS} ${ABSL_CC_LIB_HDRS})
-      if(APPLE)
-        set_target_properties(${_NAME} PROPERTIES
-          INSTALL_RPATH "@loader_path")
-      elseif(UNIX)
-        set_target_properties(${_NAME} PROPERTIES
-          INSTALL_RPATH "$ORIGIN")
+      if (_build_type STREQUAL "static")
+        add_library(${_NAME} STATIC)
+      else()
+        ADD_SHARED_LIBRARY(${_NAME} SKIP_INSTALL)
+        INSTALL_PRIVATE_LIBRARY(${_NAME})
+        IF(LINUX)
+          ADD_INSTALL_RPATH(${_NAME} "\$ORIGIN")
+        ENDIF()
+        TARGET_LINK_OPTIONS(${_NAME} PRIVATE
+          -Wl,--version-script=${CMAKE_SOURCE_DIR}/extra/abseil/absllib.map
+          )
+        SET_TARGET_PROPERTIES(${_NAME}
+          PROPERTIES LINK_DEPENDS ${CMAKE_SOURCE_DIR}/extra/abseil/absllib.map
+          )
+        IF(WITH_ROUTER)
+          INSTALL(TARGETS ${_NAME}
+            LIBRARY
+            DESTINATION "${ROUTER_INSTALL_LIBDIR}"
+            COMPONENT Router
+            )
+        ENDIF()
       endif()
+      target_sources(${_NAME} PRIVATE ${ABSL_CC_LIB_SRCS} ${ABSL_CC_LIB_HDRS})
       target_link_libraries(${_NAME}
       PUBLIC ${ABSL_CC_LIB_DEPS}
       PRIVATE

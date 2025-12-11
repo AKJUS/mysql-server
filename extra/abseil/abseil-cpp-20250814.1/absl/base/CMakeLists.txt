@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-find_library(LIBRT rt)
+find_library(ABSL_LIBRT rt)
 
 # Internal-only target, do not depend on directly.
 absl_cc_library(
@@ -247,7 +247,7 @@ absl_cc_library(
     ${ABSL_DEFAULT_COPTS}
   LINKOPTS
     ${ABSL_DEFAULT_LINKOPTS}
-    $<$<BOOL:${LIBRT}>:-lrt>
+    $<$<BOOL:${ABSL_LIBRT}>:-lrt>
     $<$<BOOL:${MINGW}>:-ladvapi32>
   DEPS
     absl::atomic_hook

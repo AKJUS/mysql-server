@@ -16,7 +16,7 @@
 
 # https://github.com/google/oss-policies-info/blob/main/foundational-cxx-support-matrix.md
 # As of 2024-07-01, CMake 3.16 is the minimum supported version.
-cmake_minimum_required(VERSION 3.16)
+## cmake_minimum_required(VERSION 3.16)
 
 # Allow the user to specify the CMAKE_MSVC_DEBUG_INFORMATION_FORMAT
 if (POLICY CMP0141)
@@ -31,6 +31,7 @@ include(CTest)
 # building Abseil as a DLL, it is important to have the DLL in the same
 # directory as the executable using it. Thus, we put all executables in a single
 # /bin directory.
+# NOTE:we override this with SET_TARGET_PROPERTIES(${_dll} ...) below.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # when absl is included as subproject (i.e. using add_subdirectory(abseil-cpp))

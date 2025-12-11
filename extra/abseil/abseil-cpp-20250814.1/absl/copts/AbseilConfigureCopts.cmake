@@ -1,9 +1,10 @@
 # See absl/copts/copts.py and absl/copts/generate_copts.py
-include(GENERATED_AbseilCopts)
+# Disable abseil maintainer mode flags.
+# include(GENERATED_AbseilCopts)
 
 set(ABSL_DEFAULT_LINKOPTS "")
 
-if (BUILD_SHARED_LIBS AND (MSVC OR ABSL_BUILD_MONOLITHIC_SHARED_LIBS))
+if (absl_BUILD_SHARED_LIBS AND (MSVC OR ABSL_BUILD_MONOLITHIC_SHARED_LIBS))
   set(ABSL_BUILD_DLL TRUE)
   set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 else()
