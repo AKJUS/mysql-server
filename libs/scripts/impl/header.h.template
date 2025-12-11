@@ -52,7 +52,6 @@
 /// Experimental API header
 
 #include <...> (headers from external libraries)
-
 #include "mysql/..." (headers from MySQL libraries)
 
 /// @addtogroup {doc_groupname}

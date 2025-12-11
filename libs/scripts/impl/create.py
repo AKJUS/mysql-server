@@ -33,6 +33,7 @@ import cmakelists as cm
 from   debug import trace
 import file_edit
 import file_name
+import file_system
 import git
 from   messages import *
 import readme_warning
@@ -266,6 +267,7 @@ def parse_arguments() -> argparse.Namespace:
 def pre_check(opt: argparse.Namespace) -> None:
     '''Check that the git tree is clean.'''
 
+    file_system.validate_current_directory()
     git.require_clean_git_workdir(
         force=opt.force, error_message='Use --force to run anyway.'
     )

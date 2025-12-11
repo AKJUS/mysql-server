@@ -48,7 +48,6 @@
 #include "{my_header}"
 
 #include <...> (headers from external libraries)
-
 #include "mysql/..." (headers from MySQL libraries)
 
 /// @file
