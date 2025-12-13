@@ -4404,7 +4404,11 @@ bool find_order_in_list(THD *thd, Ref_item_array ref_item_array,
 
   uint el = fields->size();
 
-  if (!order_item->const_for_execution()) {
+  const bool needs_field_for_explain = thd->lex->is_explain() &&
+                                       !thd->lex->is_explain_analyze &&
+                                       order_item->has_stored_program();
+
+  if (!order_item->const_for_execution() || needs_field_for_explain) {
     order_item->increment_ref_count();
     assert_consistent_hidden_flags(*fields, order_item, /*hidden=*/true);
 
@@ -4430,7 +4434,7 @@ bool find_order_in_list(THD *thd, Ref_item_array ref_item_array,
     with clean_up_after_removal() on the old order->item.
   */
   assert(order_item == *order->item);
-  if (!order_item->const_for_execution()) {
+  if (!order_item->const_for_execution() || needs_field_for_explain) {
     order->item = &ref_item_array[el];
   }
   return false;
