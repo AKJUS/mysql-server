@@ -8273,6 +8273,22 @@ static bool column_exists_in_create_list(const char *column_name,
   return false;
 }
 
+static bool is_candidate_key(const KEY *key) {
+  KEY_PART_INFO *key_part;
+  KEY_PART_INFO *key_part_end = key->key_part + key->user_defined_key_parts;
+
+  if (!(key->flags & HA_NOSAME) || (key->flags & HA_NULL_PART_KEY))
+    return false;
+
+  if (key->flags & HA_VIRTUAL_GEN_KEY) return false;
+
+  for (key_part = key->key_part; key_part < key_part_end; key_part++) {
+    if (key_part->key_part_flag & HA_PART_KEY_SEG) return false;
+  }
+
+  return true;
+}
+
 // Prepares the table and key structures for table creation.
 bool mysql_prepare_create_table(
     THD *thd, const char *error_schema_name, const char *error_table_name,
@@ -8536,19 +8552,6 @@ bool mysql_prepare_create_table(
       key_number++;
     }
   }
-  // If the table is created without PK, we must check if this has
-  // been disabled and return error. Limit the effect of sql_require_primary_key
-  // to only those SEs that can participate in replication.
-  if (!primary_key && !thd->is_dd_system_thread() &&
-      !thd->is_initialize_system_thread() &&
-      thd->lex->get_not_supported_in_primary_reason() !=
-          TEMPORARY_TABLE_CREATION &&
-      (file->ha_table_flags() &
-       (HA_BINLOG_ROW_CAPABLE | HA_BINLOG_STMT_CAPABLE)) != 0 &&
-      thd->variables.sql_require_primary_key) {
-    my_error(ER_TABLE_WITHOUT_PK, MYF(0));
-    return true;
-  }
 
   /*
     At this point all KEY objects are for indexes are fully constructed.
@@ -8561,6 +8564,24 @@ bool mysql_prepare_create_table(
                             *dup_check_key, *key_info_buffer, *key_count,
                             alter_info))
       return true;
+  }
+
+  // If the table is created without PK, we must check if this has
+  // been disabled and return error. Limit the effect of sql_require_primary_key
+  // to only those SEs that can participate in replication.
+  if (!primary_key && !thd->is_dd_system_thread() &&
+      !thd->is_initialize_system_thread() &&
+      thd->lex->get_not_supported_in_primary_reason() !=
+          TEMPORARY_TABLE_CREATION &&
+      (file->ha_table_flags() &
+       (HA_BINLOG_ROW_CAPABLE | HA_BINLOG_STMT_CAPABLE)) != 0 &&
+      thd->variables.sql_require_primary_key) {
+    // Check if there is a UNIQUE NOT NULL (cf. PKE), as PK fallback
+    if (std::none_of(keys_to_check.begin(), keys_to_check.end(),
+                     is_candidate_key)) {
+      my_error(ER_TABLE_WITHOUT_PK, MYF(0));
+      return true;
+    }
   }
 
   if (!primary_key && check_promoted_index(file, *key_info_buffer, *key_count))
@@ -12730,27 +12751,6 @@ bool Sql_cmd_secondary_load_unload::mysql_secondary_load_or_unload(
 
   my_ok(thd);
   return false;
-}
-
-/**
-  Check if key is a candidate key, i.e. a unique index with no index
-  fields partial, nullable or virtual generated.
-*/
-
-static bool is_candidate_key(KEY *key) {
-  KEY_PART_INFO *key_part;
-  KEY_PART_INFO *key_part_end = key->key_part + key->user_defined_key_parts;
-
-  if (!(key->flags & HA_NOSAME) || (key->flags & HA_NULL_PART_KEY))
-    return false;
-
-  if (key->flags & HA_VIRTUAL_GEN_KEY) return false;
-
-  for (key_part = key->key_part; key_part < key_part_end; key_part++) {
-    if (key_part->key_part_flag & HA_PART_KEY_SEG) return false;
-  }
-
-  return true;
 }
 
 /**
