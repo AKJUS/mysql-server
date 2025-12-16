@@ -872,10 +872,6 @@ bool mysql_rm_db(THD *thd, const LEX_CSTRING &db, bool if_exists) {
   {
     /* Database directory does not exist. */
     if (schema_dirp == nullptr) {
-      if (!if_exists) {
-        my_error(ER_SCHEMA_DIR_MISSING, MYF(0), path);
-        return true;
-      }
       push_warning_printf(thd, Sql_condition::SL_NOTE, ER_SCHEMA_DIR_MISSING,
                           ER_THD(thd, ER_SCHEMA_DIR_MISSING), path);
     } else {
@@ -914,7 +910,8 @@ bool mysql_rm_db(THD *thd, const LEX_CSTRING &db, bool if_exists) {
       Note: We use !opt_initialize because ddl logs are not available when
       the server is started with --initialize.
     */
-    bool log_ddl = !opt_initialize && use_ddl_log_for_schema_ddl();
+    bool log_ddl = !opt_initialize && (schema_dirp != nullptr) &&
+                   use_ddl_log_for_schema_ddl();
     if (tables) {
       error = mysql_rm_table_no_locks(
           thd, tables, true, false, true, db.str, log_ddl, &dropped_non_atomic,
