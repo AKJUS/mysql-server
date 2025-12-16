@@ -265,6 +265,11 @@
      SYS.INNODB_LOCK_WAITS IN MYSQL 8.0
      - Table performance_schema.data_lock_waits, add PRIMARY KEY.
 
+  80409:
+
+   - WL#15201 PERFORMANCE_SCHEMA, OTEL INTERFACE: LOG
+     - New table performance_schema.setup_logger.
+
   90000:
 
    - WL#15855: System variable metadata
