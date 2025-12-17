@@ -28,8 +28,8 @@
 
 #include "storage/perfschema/table_setup_meters.h"
 
-#include <assert.h>
-#include <stddef.h>
+#include <cassert>
+#include <cstddef>
 
 #include <mysql/psi/mysql_metric.h>
 #include "my_thread.h"

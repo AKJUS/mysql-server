@@ -28,8 +28,8 @@
 
 #include "storage/perfschema/table_keyring_component_status.h"
 
-#include <stddef.h>
 #include <algorithm>
+#include <cstddef>
 #include <memory>
 
 #include "my_dbug.h"

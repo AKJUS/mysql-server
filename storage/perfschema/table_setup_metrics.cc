@@ -28,8 +28,8 @@
 
 #include "storage/perfschema/table_setup_metrics.h"
 
-#include <assert.h>
-#include <stddef.h>
+#include <cassert>
+#include <cstddef>
 
 #include "my_thread.h"
 #include "sql/field.h"

@@ -28,8 +28,8 @@
 
 #include "storage/perfschema/table_mems_global_by_event_name.h"
 
-#include <assert.h>
-#include <stddef.h>
+#include <cassert>
+#include <cstddef>
 
 #include "my_thread.h"
 #include "sql/field.h"

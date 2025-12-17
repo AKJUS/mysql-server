@@ -28,8 +28,8 @@
 
 #include "storage/perfschema/table_setup_loggers.h"
 
-#include <assert.h>
-#include <stddef.h>
+#include <cassert>
+#include <cstddef>
 
 #include <mysql/components/services/mysql_server_telemetry_logs_service.h>
 #include "my_thread.h"

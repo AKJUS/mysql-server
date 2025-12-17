@@ -28,8 +28,8 @@
 
 #include "storage/perfschema/table_keyring_keys.h"
 
-#include <assert.h>
-#include <stddef.h>
+#include <cassert>
+#include <cstddef>
 
 #include "sql/current_thd.h"
 #include "sql/field.h"

@@ -28,8 +28,8 @@
 
 #include "storage/perfschema/pfs_data_lock.h"
 
-#include <assert.h>
-#include <stddef.h>
+#include <cassert>
+#include <cstddef>
 
 #include "storage/perfschema/pfs_std_allocator.h"
 

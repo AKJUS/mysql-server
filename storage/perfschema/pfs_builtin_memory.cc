@@ -28,7 +28,7 @@
 
 #include "storage/perfschema/pfs_builtin_memory.h"
 
-#include <assert.h>
+#include <cassert>
 
 #include "storage/perfschema/pfs_global.h"
 

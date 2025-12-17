@@ -28,10 +28,10 @@
 
 #include "storage/perfschema/pfs_timer.h"
 
-#include <assert.h>
-#include <math.h>
-#include <stddef.h>
 #include <sys/types.h>
+#include <cassert>
+#include <cmath>
+#include <cstddef>
 
 #include "my_rdtsc.h"
 #include "mysqld_error.h"
