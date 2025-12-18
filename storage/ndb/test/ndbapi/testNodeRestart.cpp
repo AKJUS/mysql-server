@@ -39,6 +39,7 @@
 #include <RefConvert.hpp>
 #include <UtilTransactions.hpp>
 #include <Vector.hpp>
+#include <algorithm>
 #include <cstring>
 #include <signaldata/DumpStateOrd.hpp>
 #include "../../src/ndbapi/NdbInfo.hpp"
@@ -10117,6 +10118,167 @@ int runMixedLoadExtra(NDBT_Context *ctx, NDBT_Step *step) {
   return NDBT_OK;
 }
 
+int runPrepareUpdatesTransaction(NDBT_Context *ctx, NDBT_Step *step) {
+  int result = NDBT_OK;
+  int records = ctx->getNumRecords();
+  int batch = std::min(100, records / step->getStepTypeCount());
+  int step_num = step->getStepTypeNo();
+  Ndb *pNdb = GETNDB(step);
+  NdbRestarter restarter;
+  std::string prefix;
+  prefix = prefix + "Step thread " + std::to_string(step_num) + ": " +
+           __func__ + ": ";
+  const char *step_prefix = prefix.c_str();
+
+  Uint32 restart_count = 0;
+  int i = 0;
+  while (!ctx->isTestStopped()) {
+    g_info << i << ": ";
+
+    // Try wait for whole cluster up and connected before preceeding, not
+    // critical
+    restarter.waitClusterStarted();
+    CHK_NDB_READY(pNdb);
+
+    restart_count = ctx->getProperty("RESTART_COUNT", restart_count);
+
+    int nodeid = restarter.getDbNodeId(rand() % restarter.getNumDbNodes());
+
+    HugoOperations hugoOps(*ctx->getTab());
+
+    if (hugoOps.startTransaction(pNdb, nodeid, 0) != NDBT_OK) {
+      ndbout << step_prefix << "Failed to start transaction" << endl;
+      hugoOps.closeTransaction(pNdb);
+      continue;
+    }
+    // Check actual node id of transaction
+    NdbConnection *pCon = hugoOps.getTransaction();
+    nodeid = pCon->getConnectedNodeId();
+
+    int op_count = 0;
+    for (int j = 0; j < batch; j++) {
+      int record_no = step_num * batch + j;
+      if (hugoOps.pkUpdateRecord(pNdb, record_no, 1, rand())) {
+        ndbout << step_prefix
+               << "Failed to update record number = " << record_no << endl;
+      } else {
+        op_count++;
+      }
+    }
+    if (hugoOps.execute_NoCommit(pNdb) != 0) {
+      ndbout << step_prefix << "Failed to execute no commit" << endl;
+      hugoOps.closeTransaction(pNdb);
+      continue;
+    }
+    ndbout_c(
+        "%sPrepared transaction with %d updates on node %d "
+        "(current restart %d)",
+        step_prefix, op_count, nodeid, restart_count);
+
+    // Wait for a restart
+    while (!ctx->isTestStopped() &&
+           ctx->getProperty("RESTART_COUNT", restart_count) == restart_count) {
+      NdbSleep_SecSleep(1);
+    }
+
+    hugoOps.closeTransaction(pNdb);
+
+    i++;
+  }
+  return result;
+}
+
+int runSlowCompleteNF(NDBT_Context *ctx, NDBT_Step *step) {
+  int result = NDBT_OK;
+  NdbRestarter restarter;
+  // Error codes to slow down completion of transactions
+  const Uint32 err_codes[] = {0, 8123, 8127};
+  int loops = ctx->getNumLoops();
+
+  if (restarter.getNumDbNodes() < 2) {
+    g_err << "Too few nodes" << endl;
+    ctx->stopTest();
+    return NDBT_SKIPPED;
+  }
+
+  Uint32 restart_count = 0;
+  for (int i = 0; i < loops && result == NDBT_OK && !ctx->isTestStopped();
+       i++) {
+    for (unsigned j = 0; j < std::size(err_codes) && !ctx->isTestStopped();
+         j++) {
+      int errorCode = err_codes[j];
+      // sending at TC
+      ndbout << "Injecting error " << errorCode << " for slow complete."
+             << endl;
+      restarter.insertErrorInAllNodes(errorCode);
+
+      /* Give some time for things to get stuck in slowness */
+      NdbSleep_MilliSleep(1000);
+
+      const int id = restarter.getNode(NdbRestarter::NS_RANDOM);
+      ndbout << "Restart node " << id << endl;
+
+      {
+        // NRT_NoStart_Restart = 1
+        const int dumpVals[] = {DumpStateOrd::CmvmiSetRestartOnErrorInsert, 1};
+        CHECK((restarter.dumpStateOneNode(id, dumpVals, 2) == NDBT_OK),
+              "Failed to request error insert restart");
+      }
+
+      /* Next cause an error insert failure */
+      CHECK((restarter.insertErrorInNode(id, 9999) == NDBT_OK),
+            "Failed to request node crash");
+      if (restarter.waitNodesNoStart(&id, 1)) {
+        g_err << "Failed to waitNodesNoStart" << endl;
+        result = NDBT_FAILED;
+        break;
+      }
+      if (restarter.startNodes(&id, 1)) {
+        g_err << "Failed to start node" << endl;
+        result = NDBT_FAILED;
+        break;
+      }
+      if (restarter.waitClusterStarted() != 0) {
+        result = NDBT_FAILED;
+        break;
+      }
+
+      CHECK((restarter.insertErrorInNode(id, 0) == NDBT_OK),
+            "Failed to clear error injections");
+
+      /* Ensure connected */
+      if (GETNDB(step)->get_ndb_cluster_connection().wait_until_ready(30, 30) !=
+          0) {
+        g_err << "Timeout waiting for NdbApi reconnect" << endl;
+        result = NDBT_FAILED;
+        break;
+      }
+      restart_count++;
+      ndbout << "Restart " << restart_count << " completed." << endl;
+      ctx->setProperty("RESTART_COUNT", restart_count);
+    }
+  }
+
+  restarter.insertErrorInAllNodes(0);
+  ctx->stopTest();
+
+  if (result != NDBT_OK) {
+    // TODO dump ops and trans
+    ndbout_c("%s: Dump TC operations", __func__);
+    int val1[] = {2517, 0, 99999, 1, 1};
+    if (restarter.dumpStateAllNodes(val1, std::size(val1)) == 0) {
+      NdbSleep_SecSleep(5);
+    }
+    ndbout_c("%s: Dump LQH operations", __func__);
+    int val2[] = {DumpStateOrd::LqhDumpAllTcRec};
+    if (restarter.dumpStateAllNodes(val2, 1) == 0) {
+      NdbSleep_SecSleep(5);
+    }
+  }
+
+  return result;
+}
+
 NDBT_TESTSUITE(testNodeRestart);
 TESTCASE("NoLoad",
          "Test that one node at a time can be stopped and then restarted "
@@ -10941,6 +11103,14 @@ TESTCASE("timeout_apifail", "Timeout handling api failure") {
   FINALIZER(runClearExtraConnections);
   FINALIZER(runClearTable);
 }
+TESTCASE("PreparedUpdatesNF",
+         "Test node failure handling with prepared transactions with updates") {
+  INITIALIZER(runLoadTable);
+  STEPS(runPrepareUpdatesTransaction, 3);
+  STEP(runSlowCompleteNF);
+  FINALIZER(runClearTable);
+}
+
 NDBT_TESTSUITE_END(testNodeRestart)
 
 int main(int argc, const char **argv) {
