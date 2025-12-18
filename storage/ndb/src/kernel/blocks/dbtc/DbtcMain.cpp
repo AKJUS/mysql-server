@@ -438,7 +438,7 @@ void Dbtc::execCONTINUEB(Signal *signal) {
       return;
     case TcContinueB::ZNF_CHECK_TRANSACTIONS:
       jam();
-      nodeFailCheckTransactions(signal, Tdata0, Tdata1, Tdata2);
+      nodeFailCheckTransactions(signal, Tdata0, Tdata1, Tdata2, Tdata3);
       return;
     case TcContinueB::TRIGGER_PENDING: {
       jam();
@@ -10009,7 +10009,7 @@ void Dbtc::execNODE_FAILREP(Signal *signal) {
 
     checkScanActiveInFailedLqh(signal, 0, myHostPtr.i);
     nodeFailCheckTransactions(signal, HostRecord::NF_CT_TIMEOUT_TRANSACTIONS, 0,
-                              myHostPtr.i);
+                              myHostPtr.i, 0);
     Callback cb = {safe_cast(&Dbtc::ndbdFailBlockCleanupCallback), myHostPtr.i};
     simBlockNodeFailure(signal, myHostPtr.i, cb);
   }
@@ -10185,7 +10185,8 @@ void Dbtc::checkScanActiveInFailedLqh(Signal *signal, Uint32 scanPtrI,
 }
 
 void Dbtc::nodeFailCheckTransactions(Signal *signal, Uint32 phase,
-                                     Uint32 transPtrI, Uint32 failedNodeId) {
+                                     Uint32 transPtrI, Uint32 failedNodeId,
+                                     Uint32 wait_for_count) {
   jam();
   Uint32 TtcTimer = ctcTimer;
   Uint32 TapplTimeout = c_appl_timeout_value;
@@ -10220,6 +10221,8 @@ void Dbtc::nodeFailCheckTransactions(Signal *signal, Uint32 phase,
           if (i + 1 < ptr_cnt) {
             api_ptr = ptrs[i + 1].i;
           }
+
+          wait_for_count++;
         } else {
           ndbrequire(phase == HostRecord::NF_CT_WAIT_TRANSACTIONS);
           jam();
@@ -10236,6 +10239,11 @@ void Dbtc::nodeFailCheckTransactions(Signal *signal, Uint32 phase,
   if (api_ptr == RNIL) {
     if (phase == HostRecord::NF_CT_TIMEOUT_TRANSACTIONS) {
       jam();
+      g_eventLogger->info(
+          "DBTC %u: Step %s identified %u transactions where failed node %u "
+          "participated which are now being committed or rolled back.",
+          instance(), getNFBitName(HostRecord::NF_CHECK_TRANSACTION),
+          wait_for_count, failedNodeId);
       /* Proceed to phase 1, waiting for relevant transactions to complete */
       signal->theData[0] = TcContinueB::ZNF_CHECK_TRANSACTIONS;
       signal->theData[1] = HostRecord::NF_CT_WAIT_TRANSACTIONS;
@@ -10246,6 +10254,11 @@ void Dbtc::nodeFailCheckTransactions(Signal *signal, Uint32 phase,
       ndbrequire(phase == HostRecord::NF_CT_WAIT_TRANSACTIONS);
       /* NF transactions complete, record fact */
       jam();
+      g_eventLogger->info(
+          "DBTC %u: Step %s all transactions where failed node %u participated "
+          "are now either committed or rolled back.",
+          instance(), getNFBitName(HostRecord::NF_CHECK_TRANSACTION),
+          failedNodeId);
       checkNodeFailComplete(signal, failedNodeId,
                             HostRecord::NF_CHECK_TRANSACTION);
     }
@@ -10256,12 +10269,18 @@ void Dbtc::nodeFailCheckTransactions(Signal *signal, Uint32 phase,
     signal->theData[1] = phase;
     signal->theData[2] = api_ptr;
     signal->theData[3] = failedNodeId;
+    Uint32 siglen = 4;
+    if (phase == HostRecord::NF_CT_TIMEOUT_TRANSACTIONS) {
+      jam();
+      signal->theData[4] = wait_for_count;
+      siglen = 5;
+    }
     if (delay) {
       jam();
-      sendSignalWithDelay(cownref, GSN_CONTINUEB, signal, 50, 4);
+      sendSignalWithDelay(cownref, GSN_CONTINUEB, signal, 50, siglen);
     } else {
       jam();
-      sendSignal(cownref, GSN_CONTINUEB, signal, 4, JBB);
+      sendSignal(cownref, GSN_CONTINUEB, signal, siglen, JBB);
     }
   }
 }
