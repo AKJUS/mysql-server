@@ -2346,7 +2346,7 @@ class Dbtc : public SimulatedBlock {
                                   Uint32 failedNodeId);
 
   void nodeFailCheckTransactions(Signal *, Uint32 phase, Uint32 transPtrI,
-                                 Uint32 failedNodeId);
+                                 Uint32 failedNodeId, Uint32 wait_for_count);
   void ndbdFailBlockCleanupCallback(Signal *signal, Uint32 failedNodeId,
                                     Uint32 ignoredRc);
   void checkNodeFailComplete(Signal *signal, Uint32 failedNodeId, Uint32 bit);
