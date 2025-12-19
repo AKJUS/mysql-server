@@ -348,6 +348,34 @@ class TableS {
 
 class RestoreLogIterator;
 
+/**
+ * BatchBuffer
+ * Buffer used to allocate space as needed for a batch
+ * of operations
+ * When the buffer is full, the batch should be executed,
+ * afterwards it can be grown if desired to avoid being
+ * a batchsize limitation
+ */
+class BatchBuffer {
+ public:
+  static constexpr Uint32 DEFAULT_SIZE = 8192;
+  BatchBuffer(Uint32 initialWordSize = DEFAULT_SIZE);
+  ~BatchBuffer();
+
+  bool hasSpaceForEntry(Uint32 wordSize) const;
+  Uint32 *getWordsPtr(Uint32 wordSize);
+  void reset();
+
+  void expand();
+
+ private:
+  void reAlloc(Uint32 newWordSize);
+
+  Uint32 totalWords;
+  Uint32 *allocationPtr;
+  Uint32 *nextWritePtr;
+};
+
 class BackupFile {
  protected:
   ndb_file m_file;
@@ -373,6 +401,8 @@ class BackupFile {
 
   UtilBuffer m_twiddle_buffer;
 
+  BatchBuffer m_extra_data_buffer;
+
   bool m_is_undolog;
   void (*free_data_callback)(void *);
   void *m_ctx;  // context for callback function
@@ -390,6 +420,9 @@ class BackupFile {
     if (free_data_callback) {
       (*free_data_callback)(m_ctx);
     }
+
+    m_extra_data_buffer.reset();
+
     reset_buffers();
   }
 
@@ -502,7 +535,6 @@ class RestoreDataIterator : public BackupFile {
   // Read data file fragment header
   bool readFragmentHeader(int &res, Uint32 *fragmentId);
   bool validateFragmentFooter();
-  bool validateRestoreDataIterator();
 
   const TupleS *getNextTuple(int &res, bool skipFragment);
   TableS *getCurrentTable();
@@ -513,24 +545,16 @@ class RestoreDataIterator : public BackupFile {
    * consumers cannot read directly from the file buffer
    */
   void calc_row_extra_storage_words(const TableS *tableSpec);
-  void alloc_extra_storage(Uint32 words);
-  void free_extra_storage();
-  void reset_extra_storage();
+
   void check_extra_storage();
   Uint32 *get_extra_storage(Uint32 len);
-  Uint32 get_free_extra_storage() const;
 
   Uint32 m_row_max_extra_wordlen;
-  Uint32 *m_extra_storage_ptr;
-  Uint32 *m_extra_storage_curr_ptr;
-  Uint32 m_extra_storage_wordlen;
 
   /* Are there column transforms for the current table */
   bool m_current_table_has_transforms;
 
  protected:
-  void reset_buffers() override { reset_extra_storage(); }
-
   int readTupleData_old(Uint32 *buf_ptr, Uint32 dataLength);
   int readTupleData_packed(Uint32 *buf_ptr, Uint32 dataLength);
 
@@ -568,6 +592,7 @@ class LogEntry {
     for (i = 0; i < m_values.size(); i++) delete m_values[i];
     for (i = 0; i < m_values_e.size(); i++) delete m_values_e[i];
   }
+  LogEntry &operator=(const LogEntry &logEntry);
   Uint32 size() const { return m_values.size(); }
   const AttributeS *operator[](int i) const { return m_values[i]; }
   void printSqlLog() const;
@@ -589,12 +614,13 @@ class RestoreLogIterator : public BackupFile {
   LogEntry m_logEntry;
   static const Uint32 RowBuffWords =
       MAX_TUPLE_SIZE_IN_WORDS + MAX_ATTRIBUTES_IN_TABLE;
-  Uint32 m_rowBuff[RowBuffWords];
-  Uint32 m_rowBuffIndex;
 
  public:
-  RestoreLogIterator(const RestoreMetaData &);
+  RestoreLogIterator(const RestoreMetaData &,
+                     void (*free_data_callback)(void *), void *, Uint32);
   ~RestoreLogIterator() override {}
+
+  void check_extra_storage();
 
   bool isSnapshotstartBackup() { return m_is_undolog; }
   const LogEntry *getNextLogEntry(int &res);

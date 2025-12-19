@@ -1607,12 +1607,12 @@ static bool setup_column_remappings(RestoreMetaData &metaData) {
 }
 
 static void free_data_callback(void *ctx) {
-  // RestoreThreadData is passed as context object to in RestoreDataIterator
-  // ctor. RestoreDataIterator calls callback function with context object
+  // RestoreThreadData is passed as context object to Iterators
+  // Iterators call callback function with context object
   // as parameter, so that callback can extract thread info from it.
   RestoreThreadData *data = (RestoreThreadData *)ctx;
   for (Uint32 i = 0; i < data->m_consumers.size(); i++)
-    data->m_consumers[i]->tuple_free();
+    data->m_consumers[i]->data_free();
 }
 
 static void free_include_excludes_vector() {
@@ -2176,12 +2176,6 @@ int do_restore(RestoreThreadData *thrdata) {
         return NdbToolsProgramExitCode::FAILED;
       }
 
-      if (!dataIter.validateRestoreDataIterator()) {
-        restoreLogger.log_error(
-            "Unable to allocate memory for RestoreDataIterator constructor");
-        return NdbToolsProgramExitCode::FAILED;
-      }
-
       restoreLogger.log_info("[restore_data] Read data file header");
 
       // Read data file header
@@ -2296,7 +2290,8 @@ int do_restore(RestoreThreadData *thrdata) {
     }
 
     if (_restore_data || _print_log || _print_sql_log) {
-      RestoreLogIterator logIter(metaData);
+      RestoreLogIterator logIter(metaData, &free_data_callback, (void *)thrdata,
+                                 opt_read_size);
 
       restoreLogger.log_info("[restore_log] Read log file header");
 
@@ -2434,7 +2429,8 @@ int do_restore(RestoreThreadData *thrdata) {
 
   if (ga_restore_epoch) {
     restoreLogger.log_info("[restore_epoch] Restoring epoch");
-    RestoreLogIterator logIter(metaData);
+    RestoreLogIterator logIter(metaData, &free_data_callback, (void *)thrdata,
+                               opt_read_size);
 
     if (!logIter.readHeader()) {
       err << "Failed to read snapshot info from log file. Exiting..." << endl;
