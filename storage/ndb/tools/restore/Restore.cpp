@@ -843,20 +843,9 @@ RestoreDataIterator::RestoreDataIterator(const RestoreMetaData &md,
       m_current_table_has_transforms(false) {
   restoreLogger.log_debug("RestoreDataIterator constructor");
   setDataFile(md, 0);
-
-  alloc_extra_storage(8192);
-  m_row_max_extra_wordlen = 0;
 }
 
-bool RestoreDataIterator::validateRestoreDataIterator() {
-  if (!m_extra_storage_ptr) {
-    restoreLogger.log_error("m_extra_storage_ptr is NULL");
-    return false;
-  }
-  return true;
-}
-
-RestoreDataIterator::~RestoreDataIterator() { free_extra_storage(); }
+RestoreDataIterator::~RestoreDataIterator() {}
 
 void RestoreDataIterator::calc_row_extra_storage_words(
     const TableS *tableSpec) {
@@ -880,38 +869,16 @@ void RestoreDataIterator::calc_row_extra_storage_words(
   m_row_max_extra_wordlen = bitmap_words + transform_words;
 }
 
-void RestoreDataIterator::reset_extra_storage() {
-  m_extra_storage_curr_ptr = m_extra_storage_ptr;
-}
-
-void RestoreDataIterator::alloc_extra_storage(Uint32 words) {
-  m_extra_storage_wordlen = words;
-  m_extra_storage_ptr = (Uint32 *)malloc(4 * words);
-  m_extra_storage_curr_ptr = m_extra_storage_ptr;
-}
-
-void RestoreDataIterator::free_extra_storage() {
-  if (m_extra_storage_ptr) free(m_extra_storage_ptr);
-  m_extra_storage_ptr = 0;
-  m_extra_storage_curr_ptr = 0;
-}
-
-Uint32 RestoreDataIterator::get_free_extra_storage() const {
-  return Uint32((m_extra_storage_ptr + m_extra_storage_wordlen) -
-                m_extra_storage_curr_ptr);
-}
-
 void RestoreDataIterator::check_extra_storage() {
-  assert(m_row_max_extra_wordlen <= m_extra_storage_wordlen);
-  if (m_row_max_extra_wordlen >= get_free_extra_storage()) {
+  if (unlikely(
+          !m_extra_data_buffer.hasSpaceForEntry(m_row_max_extra_wordlen))) {
     /**
      * No more space available to buffer rows, flush
      * what is outstanding, then reset buffers and
      * continue.
      */
     flush_and_reset_buffers();
-    assert(get_free_extra_storage() > m_row_max_extra_wordlen);
-    assert(m_extra_storage_ptr == m_extra_storage_curr_ptr);
+    assert(m_extra_data_buffer.hasSpaceForEntry(m_row_max_extra_wordlen));
 
     /**
      * We do not want to break up batching due to a lack of
@@ -922,24 +889,12 @@ void RestoreDataIterator::check_extra_storage() {
      * boundaries are eventually controlled by the file
      * buffering only.
      */
-    const Uint32 newWords = m_extra_storage_wordlen * 2;
-    free_extra_storage();
-    alloc_extra_storage(newWords);
+    m_extra_data_buffer.expand();
   }
 }
 
 Uint32 *RestoreDataIterator::get_extra_storage(Uint32 len) {
-  Uint32 *currptr = m_extra_storage_curr_ptr;
-  Uint32 *nextptr = currptr + len;
-  Uint32 *endptr = m_extra_storage_ptr + m_extra_storage_wordlen;
-
-  if (nextptr <= endptr) {
-    m_extra_storage_curr_ptr = nextptr;
-    return currptr;
-  }
-
-  abort();
-  return 0;
+  return m_extra_data_buffer.getWordsPtr(len);
 }
 
 TupleS &TupleS::operator=(const TupleS &tuple) {
@@ -2086,17 +2041,42 @@ Uint64 Twiddle64(Uint64 in) {
   return (retVal);
 }  // Twiddle64
 
-RestoreLogIterator::RestoreLogIterator(const RestoreMetaData &md)
-    : m_metaData(md) {
+RestoreLogIterator::RestoreLogIterator(const RestoreMetaData &md,
+                                       void (*_free_data_callback)(void *),
+                                       void *ctx, Uint32 bufferSz)
+    : BackupFile(_free_data_callback, ctx, bufferSz), m_metaData(md) {
   restoreLogger.log_debug("RestoreLog constructor");
   setLogFile(md, 0);
 
   m_count = 0;
   m_last_gci = 0;
-  m_rowBuffIndex = 0;
+}
+
+void RestoreLogIterator::check_extra_storage() {
+  if (unlikely(!m_extra_data_buffer.hasSpaceForEntry(RowBuffWords))) {
+    /**
+     * No space available, flush outstanding, reset
+     * and continue
+     */
+    flush_and_reset_buffers();
+    assert(m_extra_data_buffer.hasSpaceForEntry(RowBuffWords));
+
+    /**
+     * We do not want to break up batching due to a lack of
+     * extra buffer storage, but that is what has happened
+     * here.
+     * So to avoid this in future we will take this chance
+     * to double the extra storage size, so that batching
+     * boundaries are eventually controlled by the file
+     * buffering only.
+     */
+    m_extra_data_buffer.expand();
+  }
 }
 
 const LogEntry *RestoreLogIterator::getNextLogEntry(int &res) {
+  check_extra_storage();
+
   // Read record length
   const Uint32 startGCP = m_metaData.getStartGCP();
   const Uint32 stopGCP = m_metaData.getStopGCP();
@@ -2220,7 +2200,6 @@ const LogEntry *RestoreLogIterator::getNextLogEntry(int &res) {
 
   const TableS *tab = m_logEntry.m_table;
   m_logEntry.clear();
-  m_rowBuffIndex = 0;
 
   AttributeHeader *ah = (AttributeHeader *)attr_data;
   AttributeHeader *end = (AttributeHeader *)(attr_data + attr_data_len);
@@ -2254,9 +2233,8 @@ const LogEntry *RestoreLogIterator::getNextLogEntry(int &res) {
     if (attr->Desc->transform) {
       const int col_idx = ah->getAttributeId();
       const NdbDictionary::Column *col = tab->m_dictTable->getColumn(col_idx);
-      void *dst_buf = m_rowBuff + m_rowBuffIndex;
-      m_rowBuffIndex += attr->Desc->getSizeInWords();
-      assert(m_rowBuffIndex <= RowBuffWords);
+      void *dst_buf =
+          m_extra_data_buffer.getWordsPtr(attr->Desc->getSizeInWords());
 
       if (!applyColumnTransform(col, attr->Desc, &attr->Data, dst_buf)) {
         res = -1;
@@ -2270,6 +2248,29 @@ const LogEntry *RestoreLogIterator::getNextLogEntry(int &res) {
   m_count++;
   res = 0;
   return &m_logEntry;
+}
+
+LogEntry &LogEntry::operator=(const LogEntry &logEntry) {
+  clear();
+
+  /* Copy over member vars + AttributeS which
+   * reference data in underlying buffer
+   */
+  m_frag_id = logEntry.m_frag_id;
+  m_type = logEntry.m_type;
+  m_table = logEntry.m_table;
+
+  for (Uint32 a = 0; a < logEntry.m_values.size(); a++) {
+    const AttributeS &source = *logEntry.m_values[a];
+    AttributeS *copy = add_attr();
+    if (unlikely(copy == nullptr)) abort();
+    copy->Desc = source.Desc;
+    copy->Data.null = source.Data.null;
+    copy->Data.size = source.Data.size;
+    copy->Data.void_value = source.Data.void_value;
+  }
+
+  return *this;
 }
 
 NdbOut &operator<<(NdbOut &ndbout, const AttributeS &attr) {
@@ -2502,6 +2503,55 @@ NdbOut &operator<<(NdbOut &ndbout, const TableS &table) {
   ndbout << "-- " << table.getTableName() << " --" << endl;
   ndbout << *(table.m_dictTable) << endl;
   return ndbout;
+}
+
+BatchBuffer::BatchBuffer(Uint32 initialWordSize)
+    : totalWords(initialWordSize),
+      allocationPtr(nullptr),
+      nextWritePtr(nullptr) {
+  if (initialWordSize > 0) {
+    reAlloc(initialWordSize);
+  }
+}
+
+BatchBuffer::~BatchBuffer() { delete[] allocationPtr; }
+
+void BatchBuffer::reAlloc(Uint32 newWordSize) {
+  /* Check have nothing buffered */
+  require(allocationPtr == nextWritePtr);
+
+  if (allocationPtr) {
+    delete[] allocationPtr;
+  }
+
+  allocationPtr = new Uint32[newWordSize];
+  nextWritePtr = allocationPtr;
+  totalWords = newWordSize;
+}
+
+void BatchBuffer::reset() { nextWritePtr = allocationPtr; }
+
+void BatchBuffer::expand() {
+  if (likely(totalWords > 0)) {
+    reAlloc(2 * totalWords);
+  } else {
+    reAlloc(DEFAULT_SIZE);
+  }
+}
+
+bool BatchBuffer::hasSpaceForEntry(Uint32 wordSize) const {
+  const Uint32 usedWords = (nextWritePtr - allocationPtr);
+  const Uint32 freeWords = (totalWords - usedWords);
+
+  return (freeWords >= wordSize);
+}
+
+Uint32 *BatchBuffer::getWordsPtr(Uint32 wordSize) {
+  Uint32 *ret = nextWritePtr;
+  nextWritePtr += wordSize;
+  require(nextWritePtr <= allocationPtr + totalWords);
+
+  return ret;
 }
 
 template class Vector<TableS *>;
