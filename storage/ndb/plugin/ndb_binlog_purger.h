@@ -81,6 +81,9 @@ class Ndb_binlog_purger : public Ndb_component {
   // binary log files, then submits those referencing orphan files for removal.
   void find_and_delete_orphan_purged_rows();
 
+  // Wait until the ndb binlog is no longer using the specified binlog file.
+  bool wait_until_not_using(const std::string &filename);
+
   static constexpr time_t DELETE_SLICE_DELAY_MILLIS = 100;
 
   // Functionality for RESET MASTER aka. RESET BINARY LOGS AND GTIDS,

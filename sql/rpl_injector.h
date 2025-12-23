@@ -67,6 +67,15 @@ class injector {
   static void free_instance();
 
   /*
+    Return current binlog filename into provided buffer.
+
+    Writes an empty string if no binlog file is active.
+
+    Only buffers of size FN_REFLEN are supported (compile-time enforced).
+  */
+  static void get_current_binlog_filename(char (&filename)[FN_REFLEN]);
+
+  /*
     A transaction where rows can be added.
 
     DESCRIPTION
