@@ -262,3 +262,9 @@ void injector::free_instance() {
 int injector::record_incident(THD *thd, std::string_view message) {
   return mysql_bin_log.write_incident_commit(thd, message);
 }
+
+void injector::get_current_binlog_filename(char (&filename)[FN_REFLEN]) {
+  LOG_INFO log_info;
+  mysql_bin_log.get_current_log(&log_info);
+  strmake(filename, log_info.log_file_name, FN_REFLEN - 1);
+}

@@ -25,17 +25,18 @@
 
 #include "storage/ndb/plugin/ha_ndbcluster_binlog.h"
 
+#include <chrono>
 #include <unordered_map>
 
 #include "m_string.h"
 #include "my_config.h"  // WORDS_BIGENDIAN
 #include "my_dbug.h"
+#include "my_io.h"  // FN_REFLEN
 #include "my_thread.h"
 #include "mysql/plugin.h"
 #include "mysql/strings/m_ctype.h"
 #include "nulls.h"
 #include "sql/auth/acl_change_notification.h"
-#include "sql/binlog.h"
 #include "sql/dd/types/abstract_table.h"  // dd::enum_table_type
 #include "sql/dd/types/tablespace.h"      // dd::Tablespace
 #include "sql/debug_sync.h"               // debug_sync_set_action, DEBUG_SYNC
@@ -7031,15 +7032,15 @@ void Ndb_binlog_thread::check_reconnect_incident(
   if (incident_id == MYSQLD_STARTUP) {
     msg = "mysqld startup";
 
-    LOG_INFO log_info;
-    mysql_bin_log.get_current_log(&log_info);
-    log_verbose(60, " - current binlog file: %s", log_info.log_file_name);
+    char filename[FN_REFLEN];
+    injector::get_current_binlog_filename(filename);
+    log_verbose(60, " - current binlog file: %s", filename);
 
     uint log_number = 0;
-    if ((sscanf(strend(log_info.log_file_name) - 6, "%u", &log_number) == 1) &&
+    if (sscanf(strend(filename) - 6, "%u", &log_number) == 1 &&
         log_number == 1) {
       /*
-        This is the fist binlog file, skip writing incident since
+        This is the first binlog file, skip writing incident since
         there is really no log to have a gap in
       */
       log_verbose(60, " - skipping incident for first log, log_number: %u",
@@ -7801,6 +7802,9 @@ restart_cluster_failure:
              i_pOp->getState() != NdbEventOperation::EO_DROPPED);
     }
 
+    // Publish current binlog filename if someone is waiting
+    m_binlog_tracker.publish_if_waiters();
+
     release_thd_resources(thd);
 
     // Check that "microsecond timestamps used in query" has been reset
@@ -7947,6 +7951,10 @@ int ndbcluster_binlog_get_schema_participant_count(THD *, SHOW_VAR *var,
   var->value = buf;
   *(pointer_cast<int *>(buf)) = g_subscriber_count.load();
   return 0;
+}
+
+bool ndbcluster_binlog_wait_for_published_binlog_file(std::string &filename) {
+  return ndb_binlog_thread.wait_for_published_binlog_file(filename);
 }
 
 /*
