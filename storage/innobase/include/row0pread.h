@@ -372,7 +372,7 @@ class Parallel_reader {
 
   // Disable copying.
   Parallel_reader(const Parallel_reader &) = delete;
-  Parallel_reader(const Parallel_reader &&) = delete;
+  Parallel_reader(Parallel_reader &&) = delete;
   Parallel_reader &operator=(Parallel_reader &&) = delete;
   Parallel_reader &operator=(const Parallel_reader &) = delete;
 

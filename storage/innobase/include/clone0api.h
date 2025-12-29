@@ -231,7 +231,7 @@ class Clone_notify {
   int get_error() const { return m_error; }
 
   /** Disable copy construction */
-  Clone_notify(Clone_notify &) = delete;
+  Clone_notify(const Clone_notify &) = delete;
 
   /** Disable assignment */
   Clone_notify &operator=(Clone_notify const &) = delete;
