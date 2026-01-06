@@ -24,6 +24,8 @@
 #ifndef SQL_CMD_DDL_INCLUDED
 #define SQL_CMD_DDL_INCLUDED
 
+#include <cassert>
+
 #include "lex_string.h"
 #include "my_sqlcommand.h"
 #include "sql/sql_cmd.h"
@@ -125,6 +127,44 @@ class Sql_cmd_drop_library final : public Sql_cmd_ddl {
  private:
   bool m_if_exists;
   sp_name *m_name;
+};
+
+class Sql_cmd_create_masking_policy final : public Sql_cmd_ddl {
+ public:
+  Sql_cmd_create_masking_policy(bool if_not_exists, LEX_CSTRING policy_name,
+                                LEX_CSTRING arg_name, Item *expr)
+      : m_if_not_exists{if_not_exists},
+        m_policy_name{policy_name},
+        m_argument_name{arg_name},
+        m_masking_expr{expr} {}
+
+  enum_sql_command sql_command_code() const override {
+    return SQLCOM_CREATE_MASKING_POLICY;
+  }
+
+  bool execute(THD *thd) override;
+
+ private:
+  bool m_if_not_exists;
+  LEX_CSTRING m_policy_name;
+  LEX_CSTRING m_argument_name;
+  Item *m_masking_expr;
+};
+
+class Sql_cmd_drop_masking_policy final : public Sql_cmd_ddl {
+ public:
+  Sql_cmd_drop_masking_policy(bool if_exists, LEX_CSTRING policy_name)
+      : m_if_exists{if_exists}, m_policy_name{policy_name} {}
+
+  enum_sql_command sql_command_code() const override {
+    return SQLCOM_DROP_MASKING_POLICY;
+  }
+
+  bool execute(THD *thd) override;
+
+ private:
+  bool m_if_exists;
+  LEX_CSTRING m_policy_name;
 };
 
 #endif  // SQL_CMD_DDL_INCLUDED

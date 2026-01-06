@@ -406,6 +406,8 @@ uint sp_get_flags_for_command(LEX *lex);
 
 bool sp_check_name(LEX_STRING *ident);
 
+bool sp_check_name(LEX_CSTRING ident);
+
 Table_ref *sp_add_to_query_tables(THD *thd, LEX *lex, const char *db,
                                   const char *name);
 

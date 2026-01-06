@@ -5929,6 +5929,50 @@ class PT_jdv_name_value_list : public Parse_tree_node {
   Mem_root_array<uint> *col_tags_list() { return &m_jdv_col_tags_list; }
 };
 
+class PT_create_masking_policy_stmt final : public Parse_tree_root {
+ public:
+  PT_create_masking_policy_stmt(const POS &pos, bool if_not_exists,
+                                LEX_CSTRING policy_name, LEX_CSTRING arg_name,
+                                Item *expr)
+      : Parse_tree_root{pos},
+        m_if_not_exists{if_not_exists},
+        m_policy_name{policy_name},
+        m_argument_name{arg_name},
+        m_expr{expr} {}
+
+  Sql_cmd *make_cmd(THD *) override;
+
+ private:
+  bool m_if_not_exists;
+  LEX_CSTRING m_policy_name;
+  LEX_CSTRING m_argument_name;
+  Item *m_expr;
+};
+
+class PT_drop_masking_policy_stmt final : public Parse_tree_root {
+ public:
+  PT_drop_masking_policy_stmt(const POS &pos, bool if_exists,
+                              LEX_CSTRING policy_name)
+      : Parse_tree_root{pos}, m_cmd{if_exists, policy_name} {}
+
+  Sql_cmd *make_cmd(THD *) override { return &m_cmd; }
+
+ private:
+  Sql_cmd_drop_masking_policy m_cmd;
+};
+
+class PT_show_create_masking_policy final : public PT_show_base {
+ public:
+  PT_show_create_masking_policy(const POS &pos, LEX_CSTRING policy_name)
+      : PT_show_base{pos, SQLCOM_SHOW_CREATE_MASKING_POLICY},
+        m_policy_name{policy_name} {}
+
+  Sql_cmd *make_cmd(THD *) override;
+
+ private:
+  LEX_CSTRING m_policy_name;
+};
+
 /**
   Top-level node for the SHUTDOWN statement
 

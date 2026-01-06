@@ -357,6 +357,20 @@ class Sql_cmd_show_create_user : public Sql_cmd_show {
   bool execute_inner(THD *thd) override;
 };
 
+/// Represents SHOW CREATE MASKING POLICY statement.
+
+class Sql_cmd_show_create_masking_policy : public Sql_cmd_show_noplan {
+ public:
+  explicit Sql_cmd_show_create_masking_policy(LEX_CSTRING policy_name)
+      : Sql_cmd_show_noplan{SQLCOM_SHOW_CREATE_MASKING_POLICY},
+        m_policy_name{policy_name} {}
+  bool check_privileges(THD *thd) override;
+  bool execute_inner(THD *thd) override;
+
+ private:
+  LEX_CSTRING m_policy_name;
+};
+
 /// Represents SHOW DATABASES statement.
 
 class Sql_cmd_show_databases : public Sql_cmd_show {

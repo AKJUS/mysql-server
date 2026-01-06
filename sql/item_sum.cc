@@ -956,6 +956,17 @@ bool Item_sum::split_sum_func(THD *thd, Ref_item_array ref_item_array,
   return false;
 }
 
+// Aggregate functions and window functions cannot be used in generated columns,
+// default value expressions, check constraints or masking policy expressions.
+bool Item_sum::check_function_as_value_generator(uchar *) {
+  if (m_is_window_function) {
+    my_error(ER_WINDOW_INVALID_WINDOW_FUNC_USE, MYF(0), func_name());
+    return true;
+  }
+  my_error(ER_INVALID_GROUP_FUNC_USE, MYF(0));
+  return true;
+}
+
 bool Item_sum::reset_wf_state(uchar *arg) {
   if (!m_is_window_function) return false;
   DBUG_TRACE;
@@ -6546,6 +6557,13 @@ bool Item_func_grouping::check_args_found_in_group_by() const {
     }
   }
   return false;
+}
+
+// GROUPING cannot be used in generated columns, default value expressions,
+// check constraints or masking policy expressions.
+bool Item_func_grouping::check_function_as_value_generator(uchar *) {
+  my_error(ER_INVALID_GROUP_FUNC_USE, MYF(0));
+  return true;
 }
 
 /**

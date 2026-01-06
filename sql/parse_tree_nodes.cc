@@ -93,6 +93,7 @@
 #include "sql/sql_exchange.h"
 #include "sql/sql_insert.h"  // Sql_cmd_insert...
 #include "sql/sql_lex.h"
+#include "sql/sql_masking_policy.h"
 #include "sql/sql_parse.h"
 #include "sql/sql_select.h"  // Sql_cmd_select...
 #include "sql/sql_show.h"    // Sql_cmd_show...
@@ -5486,6 +5487,31 @@ Sql_cmd *PT_set_resource_group::make_cmd(THD *thd) {
 
   thd->lex->sql_command = SQLCOM_SET_RESOURCE_GROUP;
   return &sql_cmd;
+}
+
+Sql_cmd *PT_create_masking_policy_stmt::make_cmd(THD *thd) {
+  if (check_masking_policy_name(m_policy_name) ||
+      check_masking_policy_name(m_argument_name)) {
+    return nullptr;
+  }
+
+  Item *expr = m_expr;
+  Parse_context pc{thd, thd->lex->current_query_block()};
+  if (expr->itemize(&pc, &expr)) {
+    return nullptr;
+  }
+
+  if (validate_masking_policy_syntax(thd, m_argument_name, expr)) {
+    return nullptr;
+  }
+
+  return new (thd->mem_root) Sql_cmd_create_masking_policy{
+      m_if_not_exists, m_policy_name, m_argument_name, expr};
+}
+
+Sql_cmd *PT_show_create_masking_policy::make_cmd(THD *thd) {
+  thd->lex->sql_command = m_sql_command;
+  return new (thd->mem_root) Sql_cmd_show_create_masking_policy{m_policy_name};
 }
 
 Sql_cmd *PT_restart_server::make_cmd(THD *thd) {

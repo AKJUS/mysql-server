@@ -10940,6 +10940,39 @@ ER_WARN_AUDIT_LOG_FILTERS_INVALID
 ER_JDV_GENERATED_AND_EXPLICIT_PKS_NOT_ALLOWED
   eng "Paths %s and %s use generated and explicit values for the same primary key, which is not allowed."
 
+ER_MASKING_POLICY_COMPONENT_ERROR
+  eng "MASKING POLICY component error: %s."
+
+ER_MASKING_POLICY_ALREADY_EXISTS 42000
+  eng "MASKING POLICY '%s' already exists."
+
+ER_MASKING_POLICY_EXPECTS_CASE 42000
+  eng "MASKING POLICY must use CASE."
+
+ER_MASKING_POLICY_EXPECTS_CASE_WHEN 42000
+  eng "MASKING POLICY must use CASE WHEN <gatekeeper_expr>."
+
+ER_MASKING_POLICY_MISSING_ELSE 42000
+  eng "MASKING POLICY must have an ELSE clause."
+
+ER_MASKING_POLICY_ONE_WHEN_REQUIRED 42000
+  eng "MASKING POLICY must have exactly one WHEN clause."
+
+ER_MASKING_POLICY_MUST_RETURN_ARGUMENT 42000
+  eng "MASKING POLICY must return the unmasked value in THEN or ELSE."
+
+ER_MASKING_POLICY_INVALID_GATEKEEPER 42000
+  eng "MASKING POLICY gatekeeper must be CURRENT_USER_IN or CURRENT_ROLE_IN."
+
+ER_MASKING_POLICY_NON_LITERAL_GATEKEEPER_ARG 42000
+  eng "MASKING POLICY gatekeeper arguments must be string literals."
+
+ER_MASKING_POLICY_DISALLOWED_CONSTRUCT 42000
+  eng "MASKING POLICY references a disallowed construct: %s."
+
+ER_MASKING_POLICY_INVALID_COLUMN_REFERENCE 42000
+  eng "MASKING POLICY expression may only reference its argument '%s' (found '%s')."
+
 #
 #  End of 9.x error messages (server-to-client).
 #
@@ -10957,4 +10990,3 @@ ER_JDV_GENERATED_AND_EXPLICIT_PKS_NOT_ALLOWED
 # same directory as this file for more
 # information.
 ################################################################################
-

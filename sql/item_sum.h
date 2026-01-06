@@ -650,6 +650,7 @@ class Item_sum : public Item_func {
   bool has_aggregate_ref_in_group_by(uchar *arg) override;
   bool init_sum_func_check(THD *thd);
   bool check_sum_func(THD *thd, Item **ref);
+  bool check_function_as_value_generator(uchar *) override;
 
   Item *set_arg(THD *thd, uint i, Item *new_val) override;
   /// @todo delete this when we no longer support temporary transformations
@@ -2752,6 +2753,7 @@ class Item_func_grouping : public Item_int_func {
   void update_used_tables() override;
   bool aggregate_check_distinct(uchar *arg) override;
   bool check_args_found_in_group_by() const;
+  bool check_function_as_value_generator(uchar *) override;
 
  private:
   /// The query block in which this function is called.

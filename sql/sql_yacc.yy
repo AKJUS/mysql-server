@@ -1488,6 +1488,9 @@ CHARSET_INFO *warn_on_deprecated_user_defined_collation(
 %token<lexer.keyword> SETS_SYM        1238   /* SQL-1999-N */
 %token<lexer.keyword> VALIDATE_SYM    1239     /* MYSQL */
 
+%token<lexer.keyword> MASKING_SYM       1240     /* MYSQL */
+%token<lexer.keyword> POLICY_SYM        1241     /* MYSQL */
+
 /*
   NOTE! When adding new non-standard keywords, make sure they are added to the
   list ident_keywords_unambiguous lest they become reserved keywords.
@@ -2005,6 +2008,7 @@ CHARSET_INFO *warn_on_deprecated_user_defined_collation(
         check_table_stmt
         create_index_stmt
         create_library_stmt
+        create_masking_policy_stmt
         create_resource_group_stmt
         create_role_stmt
         create_srs_stmt
@@ -2014,6 +2018,7 @@ CHARSET_INFO *warn_on_deprecated_user_defined_collation(
         do_stmt
         drop_index_stmt
         drop_library_stmt
+        drop_masking_policy_stmt
         drop_resource_group_stmt
         drop_role_stmt
         drop_srs_stmt
@@ -2043,6 +2048,7 @@ CHARSET_INFO *warn_on_deprecated_user_defined_collation(
         show_create_event_stmt
         show_create_function_stmt
         show_create_library_stmt
+        show_create_masking_policy_stmt
         show_create_procedure_stmt
         show_create_table_stmt
         show_create_trigger_stmt
@@ -2490,6 +2496,7 @@ simple_statement:
         | create                        { $$= nullptr; }
         | create_index_stmt
         | create_library_stmt
+        | create_masking_policy_stmt
         | create_resource_group_stmt
         | create_role_stmt
         | create_srs_stmt
@@ -2504,6 +2511,7 @@ simple_statement:
         | drop_index_stmt
         | drop_library_stmt
         | drop_logfile_stmt             { $$= nullptr; }
+        | drop_masking_policy_stmt
         | drop_procedure_stmt           { $$= nullptr; }
         | drop_resource_group_stmt
         | drop_role_stmt
@@ -2560,6 +2568,7 @@ simple_statement:
         | show_create_event_stmt
         | show_create_function_stmt
         | show_create_library_stmt
+        | show_create_masking_policy_stmt
         | show_create_procedure_stmt
         | show_create_table_stmt
         | show_create_trigger_stmt
@@ -13485,6 +13494,15 @@ drop_role_stmt:
           }
         ;
 
+drop_masking_policy_stmt:
+          DROP MASKING_SYM POLICY_SYM if_exists ident
+          {
+            Lex->sql_command = SQLCOM_DROP_MASKING_POLICY;
+            $$ =
+              NEW_PTN PT_drop_masking_policy_stmt(@$, $4, to_lex_cstring($5));
+          }
+        ;
+
 table_list:
           table_ident
           {
@@ -14407,6 +14425,13 @@ show_parse_tree_stmt:
             MYSQL_YYABORT;
 #endif
             $$ = NEW_PTN PT_show_parse_tree(@$, $3);
+          }
+        ;
+
+show_create_masking_policy_stmt:
+          SHOW CREATE MASKING_SYM POLICY_SYM ident
+          {
+            $$ = NEW_PTN PT_show_create_masking_policy(@$, to_lex_cstring($5));
           }
         ;
 
@@ -16089,6 +16114,7 @@ ident_keywords_unambiguous:
         | LOG_SYM
         | NETWORK_NAMESPACE_SYM
         | MASTER_SYM
+        | MASKING_SYM
         | MATERIALIZED_SYM
         | MAX_CONNECTIONS_PER_HOUR
         | MAX_QUERIES_PER_HOUR
@@ -16157,6 +16183,7 @@ ident_keywords_unambiguous:
         | PLUGIN_SYM
         | POINT_SYM
         | POLYGON_SYM
+        | POLICY_SYM
         | PORT_SYM
         | PARAMETERS_SYM
         | PRECEDING_SYM
@@ -18745,6 +18772,19 @@ drop_library_stmt:
             Lex->sql_command = SQLCOM_DROP_LIBRARY;
             $$ = NEW_PTN PT_drop_library_stmt(@$, $3, $4);
           }
+        ;
+
+create_masking_policy_stmt:
+        CREATE MASKING_SYM POLICY_SYM
+        opt_if_not_exists                 /*$4*/
+        ident                             /*$5*/
+        '(' ident  ')'                    /*$7*/
+        expr                              /*$9*/
+        {
+          Lex->sql_command = SQLCOM_CREATE_MASKING_POLICY;
+          $$ = NEW_PTN PT_create_masking_policy_stmt(
+              @$, $4, to_lex_cstring($5), to_lex_cstring($7), $9);
+        }
         ;
 
 /*************************************************************************/

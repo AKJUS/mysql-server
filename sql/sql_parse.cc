@@ -4697,7 +4697,9 @@ int mysql_execute_command(THD *thd, bool first_level) {
     case SQLCOM_SELECT:
     case SQLCOM_DO:
     case SQLCOM_CALL:
+    case SQLCOM_CREATE_MASKING_POLICY:
     case SQLCOM_CREATE_ROLE:
+    case SQLCOM_DROP_MASKING_POLICY:
     case SQLCOM_DROP_ROLE:
     case SQLCOM_SET_ROLE:
     case SQLCOM_GRANT_ROLE:
@@ -4711,8 +4713,9 @@ int mysql_execute_command(THD *thd, bool first_level) {
     case SQLCOM_SHOW_CREATE_EVENT:
     case SQLCOM_SHOW_CREATE_FUNC:
     case SQLCOM_SHOW_CREATE_PROC:
-    case SQLCOM_SHOW_CREATE_LIBRARY:
     case SQLCOM_SHOW_CREATE:
+    case SQLCOM_SHOW_CREATE_LIBRARY:
+    case SQLCOM_SHOW_CREATE_MASKING_POLICY:
     case SQLCOM_SHOW_CREATE_TRIGGER:
     // case SQLCOM_SHOW_CREATE_USER:
     case SQLCOM_SHOW_DATABASES:

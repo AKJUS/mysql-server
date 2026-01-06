@@ -1,0 +1,36 @@
+#
+# WL#16525: Dynamic Datamasking Support in MySQL
+#
+# Test cases for CREATE/DROP/SHOW MASKING POLICY.
+CREATE MASKING POLICY mak_pol(i)
+CASE WHEN CURRENT_ROLE_IN('admin') THEN sha2('abc', 224) ELSE i END;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+CREATE MASKING POLICY IF NOT EXISTS pol_if_not_exists(i)
+CASE WHEN CURRENT_ROLE_IN('admin') THEN sha2('abc', 224) ELSE i END;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+CREATE MASKING POLICY p1(i)
+CASE WHEN CURRENT_USER_IN ('admin, app') THEN sha2('abc', i) ELSE i END;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+SHOW CREATE MASKING POLICY p1;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+CREATE MASKING POLICY p1_1(i)
+CASE WHEN CURRENT_USER_IN('admin, app') THEN sha2('abc', 224) ELSE i END;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+SHOW CREATE MASKING POLICY p1_1;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+CREATE MASKING POLICY p2(i)
+CASE WHEN CURRENT_USER_IN('admin, app') THEN i ELSE sha2('abc', i) END;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+SHOW CREATE MASKING POLICY p2;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+CREATE MASKING POLICY p2_2(i)
+CASE WHEN CURRENT_USER_IN('admin, app') THEN i ELSE sha2('abc', 224) END;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+SHOW CREATE MASKING POLICY p2_2;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+DROP MASKING POLICY pol_does_not_exist;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+DROP MASKING POLICY IF EXISTS pol_does_not_exist;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+SHOW CREATE MASKING POLICY pol_does_not_exist;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
