@@ -341,7 +341,7 @@ class Item_bool_func : public Item_int_func {
   }
   uint decimal_precision() const override { return 1; }
   bool created_by_in2exists() const override { return m_created_by_in2exists; }
-  void set_created_by_in2exists();
+  void set_created_by_in2exists() { m_created_by_in2exists = true; }
 
   virtual Item_bool_func *negate_item() {
     assert(false);

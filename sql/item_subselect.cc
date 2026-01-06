@@ -2233,6 +2233,7 @@ bool Item_in_subselect::single_value_in_to_exists_transformer(
     Item_bool_func *item = new_comparison_func(
         m_pos, func, m_injected_left_expr, ref_null, all_predicate);
     if (item == nullptr) return true;
+    m_injected_left_expr->real_item()->increment_ref_count();
 
     item->set_created_by_in2exists();
 
@@ -2302,6 +2303,8 @@ bool Item_in_subselect::single_value_in_to_exists_transformer(
       Item_bool_func *item = new_comparison_func(
           m_pos, func, m_injected_left_expr, orig_item, all_predicate);
       if (item == nullptr) return true;
+      m_injected_left_expr->real_item()->increment_ref_count();
+      orig_item->real_item()->increment_ref_count();
       /*
         We may soon add a 'OR inner IS NULL' to 'item', but that may later be
         removed if 'inner' is not nullable, so the in2exists mark must be on
@@ -2311,6 +2314,7 @@ bool Item_in_subselect::single_value_in_to_exists_transformer(
       if (process_nulls() && orig_item->is_nullable()) {
         Item_bool_func *having = new Item_is_not_null_test(this, orig_item);
         if (having == nullptr) return true;
+        orig_item->real_item()->increment_ref_count();
         having->set_created_by_in2exists();
         if (left_expr->is_nullable()) {
           having = new Item_func_trig_cond(
@@ -2337,6 +2341,7 @@ bool Item_in_subselect::single_value_in_to_exists_transformer(
         select->having_fix_field = false;
         item = new Item_cond_or(item, new Item_func_isnull(orig_item));
         if (item == nullptr) return true;
+        orig_item->real_item()->increment_ref_count();
         item->set_created_by_in2exists();
       }
       /*
@@ -2381,6 +2386,7 @@ bool Item_in_subselect::single_value_in_to_exists_transformer(
                                    &select->base_ref_items[0]),
           all_predicate);
       if (new_having == nullptr) return true;
+      m_injected_left_expr->real_item()->increment_ref_count();
 
       new_having->set_created_by_in2exists();
       if (process_nulls() && left_expr->is_nullable()) {
