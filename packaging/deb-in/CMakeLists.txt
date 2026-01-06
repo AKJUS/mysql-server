@@ -137,6 +137,7 @@ usr/lib/mysql/plugin/component_scheduler.so
 usr/lib/mysql/plugin/component_option_tracker.so
 usr/lib/mysql/plugin/component_firewall.so
 usr/lib/mysql/private/libpolyglot.so
+usr/lib/mysql/plugin/component_object_policy.so
 ")
 
    SET (DEB_INSTALL_TEST_PLUGINS

@@ -325,6 +325,8 @@ bool dynamic_privilege_init(void) {
       service->register_privilege(STRING_WITH_LEN("ALLOW_NONEXISTENT_DEFINER"));
   ret += service->register_privilege(STRING_WITH_LEN("TRANSACTION_GTID_TAG"));
   ret += service->register_privilege(STRING_WITH_LEN("OPTIMIZE_LOCAL_TABLE"));
+  ret += service->register_privilege(
+      STRING_WITH_LEN("MANAGE_DATA_MASKING_POLICY"));
 
   return ret != 0;
 }

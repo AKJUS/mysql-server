@@ -1603,6 +1603,12 @@ INSERT INTO global_grants SELECT user, host, 'OPTIMIZE_LOCAL_TABLE',
 IF (WITH_GRANT_OPTION = 'Y', 'Y', 'N') FROM global_grants WHERE priv = 'SYSTEM_USER' AND @hadOptimizeLocalTable = 0;
 COMMIT;
 
+-- Add the privilege MANAGE_DATA_MASKING_POLICY for every user who has CREATE or DROP privilege
+SET @hadManageDataMaskingPolicy = (SELECT COUNT(*) FROM global_grants WHERE priv = 'MANAGE_DATA_MASKING_POLICY');
+INSERT INTO global_grants SELECT user, host, 'MANAGE_DATA_MASKING_POLICY',
+IF (grant_priv = 'Y', 'Y', 'N') FROM mysql.user WHERE (Create_priv = 'Y' OR Drop_priv = 'Y') AND @hadManageDataMaskingPolicy = 0;
+COMMIT;
+
 SET @@session.sql_mode = @old_sql_mode;
 
 ALTER TABLE gtid_executed

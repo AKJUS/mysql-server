@@ -248,6 +248,7 @@ usr/lib/mysql/plugin/debug/component_scheduler.so
 usr/lib/mysql/plugin/debug/component_option_tracker.so
 usr/lib/mysql/plugin/debug/component_firewall.so
 usr/lib/mysql/plugin/debug/authentication_webauthn.so
+usr/lib/mysql/plugin/debug/component_object_policy.so
 ")
 
   ENDIF()
