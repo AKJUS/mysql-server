@@ -1,4 +1,4 @@
-# Copyright (c) 2000, 2025, Oracle and/or its affiliates.
+# Copyright (c) 2000, 2026, Oracle and/or its affiliates.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License, version 2.0,
@@ -432,6 +432,10 @@ This package contains the client-plugins libraries used by MySQL client applicat
 Summary:       MySQL Router
 Requires:      shadow-utils
 Provides:      mysql-router = %{version}-%{release}
+%if 0%{?fedora} >= 43
+Provides:      user(mysqlrouter)
+Provides:      group(mysqlrouter)
+%endif
 Obsoletes:     mysql-router < %{version}-%{release}
 %if 0%{?commercial}
 Obsoletes:     mysql-router-community < %{version}-%{release}
