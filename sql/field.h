@@ -806,6 +806,9 @@ class Field {
   */
   unsigned int m_warnings_pushed;
 
+  /// Holds the name of the masking policy applied to the field.
+  LEX_CSTRING m_masking_policy = EMPTY_CSTR;
+
  public:
   /* Generated column data */
   Value_generator *gcol_info{nullptr};
@@ -832,6 +835,18 @@ class Field {
     @param hidden the new hidden type to set.
   */
   void set_hidden(dd::Column::enum_hidden_type hidden) { m_hidden = hidden; }
+
+  /// Sets the name of the masking policy to apply to this column.
+  void set_masking_policy(LEX_CSTRING masking_policy) {
+    m_masking_policy = masking_policy;
+  }
+
+  /// Does this column have a masking policy?
+  bool has_masking_policy() const { return m_masking_policy.length != 0; }
+
+  /// Returns the name of the masking policy, or an empty string if no masking
+  /// policy is defined on this column.
+  LEX_CSTRING masking_policy() const { return m_masking_policy; }
 
   /// @returns the hidden type for this field.
   dd::Column::enum_hidden_type hidden() const { return m_hidden; }

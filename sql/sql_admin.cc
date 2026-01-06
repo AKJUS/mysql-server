@@ -423,6 +423,12 @@ bool Sql_cmd_analyze_table::send_histogram_results(
         message.append(pair.first);
         message.append("' has an unsupported data type.");
         break;
+      case histograms::Message::HAS_MASKING_POLICY:
+        message_type.assign("Error");
+        message.assign("The column '");
+        message.append(pair.first);
+        message.append("' has a MASKING POLICY.");
+        break;
       case histograms::Message::TEMPORARY_TABLE:
         message_type.assign("Error");
         message.assign(

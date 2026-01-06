@@ -1370,6 +1370,14 @@ static bool resolve_histogram_fields(THD *thd, TABLE *table,
       continue;
     }
 
+    if (field->has_masking_policy()) {
+      // Don't create histograms on masked columns, since the histogram may
+      // reveal the unmasked values.
+      results.emplace((*settings)[i].column_name, Message::HAS_MASKING_POLICY);
+      std::swap((*settings)[i], (*settings)[--j]);
+      continue;
+    }
+
     // Check if this field is covered by a single-part unique index. If it is,
     // we don't want to create histogram statistics for it.
     if (covered_by_single_part_index(thd, field)) {

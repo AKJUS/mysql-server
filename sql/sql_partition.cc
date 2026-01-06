@@ -529,6 +529,13 @@ static bool set_up_field_array(TABLE *table, bool is_sub_part) {
           my_error(ER_BLOB_FIELD_IN_PART_FUNC_ERROR, MYF(0));
           result = true;
         }
+
+        if (field->has_masking_policy()) {
+          my_error(ER_MASKING_POLICY_INCOMPATIBLE_COLUMN_FEATURE, MYF(0),
+                   field->field_name,
+                   "be referenced by a partitioning function");
+          result = true;
+        }
       }
     }
   }

@@ -1333,6 +1333,27 @@ bool Item_field::check_function_as_value_generator(uchar *checker_args) {
     return false;
   }
 
+  if (field->has_masking_policy()) {
+    const char *reason = nullptr;
+    switch (func_args->source) {
+      case VGS_GENERATED_COLUMN:
+        reason = "be referenced by a generated column";
+        break;
+      case VGS_DEFAULT_EXPRESSION:
+        reason = "be referenced by a default value expression";
+        break;
+      case VGS_CHECK_CONSTRAINT:
+        reason = "be referenced by a CHECK constraint";
+        break;
+      default:
+        reason = "be referenced by a value generator";
+        break;
+    }
+    my_error(ER_MASKING_POLICY_INCOMPATIBLE_COLUMN_FEATURE, MYF(0),
+             field->field_name, reason);
+    return true;
+  }
+
   if (field->real_type() == MYSQL_TYPE_VECTOR) {
     /* Vector typed column cannot be used in generated column expression */
     if (func_args->source == VGS_DEFAULT_EXPRESSION) {

@@ -5554,6 +5554,8 @@ bool mysql_test_parse_for_slave(THD *thd) {
   @param gcol_info                 The generated column data or NULL.
   @param default_val_expr          The expression for generating default values,
                                    if there is one, or nullptr.
+  @param masking_policy            The name of the masking policy, if there is
+                                   one; otherwise, an empty string.
   @param opt_after                 The name of the field to add after or
                                    the @see first_keyword pointer to insert
                                    first.
@@ -5573,7 +5575,8 @@ bool Alter_info::add_field(
     const char *change, List<String> *interval_list, const CHARSET_INFO *cs,
     bool has_explicit_collation, uint uint_geom_type,
     Value_generator *gcol_info, Value_generator *default_val_expr,
-    const char *opt_after, std::optional<gis::srid_t> srid,
+    LEX_CSTRING masking_policy, const char *opt_after,
+    std::optional<gis::srid_t> srid,
     Sql_check_constraint_spec_list *col_check_const_spec_list,
     dd::Column::enum_hidden_type hidden, bool is_array) {
   const uint8 datetime_precision = decimals ? atoi(decimals) : 0;
@@ -5675,8 +5678,8 @@ bool Alter_info::add_field(
       new_field->init(thd, field_name->str, type, length, decimals,
                       type_modifier, default_value, on_update_value, comment,
                       change, interval_list, cs, has_explicit_collation,
-                      uint_geom_type, gcol_info, default_val_expr, srid, hidden,
-                      is_array))
+                      uint_geom_type, gcol_info, default_val_expr,
+                      masking_policy, srid, hidden, is_array))
     return true;
 
   for (const auto &a : cf_appliers) {

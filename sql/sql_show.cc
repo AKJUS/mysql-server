@@ -2574,6 +2574,12 @@ bool store_create_info(THD *thd, Table_ref *table_list, String *packet,
         packet->append(STRING_WITH_LEN(" VIRTUAL"));
     }
 
+    if (field->has_masking_policy()) {
+      packet->append(" MASKING POLICY ");
+      const LEX_CSTRING policy_name = field->masking_policy();
+      append_identifier(thd, packet, policy_name.str, policy_name.length);
+    }
+
     if (field->is_flag_set(NOT_NULL_FLAG))
       packet->append(STRING_WITH_LEN(" NOT NULL"));
     else if (field->type() == MYSQL_TYPE_TIMESTAMP) {

@@ -10973,6 +10973,9 @@ ER_MASKING_POLICY_DISALLOWED_CONSTRUCT 42000
 ER_MASKING_POLICY_INVALID_COLUMN_REFERENCE 42000
   eng "MASKING POLICY expression may only reference its argument '%s' (found '%s')."
 
+ER_MASKING_POLICY_INCOMPATIBLE_COLUMN_FEATURE 42000
+  eng "Column '%s' cannot have a MASKING POLICY and %s."
+
 #
 #  End of 9.x error messages (server-to-client).
 #

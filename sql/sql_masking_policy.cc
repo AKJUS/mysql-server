@@ -38,6 +38,7 @@
 #include "mysql/strings/m_ctype.h"
 #include "mysqld_error.h"
 #include "sql/auth/sql_security_ctx.h"
+#include "sql/create_field.h"
 #include "sql/derror.h"
 #include "sql/enum_query_type.h"
 #include "sql/field.h"
@@ -50,6 +51,7 @@
 #include "sql/sql_class.h"
 #include "sql/sql_const.h"
 #include "sql/sql_error.h"
+#include "sql/table.h"
 #include "sql_string.h"
 #include "string_with_len.h"
 #include "template_utils.h"
@@ -206,6 +208,53 @@ bool create_masking_policy(THD *thd, bool if_not_exists,
   return false;
 }
 
+/**
+  Validates constraints for masking policy assignment on a column.
+  Central checker for column-level eligibility: enforces the constraints listed
+  under "Checked here" and enumerates related constraints validated elsewhere
+  (with pointers), so this block is the canonical index of eligibility rules.
+
+  Constraints checked here:
+  - The column must not be a generated column.
+  - For existing columns (create_field.field != nullptr), the column must not
+    have a histogram.
+
+  Constraints validated elsewhere:
+  - The column must not be indexed. Checked in prepare_key_column().
+  - The column must not be referenced by generated columns, functional indexes,
+    DEFAULT value expressions or CHECK constraints. Checked by
+    Item_field::check_function_as_value_generator().
+  - The column must not be used by the table partitioning/subpartitioning
+    function. This is enforced during partition function fixing in
+    sql_partition.cc (fix_partition_func/create_partition_field_array), which
+    raises ER_MASKING_POLICY_INCOMPATIBLE_COLUMN_FEATURE when a partition key
+    references a masked column.
+
+  @param create_field Create_field object for the column to validate
+  @retval true  Validation failed, error was reported
+  @retval false Validation succeeded
+*/
+static bool validate_masking_policy_column_constraints(
+    const Create_field &create_field) {
+  if (create_field.is_gcol()) {
+    my_error(ER_UNSUPPORTED_ACTION_ON_GENERATED_COLUMN, MYF(0),
+             "MASKING POLICY");
+    return true;
+  }
+
+  // For an existing column (create_field.field != nullptr), also check that it
+  // has no histogram.
+  if (const Field *const field = create_field.field; field != nullptr) {
+    if (field->table->find_histogram(field->field_index()) != nullptr) {
+      my_error(ER_MASKING_POLICY_INCOMPATIBLE_COLUMN_FEATURE, MYF(0),
+               field->field_name, "have a histogram");
+      return true;
+    }
+  }
+
+  return false;
+}
+
 bool check_masking_policy_name(LEX_CSTRING name) {
   // Use the same rules for policy names and their arguments as for stored
   // procedure names and their parameters.
@@ -341,6 +390,20 @@ bool validate_masking_policy_syntax(THD *thd, LEX_CSTRING argument_name,
     my_error(ER_MASKING_POLICY_MUST_RETURN_ARGUMENT, MYF(0));
     return true;
   }
+
+  return false;
+}
+
+// Validates masking policies for CREATE/ALTER TABLE.
+bool validate_masking_policy_for_create_alter_table(const Create_field &field) {
+  if (field.m_masking_policy_name.length == 0) return false;
+
+  if (validate_masking_policy_column_constraints(field)) {
+    return true;
+  }
+
+  // TODO: Validate that the policy expression resolves when assigned to this
+  // column.
 
   return false;
 }

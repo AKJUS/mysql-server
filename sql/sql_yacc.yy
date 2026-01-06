@@ -4003,7 +4003,7 @@ sp_fdparam:
                                       $2->get_interval_list(),
                                       cs ? cs : thd->variables.collation_database,
                                       $3 != nullptr, $2->get_uint_geom_type(),
-                                      nullptr, nullptr, {},
+                                      nullptr, nullptr, NULL_CSTR, {},
                                       dd::Column::enum_hidden_type::HT_VISIBLE))
             {
               MYSQL_YYABORT;
@@ -4064,7 +4064,7 @@ sp_pdparam:
                                       $3->get_interval_list(),
                                       cs ? cs : thd->variables.collation_database,
                                       $4 != nullptr, $3->get_uint_geom_type(),
-                                      nullptr, nullptr, {},
+                                      nullptr, nullptr, NULL_CSTR, {},
                                       dd::Column::enum_hidden_type::HT_VISIBLE))
             {
               MYSQL_YYABORT;
@@ -4194,7 +4194,7 @@ sp_decl:
                                         $3->get_interval_list(),
                                         cs ? cs : thd->variables.collation_database,
                                         $4 != nullptr, $3->get_uint_geom_type(),
-                                        nullptr, nullptr, {},
+                                        nullptr, nullptr, NULL_CSTR, {},
                                         dd::Column::enum_hidden_type::HT_VISIBLE))
               {
                 MYSQL_YYABORT;
@@ -7553,6 +7553,10 @@ column_attribute:
           {
             $$= NEW_PTN PT_generated_default_val_column_attr(@$, $3);
           }
+        | MASKING_SYM POLICY_SYM ident
+          {
+            $$= NEW_PTN PT_masking_policy_name_column_attr(@$, to_lex_cstring($3));
+          }
         | ON_SYM UPDATE_SYM now
           {
             $$= NEW_PTN PT_on_update_column_attr(@$, static_cast<uint8>($3));
@@ -9163,7 +9167,16 @@ alter_list_item:
           {
             $$= NEW_PTN PT_alter_table_set_default(@$, $3.str, nullptr);
           }
-
+        |  ALTER opt_column ident SET_SYM MASKING_SYM POLICY_SYM ident
+          {
+            $$= NEW_PTN PT_alter_table_set_masking_policy_name(
+              @$, $3.str, to_lex_cstring($7));
+          }
+        | ALTER opt_column ident DROP MASKING_SYM POLICY_SYM
+          {
+            $$= NEW_PTN PT_alter_table_set_masking_policy_name(
+              @$, $3.str, NULL_CSTR);
+          }
         | ALTER opt_column ident SET_SYM visibility
           {
             $$= NEW_PTN PT_alter_table_column_visibility(@$, $3.str, $5);
@@ -18553,7 +18566,7 @@ sf_tail:
                                             $10->get_interval_list(),
                                             cs ? cs : YYTHD->variables.collation_database,
                                             $11 != nullptr, $10->get_uint_geom_type(),
-                                            nullptr, nullptr, {},
+                                            nullptr, nullptr, NULL_CSTR, {},
                                             dd::Column::enum_hidden_type::HT_VISIBLE))
             {
               MYSQL_YYABORT;

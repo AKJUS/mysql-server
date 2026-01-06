@@ -3721,6 +3721,9 @@ class Alter_inplace_info {
   // Alter column visibility.
   static const HA_ALTER_FLAGS ALTER_COLUMN_VISIBILITY = 1ULL << 49;
 
+  // Set or remove column's MASKING POLICY name
+  static const HA_ALTER_FLAGS ALTER_COLUMN_MASKING = 1ULL << 50;
+
   /**
     Create options (like MAX_ROWS) for the new version of table.
 

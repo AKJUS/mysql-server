@@ -4543,6 +4543,24 @@ class PT_alter_table_set_default final : public PT_alter_table_action {
   Item *m_expr;
 };
 
+class PT_alter_table_set_masking_policy_name final
+    : public PT_alter_table_action {
+  typedef PT_alter_table_action super;
+
+ private:
+  const char *m_name;
+  LEX_CSTRING m_policy_name;
+
+ public:
+  PT_alter_table_set_masking_policy_name(const POS &pos, const char *col_name,
+                                         LEX_CSTRING policy_name)
+      : super{pos, Alter_info::ALTER_COLUMN_MASKING},
+        m_name{col_name},
+        m_policy_name{policy_name} {}
+
+  bool do_contextualize(Table_ddl_parse_context *pc) override;
+};
+
 class PT_alter_table_column_visibility final : public PT_alter_table_action {
   typedef PT_alter_table_action super;
 

@@ -176,6 +176,7 @@
 #include "sql/sql_handler.h"
 #include "sql/sql_lex.h"
 #include "sql/sql_list.h"
+#include "sql/sql_masking_policy.h"
 #include "sql/sql_parse.h"  // test_if_data_home_dir
 #include "sql/sql_partition.h"
 #include "sql/sql_plist.h"
@@ -4910,6 +4911,7 @@ bool prepare_create_field(THD *thd, const char *error_schema_name,
         sql_field->interval = dup_field->interval;
         sql_field->gcol_info = dup_field->gcol_info;
         sql_field->m_default_val_expr = dup_field->m_default_val_expr;
+        sql_field->m_masking_policy_name = dup_field->m_masking_policy_name;
         sql_field->stored_in_db = dup_field->stored_in_db;
         sql_field->hidden = dup_field->hidden;
         it.remove();  // Remove first (create) definition
@@ -5077,6 +5079,12 @@ static bool prepare_key_column(THD *thd, HA_CREATE_INFO *create_info,
 
   if (sql_field == nullptr) {
     my_error(ER_KEY_COLUMN_DOES_NOT_EXITS, MYF(0), column->get_field_name());
+    return true;
+  }
+
+  if (sql_field->m_masking_policy_name.length > 0) {
+    my_error(ER_MASKING_POLICY_INCOMPATIBLE_COLUMN_FEATURE, MYF(0),
+             sql_field->field_name, "have an index");
     return true;
   }
 
@@ -13054,6 +13062,9 @@ static bool fill_alter_inplace_info(THD *thd, TABLE *table,
   if (alter_info->flags & Alter_info::ALTER_COLUMN_VISIBILITY)
     ha_alter_info->handler_flags |= Alter_inplace_info::ALTER_COLUMN_VISIBILITY;
 
+  if (alter_info->flags & Alter_info::ALTER_COLUMN_MASKING)
+    ha_alter_info->handler_flags |= Alter_inplace_info::ALTER_COLUMN_MASKING;
+
   /*
     Go through fields in old version of table and detect changes to them.
     We don't want to rely solely on Alter_info flags for this since:
@@ -15359,9 +15370,22 @@ static bool check_if_field_used_by_partitioning_func(
 }
 
 /**
-  Sets column default, drops default, renames or alters visibility.
+  Applies changes to column attributes for ALTER TABLE ... RENAME COLUMN or
+  ALTER TABLE ... ALTER COLUMN.
+
+  The following attributes may be changed by this function:
+
+  - The name of the column (RENAME COLUMN).
+  - The DEFAULT value or expression of the column (SET/DROP DEFAULT).
+  - The visibility of the column (SET VISIBLE/INVISIBLE).
+  - The masking policy of the column (SET/DROP MASKING POLICY).
+
+  Updates the supplied Create_field in-place and removes the processed
+  Alter_column entry from alter_list.
+
+  Returns true if an error was reported, otherwise false.
 */
-static bool alter_column_name_default_or_visibility(
+static bool apply_alter_column_attributes(
     const Alter_info *alter_info,
     Prealloced_array<const Alter_column *, 1> *alter_list, Create_field *def) {
   DBUG_TRACE;
@@ -15463,7 +15487,12 @@ static bool alter_column_name_default_or_visibility(
     case Alter_column::Type::SET_COLUMN_INVISIBLE:
       def->hidden = dd::Column::enum_hidden_type::HT_HIDDEN_USER;
       break;
-
+    case Alter_column::Type::SET_MASKING_POLICY:
+      def->m_masking_policy_name = alter->new_masking_policy_name();
+      break;
+    case Alter_column::Type::DROP_MASKING_POLICY:
+      def->m_masking_policy_name = EMPTY_CSTR;
+      break;
     default:
       assert(0);
       my_error(ER_UNKNOWN_ERROR, MYF(0));
@@ -15486,9 +15515,10 @@ static bool alter_column_name_default_or_visibility(
   @param alter_info   Alter_info describing which columns, defaults or
                       indexes are dropped or modified.
 
-  @return
+  @retval
     true     The field is used by generated column/default or functional
              index, error was reported.
+  @retval
     false    Otherwise.
 
 */
@@ -15775,8 +15805,9 @@ bool prepare_fields_and_keys(THD *thd, const dd::Table *src_table, TABLE *table,
         new_create_list.push_back(def);
       }
 
-      if (alter_column_name_default_or_visibility(alter_info, &alter_list, def))
+      if (apply_alter_column_attributes(alter_info, &alter_list, def)) {
         return true;
+      }
     }
   }
   def_it.rewind();
@@ -20069,7 +20100,8 @@ bool prepare_check_constraints_for_create(THD *thd, const char *db_name,
       return true;
   }
 
-  // Make sure fields used by the check constraint exists in the create list.
+  // Make sure fields used by the check constraint exists in the create list,
+  // and that they do not have a masking policy.
   mem_root_deque<Item_field *> fields(thd->mem_root);
   for (auto &cc_spec : alter_info->check_constraint_spec_list) {
     cc_spec->check_expr->walk(&Item::collect_item_field_processor,
@@ -20090,6 +20122,13 @@ bool prepare_check_constraints_for_create(THD *thd, const char *db_name,
       if (cur_fld == nullptr) {
         my_error(ER_CHECK_CONSTRAINT_REFERS_UNKNOWN_COLUMN, MYF(0),
                  cc_spec->name.str, cur_item_fld->field_name);
+        return true;
+      }
+
+      if (cur_fld->m_masking_policy_name.length > 0) {
+        my_error(ER_MASKING_POLICY_INCOMPATIBLE_COLUMN_FEATURE, MYF(0),
+                 cur_item_fld->field_name,
+                 "be referenced by a CHECK constraint");
         return true;
       }
     }

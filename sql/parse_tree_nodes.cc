@@ -37,6 +37,7 @@
 #include "my_alloc.h"
 #include "my_bitmap.h"
 #include "my_dbug.h"
+#include "mysql/components/services/bits/psi_bits.h"
 #include "mysql/mysql_lex_string.h"
 #include "mysql/strings/m_ctype.h"
 #include "mysql/udf_registration_types.h"
@@ -2750,8 +2751,9 @@ bool PT_column_def::do_contextualize(Table_ddl_parse_context *pc) {
       field_def->on_update_value, &field_def->comment, nullptr,
       field_def->interval_list, field_def->charset,
       field_def->has_explicit_collation, field_def->uint_geom_type,
-      field_def->gcol_info, field_def->default_val_info, opt_place,
-      field_def->m_srid, field_def->check_const_spec_list, field_hidden_type);
+      field_def->gcol_info, field_def->default_val_info,
+      field_def->masking_policy, opt_place, field_def->m_srid,
+      field_def->check_const_spec_list, field_hidden_type);
 }
 
 Sql_cmd *PT_create_table_stmt::make_cmd(THD *thd) {
@@ -3579,9 +3581,9 @@ bool PT_alter_table_change_column::do_contextualize(
       m_field_def->on_update_value, &m_field_def->comment, m_old_name.str,
       m_field_def->interval_list, m_field_def->charset,
       m_field_def->has_explicit_collation, m_field_def->uint_geom_type,
-      m_field_def->gcol_info, m_field_def->default_val_info, m_opt_place,
-      m_field_def->m_srid, m_field_def->check_const_spec_list,
-      field_hidden_type);
+      m_field_def->gcol_info, m_field_def->default_val_info,
+      m_field_def->masking_policy, m_opt_place, m_field_def->m_srid,
+      m_field_def->check_const_spec_list, field_hidden_type);
 }
 
 bool PT_alter_table_rename::do_contextualize(Table_ddl_parse_context *pc) {
@@ -4094,6 +4096,7 @@ bool PT_json_table_column_with_path::do_contextualize(Parse_context *pc) {
                  m_type->get_uint_geom_type(),  // Geom type
                  nullptr,                       // Gcol_info
                  nullptr,                       // Default gen expression
+                 EMPTY_CSTR,                    // Masking policy
                  {},                            // SRID
                  dd::Column::enum_hidden_type::HT_VISIBLE);  // Hidden
   return false;
@@ -5307,6 +5310,20 @@ bool PT_alter_table_set_default::do_contextualize(Table_ddl_parse_context *pc) {
     return true;  // OOM
   }
   return false;
+}
+
+bool PT_alter_table_set_masking_policy_name::do_contextualize(
+    Table_ddl_parse_context *pc) {
+  if (super::do_contextualize(pc)) return true;
+  if (m_policy_name.str != nullptr &&
+      check_masking_policy_name(m_policy_name)) {
+    return true;
+  }
+
+  const Alter_column *alter_column =
+      new (pc->mem_root) Alter_column{m_name, m_policy_name};
+  if (alter_column == nullptr) return true;
+  return pc->alter_info->alter_list.push_back(alter_column);
 }
 
 bool PT_alter_table_order::do_contextualize(Table_ddl_parse_context *pc) {

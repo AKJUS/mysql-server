@@ -29,6 +29,7 @@
 
 #include "lex_string.h"
 
+class Create_field;
 class Item;
 class THD;
 
@@ -119,5 +120,14 @@ bool check_masking_policy_name(LEX_CSTRING name);
 */
 bool validate_masking_policy_syntax(THD *thd, LEX_CSTRING argument_name,
                                     Item *expr);
+
+/**
+  Validates masking policies for CREATE/ALTER TABLE.
+
+  @param field  Column definition being validated
+  @retval true  Validation failed (error was reported)
+  @retval false Validation succeeded
+*/
+bool validate_masking_policy_for_create_alter_table(const Create_field &field);
 
 #endif  // SQL_MASKING_POLICY_INCLUDED
