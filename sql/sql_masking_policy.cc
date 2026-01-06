@@ -23,7 +23,9 @@
 
 #include "sql/sql_masking_policy.h"
 
+#include <algorithm>
 #include <cassert>
+#include <memory>
 #include <optional>
 #include <span>
 #include <string>
@@ -32,6 +34,7 @@
 
 #include "field_types.h"
 #include "lex_string.h"
+#include "map_helpers.h"
 #include "my_alloc.h"
 #include "my_inttypes.h"
 #include "my_sys.h"
@@ -39,10 +42,12 @@
 #include "mysql/components/service.h"
 #include "mysql/components/services/mysql_string.h"
 #include "mysql/components/services/object_policy_service.h"
+#include "mysql/psi/mysql_mutex.h"
 #include "mysql/strings/m_ctype.h"
 #include "mysql/udf_registration_types.h"
 #include "mysql_com.h"
 #include "mysqld_error.h"
+#include "scope_guard.h"
 #include "sql/auth/sql_security_ctx.h"
 #include "sql/create_field.h"
 #include "sql/derror.h"
@@ -52,9 +57,11 @@
 #include "sql/item.h"
 #include "sql/item_cmpfunc.h"
 #include "sql/item_func.h"
+#include "sql/mem_root_array.h"
 #include "sql/mysqld.h"
 #include "sql/mysqld_cs.h"
 #include "sql/sp.h"
+#include "sql/sql_base.h"
 #include "sql/sql_class.h"
 #include "sql/sql_const.h"
 #include "sql/sql_error.h"
@@ -83,6 +90,58 @@ static bool equal_names_for_masking_policy(std::string_view name1,
                       pointer_cast<const uchar *>(name1.data()), name1.size(),
                       pointer_cast<const uchar *>(name2.data()),
                       name2.size()) == 0;
+}
+
+/// Iterate the Table Definition Cache (TDC) to find tables whose TABLE_SHARE
+/// has at least one field referencing the given masking policy name and
+/// invalidate those tables so they will be reopened with up-to-date metadata.
+///
+/// Locking and safety:
+/// - Acquire LOCK_open while scanning table_def_cache and reading TABLE_SHARE
+///   members; skip shares with m_open_in_progress.
+/// - Copy db/table names to thd->mem_root while holding LOCK_open; perform
+///   invalidation after unlocking to avoid lock ordering issues.
+/// - Use tdc_remove_table(..., TDC_RT_MARK_FOR_REOPEN_AND_INVALIDATE_SHARE,
+///   has_lock=false) to mark open TABLEs for reopen and invalidate the share.
+static bool invalidate_tables_with_masking_policy(
+    THD *thd, std::string_view policy_name) {
+  struct Table_name {
+    const char *db;
+    const char *table;
+  };
+  Mem_root_array<Table_name> to_invalidate(thd->mem_root);
+
+  {
+    mysql_mutex_lock(&LOCK_open);
+    const auto lock_guard =
+        create_scope_guard([]() { mysql_mutex_unlock(&LOCK_open); });
+    for (const auto &[_, share] : *table_def_cache) {
+      if (share->m_open_in_progress) continue;
+      if (!share->has_masking_policy_columns()) continue;
+
+      if (std::any_of(share->field, share->field + share->fields,
+                      [&](Field *f) {
+                        return equal_names_for_masking_policy(
+                            to_string_view(f->masking_policy()), policy_name);
+                      })) {
+        const char *db_copy =
+            strmake_root(thd->mem_root, share->db.str, share->db.length);
+        const char *tbl_copy = strmake_root(
+            thd->mem_root, share->table_name.str, share->table_name.length);
+        if (db_copy == nullptr || tbl_copy == nullptr ||
+            to_invalidate.push_back({.db = db_copy, .table = tbl_copy})) {
+          return true;
+        }
+      }
+    }
+  }
+
+  for (const auto &[db, table] : to_invalidate) {
+    tdc_remove_table(thd, TDC_RT_MARK_FOR_REOPEN_AND_INVALIDATE_SHARE, db,
+                     table, /*has_lock=*/false);
+  }
+
+  return false;
 }
 
 bool drop_masking_policy(THD *thd, LEX_CSTRING policy_name, bool if_exists) {
@@ -115,10 +174,10 @@ bool drop_masking_policy(THD *thd, LEX_CSTRING policy_name, bool if_exists) {
     return true;
   }
 
-  // TODO(khatlen): When DML support is added, make sure prepared statements
-  // referencing the dropped masking policy are invalidated here.
-
-  return false;
+  // Invalidate cached tables so that prepared statements using the dropped
+  // masking policy are reprepared in the next execution.
+  return invalidate_tables_with_masking_policy(thd,
+                                               to_string_view(policy_name));
 }
 
 std::optional<Sql_masking_policy_spec> get_masking_policy_spec(

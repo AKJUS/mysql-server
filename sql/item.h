@@ -26,6 +26,7 @@
 
 #include <sys/types.h>
 
+#include <cassert>
 #include <cfloat>
 #include <climits>
 #include <cmath>
@@ -3847,6 +3848,36 @@ class Item : public Parse_tree_node {
 
  public:
   /**
+    Apply column masking policy to this item if applicable.
+
+    @param thd Thread handle.
+    @return Item to use after masking (possibly this or a new Item), or
+    nullptr on error.
+  */
+  virtual Item *apply_masking_policy(THD *thd [[maybe_unused]]) { return this; }
+
+  /**
+    Disable application of the masking policy to this item. This is used to
+    prevent replacing an Item_field with a masking expression when resolving
+    target columns of INSERT, UPDATE or REPLACE, as these statements would still
+    need to be able to write to these columns, even though they should be masked
+    when being read.
+  */
+  virtual void disable_masking_policy() {}
+
+  /**
+    Mark this expression as a masking expression for some other expression.
+    @param masked_item The item that should be masked by this expression.
+  */
+  virtual void set_masking_expression_for(const Item_field *masked_item
+                                          [[maybe_unused]]) {
+    // Only expected to be called on the top-level item of the masking policy
+    // expression as specified in a CREATE MASKING POLICY statement. At the time
+    // of writing, this has to be an Item_func_case.
+    assert(false);
+  }
+
+  /**
     Check if this expression can be used for partial update of a given
     JSON column.
 
@@ -4565,6 +4596,9 @@ class Item_field : public Item_ident {
   */
   bool m_was_sp_local_variable{false};
 
+  /// apply_masking_policy() is a no-op if this flag is true.
+  bool m_masking_policy_disabled{false};
+
  public:
   /**
     Index for this field in table->field array. Holds NO_FIELD_INDEX
@@ -4783,6 +4817,8 @@ class Item_field : public Item_ident {
 
   bool repoint_const_outer_ref(uchar *arg) override;
   bool returns_array() const override { return field && field->is_array(); }
+  Item *apply_masking_policy(THD *thd) override;
+  void disable_masking_policy() override { m_masking_policy_disabled = true; }
 
   void set_can_use_prefix_key() override { can_use_prefix_key = true; }
 

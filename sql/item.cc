@@ -29,6 +29,7 @@
 #include "my_compiler.h"
 #include "my_config.h"
 #include "sql/hash.h"
+#include "sql/sql_masking_policy.h"
 
 #include <stdio.h>
 #ifdef HAVE_SYS_TIME_H
@@ -6442,6 +6443,10 @@ bool Item_field::fix_fields(THD *thd, Item **reference) {
     // outer joins need to be nullable.
     field->table->set_nullable();
   }
+
+  Item *masked = apply_masking_policy(thd);
+  if (masked == nullptr) return true;
+  *reference = masked;
   return false;
 }
 
@@ -8530,7 +8535,8 @@ void Item_field::print(const THD *thd, String *str,
   }
 
   if (field != nullptr && field->table != nullptr &&
-      field->table->const_table && !(query_type & QT_NO_DATA_EXPANSION)) {
+      field->table->const_table && !(query_type & QT_NO_DATA_EXPANSION) &&
+      !field->has_masking_policy()) {
     char buff[MAX_FIELD_WIDTH];
     String tmp(buff, sizeof(buff), str->charset());
     if (field->is_null())
@@ -11826,4 +11832,26 @@ bool AllItemsAreEqual(const Item *const *a, const Item *const *b,
     }
   }
   return true;
+}
+
+Item *Item_field::apply_masking_policy(THD *thd) {
+  if (m_masking_policy_disabled || !field->has_masking_policy() ||
+      thd->lex->is_view_context_analysis()) {
+    return this;
+  }
+
+  std::string reason;
+  std::optional<Sql_masking_policy_spec> spec_opt =
+      get_masking_policy_spec(thd, field->masking_policy(), &reason);
+  if (!spec_opt.has_value()) {
+    my_error(ER_MASKING_POLICY_COMPONENT_ERROR, MYF(0), reason.c_str());
+    return nullptr;
+  }
+
+  Item *mask_expr = resolve_masking_expression(thd, this, *spec_opt);
+  if (mask_expr == nullptr) return nullptr;
+  mask_expr->hidden = hidden;
+  mask_expr->item_name = item_name;
+  mask_expr->set_masking_expression_for(this);
+  return mask_expr;
 }

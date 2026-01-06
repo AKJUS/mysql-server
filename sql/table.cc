@@ -2494,6 +2494,17 @@ static bool fix_value_generator_fields(THD *thd, TABLE *table,
   if (field && field->is_field_for_functional_index())
     val_generator_expr->allow_array_cast();
 
+  // Disable application of masking policies while resolving the expression.
+  // Masked columns aren't allowed in the value generator expressions in the
+  // first place, but we can't check for their presence until after the
+  // expression has been resolved. The purpose of the disabling is to get
+  // clearer error messages, as resolving the expression with masking applied is
+  // likely to fail with an error that does not explain the actual issue.
+  WalkItem(val_generator_expr, enum_walk::PREFIX, [](Item *item) {
+    item->disable_masking_policy();
+    return false;
+  });
+
   // Fix the fields for the value generator expression
   Item *new_func = val_generator_expr;
   const int fix_fields_error = val_generator_expr->fix_fields(thd, &new_func);

@@ -2120,6 +2120,9 @@ class Item_func_case final : public Item_func {
   DTCollation cmp_collation;
   cmp_item *cmp_items[5]; /* For all result types */
   cmp_item *case_item;
+  /// Pointer to the column reference being masked by this CASE statement, if it
+  /// originates from a CREATE MASKING POLICY statement. Otherwise, nullptr.
+  const Item_field *m_masking_expression_for{nullptr};
 
  protected:
   void add_json_info(Json_object *obj) override {
@@ -2177,6 +2180,9 @@ class Item_func_case final : public Item_func {
     return cmp_collation.collation;
   }
   enum Functype functype() const override { return CASE_FUNC; }
+  void set_masking_expression_for(const Item_field *masked_item) final {
+    m_masking_expression_for = masked_item;
+  }
 };
 
 /**

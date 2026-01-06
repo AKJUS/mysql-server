@@ -161,3 +161,126 @@ ALTER TABLE t ADD COLUMN l INT MASKING POLICY
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
 ERROR 42000: Identifier name 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' is too long
 DROP TABLE t;
+# Tests for DML statements on a table with a masked column. Since the
+# needed component is not installed, attempts to read the masked
+# column should fail. Statements that don't attempt to read the masked
+# column should succeed, even those that write to the masked columns.
+CREATE TABLE t1 (i INT MASKING POLICY p1, j INT);
+SELECT j FROM t1;
+j
+SELECT * FROM t1;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+SELECT i FROM t1;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+SELECT j FROM t1 WHERE i < 10;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+SELECT j FROM t1 ORDER BY i;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+SELECT SUM(i) FROM t1;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+SELECT SUM(j) FROM t1 GROUP BY i;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+SELECT FIRST_VALUE(i) OVER () FROM t1;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+SELECT ROW_NUMBER() OVER (PARTITION BY i) FROM t1;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+SELECT ROW_NUMBER() OVER (ORDER BY i) FROM t1;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+SELECT 1 FROM t1 JOIN t1 AS t2 USING (i);
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+SELECT 1 FROM t1 NATURAL JOIN t1 AS t2;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+INSERT INTO t1 VALUES (), ();
+INSERT INTO t1 VALUES (1, 2), (2, 3);
+INSERT INTO t1(i) VALUES (3);
+INSERT INTO t1(j) VALUES (4);
+INSERT INTO t1 SELECT * FROM t1;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+INSERT INTO t1(j) SELECT j FROM t1 WHERE i <> 0;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+INSERT INTO t1 SELECT j, j FROM t1 WHERE j <> 0;
+ALTER TABLE t1 ALTER COLUMN i DROP MASKING POLICY;
+SELECT * FROM t1;
+i	j
+1	2
+2	2
+2	3
+3	3
+3	NULL
+4	4
+NULL	4
+NULL	NULL
+NULL	NULL
+ALTER TABLE t1 ALTER COLUMN i SET MASKING POLICY p1;
+UPDATE t1 SET j = i;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+UPDATE t1, t1 AS t2 SET t1.j = t2.i;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+UPDATE t1 SET i = i + 1;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+UPDATE t1, t1 AS t2 SET t1.i = t2.i + 1;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+UPDATE t1 SET j = i + 1;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+UPDATE t1 SET j = i + 2;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+UPDATE t1 SET j = j + 1 WHERE i < 10;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+UPDATE t1 SET i = j + 1;
+ALTER TABLE t1 ALTER COLUMN i DROP MASKING POLICY;
+SELECT * FROM t1;
+i	j
+3	2
+3	2
+4	3
+4	3
+5	4
+5	4
+NULL	NULL
+NULL	NULL
+NULL	NULL
+ALTER TABLE t1 ALTER COLUMN i SET MASKING POLICY p1;
+UPDATE t1, t1 AS t2 SET t1.i = t2.j + 2 WHERE t1.j = t2.j;
+ALTER TABLE t1 ALTER COLUMN i DROP MASKING POLICY;
+SELECT * FROM t1;
+i	j
+4	2
+4	2
+5	3
+5	3
+6	4
+6	4
+NULL	NULL
+NULL	NULL
+NULL	NULL
+ALTER TABLE t1 ALTER COLUMN i SET MASKING POLICY p1;
+DELETE FROM t1 WHERE i < j;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+DELETE t1 FROM t1, t1 AS t2 WHERE t1.i < t2.j;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+DELETE t2 FROM t1, t1 AS t2 WHERE t1.i < t2.j;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+DELETE FROM t1 WHERE t1.j > 3;
+DELETE t1 FROM t1, t1 AS t2 WHERE t1.j = t2.j AND t2.j < 3;
+ALTER TABLE t1 ALTER COLUMN i DROP MASKING POLICY;
+SELECT * FROM t1;
+i	j
+5	3
+5	3
+NULL	NULL
+NULL	NULL
+NULL	NULL
+ALTER TABLE t1 ALTER COLUMN i SET MASKING POLICY p1;
+DROP TABLE t1;
+CREATE TABLE t2(id INT PRIMARY KEY, a INT MASKING POLICY p1, b INT);
+INSERT INTO t2 VALUES (1, 1, 1), (2, 2, 2), (3, 3, 3);
+INSERT INTO t2 (id) VALUES (1) ON DUPLICATE KEY UPDATE b = a + 1;
+ERROR HY000: MASKING POLICY component error: component is unavailable.
+INSERT INTO t2 (id) VALUES (2) ON DUPLICATE KEY UPDATE a = b + 1;
+ALTER TABLE t2 ALTER COLUMN a DROP MASKING POLICY;
+SELECT * FROM t2 ORDER BY id;
+id	a	b
+1	1	1
+2	3	2
+3	3	3
+DROP TABLE t2;

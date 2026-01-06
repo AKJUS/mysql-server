@@ -4575,6 +4575,14 @@ TYPELIB *Item_func_case::get_typelib() const {
 
 void Item_func_case::print(const THD *thd, String *str,
                            enum_query_type query_type) const {
+  if (m_masking_expression_for != nullptr) {
+    // Since SHOW CREATE MASKING policy requires a privilege, don't reveal the
+    // masking policy in EXPLAIN or traces.
+    str->append("<masked>(");
+    m_masking_expression_for->print(thd, str, query_type);
+    str->append(')');
+    return;
+  }
   str->append(STRING_WITH_LEN("(case "));
   if (first_expr_num != -1) {
     args[first_expr_num]->print(thd, str, query_type);

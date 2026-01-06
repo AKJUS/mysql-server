@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <algorithm>
 #include <atomic>
 #include <functional>
 #include <memory>
@@ -141,6 +142,7 @@
 #include "sql/sql_handler.h"  // mysql_ha_flush_tables
 #include "sql/sql_lex.h"
 #include "sql/sql_list.h"
+#include "sql/sql_masking_policy.h"
 #include "sql/sql_parse.h"    // is_update_query
 #include "sql/sql_prepare.h"  // Reprepare_observer
 #include "sql/sql_select.h"   // reset_statement_timer
@@ -8755,7 +8757,6 @@ static bool mark_common_columns(THD *thd, Table_ref *table_ref_1,
   Field_iterator_table_ref it_1, it_2;
   Natural_join_column *nj_col_1, *nj_col_2;
   bool first_outer_loop = true;
-  List<Field> fields;
   /*
     Leaf table references to which new natural join columns are added
     if the leaves are != NULL.
@@ -8871,8 +8872,6 @@ static bool mark_common_columns(THD *thd, Table_ref *table_ref_1,
 
       Field *field_1 = nj_col_1->field();
       Field *field_2 = nj_col_2->field();
-      fields.push_back(field_1);
-      fields.push_back(field_2);
       /*
         Create and hook special name resolution contexts to each item in the
         new join condition . We need this to both speed-up subsequent name
@@ -8883,10 +8882,12 @@ static bool mark_common_columns(THD *thd, Table_ref *table_ref_1,
           set_new_item_local_context(thd, item_2, nj_col_2->table_ref))
         return true;
 
-      Item_func_eq *eq_cond = new Item_func_eq(item_1, item_2);
-      if (eq_cond == nullptr) {
-        return true;
-      }
+      Item *eq_arg1 = item_1->apply_masking_policy(thd);
+      if (eq_arg1 == nullptr) return true;
+      Item *eq_arg2 = item_2->apply_masking_policy(thd);
+      if (eq_arg2 == nullptr) return true;
+      auto *eq_cond = new Item_func_eq{eq_arg1, eq_arg2};
+      if (eq_cond == nullptr) return true;
       /*
         Add the new equi-join condition to the join condition. Notice that
         fix_fields() is applied to all join conditions in setup_conds()
@@ -9354,6 +9355,12 @@ bool setup_fields(THD *thd, Access_bitmask want_privilege, bool allow_sum_func,
   const bool save_is_item_list_lookup = select->is_item_list_lookup;
   select->is_item_list_lookup = false;
 
+  if (column_update) {
+    // Don't replace target columns of INSERT, UPDATE, etc, with masking
+    // expressions, as that would prevent writing new values to masked columns.
+    std::ranges::for_each(*fields, &Item::disable_masking_policy);
+  }
+
   /*
     To prevent fail on forward lookup we fill it with zeros,
     then if we got pointer on zero after find_item_in_list we will know
@@ -9725,7 +9732,7 @@ bool insert_fields(THD *thd, Query_block *query_block, const char *db_name,
     field_iterator.set(tables);
 
     for (; !field_iterator.end_of_fields(); field_iterator.next()) {
-      Item *const item = field_iterator.create_item(thd);
+      Item *item = field_iterator.create_item(thd);
       if (!item) return true; /* purecov: inspected */
       assert(item->fixed);
 
@@ -9799,6 +9806,10 @@ bool insert_fields(THD *thd, Query_block *query_block, const char *db_name,
         item->walk(&Item::mark_field_in_map, enum_walk::SUBQUERY_POSTFIX,
                    (uchar *)&mf);
       }
+
+      Item *mask_expr = item->apply_masking_policy(thd);
+      if (mask_expr == nullptr) return true;
+      **it = mask_expr;
     }
   }
   if (found) return false;

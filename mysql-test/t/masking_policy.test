@@ -132,3 +132,114 @@ ALTER TABLE t ADD COLUMN l INT MASKING POLICY
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
 
 DROP TABLE t;
+
+--echo # Tests for DML statements on a table with a masked column. Since the
+--echo # needed component is not installed, attempts to read the masked
+--echo # column should fail. Statements that don't attempt to read the masked
+--echo # column should succeed, even those that write to the masked columns.
+
+CREATE TABLE t1 (i INT MASKING POLICY p1, j INT);
+
+# Should pass. Does not access any column with a masking policy.
+SELECT j FROM t1;
+
+# The rest should fail because they access a column with a masking
+# policy that does not exist.
+--error ER_MASKING_POLICY_COMPONENT_ERROR
+SELECT * FROM t1;
+--error ER_MASKING_POLICY_COMPONENT_ERROR
+SELECT i FROM t1;
+--error ER_MASKING_POLICY_COMPONENT_ERROR
+SELECT j FROM t1 WHERE i < 10;
+--error ER_MASKING_POLICY_COMPONENT_ERROR
+SELECT j FROM t1 ORDER BY i;
+--error ER_MASKING_POLICY_COMPONENT_ERROR
+SELECT SUM(i) FROM t1;
+--error ER_MASKING_POLICY_COMPONENT_ERROR
+SELECT SUM(j) FROM t1 GROUP BY i;
+--error ER_MASKING_POLICY_COMPONENT_ERROR
+SELECT FIRST_VALUE(i) OVER () FROM t1;
+--error ER_MASKING_POLICY_COMPONENT_ERROR
+SELECT ROW_NUMBER() OVER (PARTITION BY i) FROM t1;
+--error ER_MASKING_POLICY_COMPONENT_ERROR
+SELECT ROW_NUMBER() OVER (ORDER BY i) FROM t1;
+--error ER_MASKING_POLICY_COMPONENT_ERROR
+SELECT 1 FROM t1 JOIN t1 AS t2 USING (i);
+--error ER_MASKING_POLICY_COMPONENT_ERROR
+SELECT 1 FROM t1 NATURAL JOIN t1 AS t2;
+
+# INSERT, UPDATE, DELETE on tables with unavailable masking policies
+# is allowed, as long as they don't need to read a masked column.
+INSERT INTO t1 VALUES (), ();
+INSERT INTO t1 VALUES (1, 2), (2, 3);
+INSERT INTO t1(i) VALUES (3);
+INSERT INTO t1(j) VALUES (4);
+--error ER_MASKING_POLICY_COMPONENT_ERROR
+INSERT INTO t1 SELECT * FROM t1;
+--error ER_MASKING_POLICY_COMPONENT_ERROR
+INSERT INTO t1(j) SELECT j FROM t1 WHERE i <> 0;
+INSERT INTO t1 SELECT j, j FROM t1 WHERE j <> 0;
+
+# Verify that the INSERT statements succeeded.
+ALTER TABLE t1 ALTER COLUMN i DROP MASKING POLICY;
+--sorted_result
+SELECT * FROM t1;
+ALTER TABLE t1 ALTER COLUMN i SET MASKING POLICY p1;
+
+--error ER_MASKING_POLICY_COMPONENT_ERROR
+UPDATE t1 SET j = i;
+--error ER_MASKING_POLICY_COMPONENT_ERROR
+UPDATE t1, t1 AS t2 SET t1.j = t2.i;
+--error ER_MASKING_POLICY_COMPONENT_ERROR
+UPDATE t1 SET i = i + 1;
+--error ER_MASKING_POLICY_COMPONENT_ERROR
+UPDATE t1, t1 AS t2 SET t1.i = t2.i + 1;
+--error ER_MASKING_POLICY_COMPONENT_ERROR
+UPDATE t1 SET j = i + 1;
+--error ER_MASKING_POLICY_COMPONENT_ERROR
+UPDATE t1 SET j = i + 2;
+--error ER_MASKING_POLICY_COMPONENT_ERROR
+UPDATE t1 SET j = j + 1 WHERE i < 10;
+
+UPDATE t1 SET i = j + 1;
+
+# Verify that the single-table UPDATE statement succeeded.
+ALTER TABLE t1 ALTER COLUMN i DROP MASKING POLICY;
+--sorted_result
+SELECT * FROM t1;
+ALTER TABLE t1 ALTER COLUMN i SET MASKING POLICY p1;
+
+UPDATE t1, t1 AS t2 SET t1.i = t2.j + 2 WHERE t1.j = t2.j;
+
+# Verify that the multi-table UPDATE statement succeeded.
+ALTER TABLE t1 ALTER COLUMN i DROP MASKING POLICY;
+--sorted_result
+SELECT * FROM t1;
+ALTER TABLE t1 ALTER COLUMN i SET MASKING POLICY p1;
+
+--error ER_MASKING_POLICY_COMPONENT_ERROR
+DELETE FROM t1 WHERE i < j;
+--error ER_MASKING_POLICY_COMPONENT_ERROR
+DELETE t1 FROM t1, t1 AS t2 WHERE t1.i < t2.j;
+--error ER_MASKING_POLICY_COMPONENT_ERROR
+DELETE t2 FROM t1, t1 AS t2 WHERE t1.i < t2.j;
+
+DELETE FROM t1 WHERE t1.j > 3;
+DELETE t1 FROM t1, t1 AS t2 WHERE t1.j = t2.j AND t2.j < 3;
+
+# Verify that the DELETE statements succeeded.
+ALTER TABLE t1 ALTER COLUMN i DROP MASKING POLICY;
+--sorted_result
+SELECT * FROM t1;
+ALTER TABLE t1 ALTER COLUMN i SET MASKING POLICY p1;
+
+DROP TABLE t1;
+
+CREATE TABLE t2(id INT PRIMARY KEY, a INT MASKING POLICY p1, b INT);
+INSERT INTO t2 VALUES (1, 1, 1), (2, 2, 2), (3, 3, 3);
+--error ER_MASKING_POLICY_COMPONENT_ERROR
+INSERT INTO t2 (id) VALUES (1) ON DUPLICATE KEY UPDATE b = a + 1;
+INSERT INTO t2 (id) VALUES (2) ON DUPLICATE KEY UPDATE a = b + 1;
+ALTER TABLE t2 ALTER COLUMN a DROP MASKING POLICY;
+SELECT * FROM t2 ORDER BY id;
+DROP TABLE t2;
