@@ -1586,7 +1586,7 @@ bool acl_getroot(THD *thd, Security_context *sctx, const char *user,
     get_default_roles(authid, default_roles);
     List_of_auth_id_refs::iterator it = default_roles.begin();
     for (; it != default_roles.end(); ++it) {
-      if (sctx->activate_role(it->first, it->second)) {
+      if (sctx->activate_role(it->first, it->second, false)) {
         sctx->clear_active_roles();
         break;
       }

@@ -1391,6 +1391,8 @@ static const std::pair<const char *, Create_func *> func_array[] = {
     {"COT", SQL_FN(Item_func_cot, 1)},
     {"CRC32", SQL_FN(Item_func_crc32, 1)},
     {"CURRENT_ROLE", SQL_FN(Item_func_current_role, 0)},
+    {"CURRENT_ROLE_IN", SQL_FN(Item_func_current_role_in, 1)},
+    {"CURRENT_USER_IN", SQL_FN(Item_func_current_user_in, 1)},
     {"DATEDIFF", SQL_FACTORY(Datediff_instantiator)},
     {"DATE_FORMAT", SQL_FN(Item_func_date_format, 2)},
     {"DAYNAME", SQL_FN(Item_func_dayname, 1)},

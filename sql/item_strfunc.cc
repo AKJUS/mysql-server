@@ -45,6 +45,7 @@
 #include <memory>
 #include <ostream>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>  // vector
 
@@ -107,6 +108,7 @@
 #include "sql/events.h"          // Events::reconstruct_interval_expression
 #include "sql/filesort.h"
 #include "sql/handler.h"
+#include "sql/item_func.h"
 #include "sql/json_duality_view/i_s.h"  // get_json_duality_view_property
 #include "sql/mysqld.h"
 #include "sql/parse_tree_node_base.h"               // Parse_context
@@ -114,7 +116,8 @@
 #include "sql/rpl_gtid.h"
 #include "sql/sort_param.h"
 #include "sql/sql_base.h"
-#include "sql/sql_class.h"          // THD
+#include "sql/sql_class.h"  // THD
+#include "sql/sql_const.h"
 #include "sql/sql_digest.h"         // get_max_digest_length
 #include "sql/sql_digest_stream.h"  // sql_digest_state
 #include "sql/sql_error.h"
@@ -5727,4 +5730,44 @@ String *Item_func_internal_get_dd_column_extra::val_str(String *str) {
   str->copy(oss.str().c_str(), oss.str().length(), system_charset_info);
 
   return str;
+}
+
+bool Item_func_current_auth_id_type_in::do_itemize(Parse_context *pc,
+                                                   Item **res) {
+  if (skip_itemize(res)) return false;
+  if (super::do_itemize(pc, res)) return true;
+
+  m_name_resolution_ctx = pc->thd->lex->current_context();
+  return false;
+}
+
+longlong Item_func_current_auth_id_type_in::val_int() {
+  assert(fixed);
+  assert(arg_count == 1);
+
+  StringBuffer<STRING_BUFFER_USUAL_SIZE> buffer;
+  String *arg_str = eval_string_arg(system_charset_info, args[0], &buffer);
+  if (arg_str == nullptr) {
+    return error_int();
+  }
+  null_value = false;
+
+  const Security_context *sctx =
+      (m_name_resolution_ctx->security_ctx != nullptr)
+          ? m_name_resolution_ctx->security_ctx
+          : current_thd->security_context();
+
+  return auth_id_in(*sctx, to_string_view(*arg_str)) ? 1 : 0;
+}
+
+bool Item_func_current_user_in::auth_id_in(
+    const Security_context &sctx,
+    std::string_view comma_separated_auth_id_list) const {
+  return sctx.is_current_user_part_of(comma_separated_auth_id_list);
+}
+
+bool Item_func_current_role_in::auth_id_in(
+    const Security_context &sctx,
+    std::string_view comma_separated_auth_id_list) const {
+  return sctx.is_current_role_part_of(comma_separated_auth_id_list);
 }

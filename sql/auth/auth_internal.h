@@ -262,7 +262,6 @@ bool operator==(const Role_id &a, const Auth_id_ref &b);
 bool operator==(const Auth_id_ref &a, const Role_id &b);
 bool operator==(const std::pair<const Role_id, Role_id> &a,
                 const Auth_id_ref &b);
-bool operator==(const Role_id &a, const Role_id &b);
 bool operator==(std::pair<const Role_id, std::pair<std::string, bool>> &a,
                 const std::string &b);
 typedef std::vector<std::pair<Role_id, bool>> List_of_granted_roles;
@@ -302,7 +301,6 @@ bool modify_role_edges_in_table(THD *thd, TABLE *table,
                                 const Auth_id_ref &from_user,
                                 const Auth_id_ref &to_user,
                                 bool with_admin_option, bool delete_option);
-Auth_id_ref create_authid_from(const Role_id &user);
 Auth_id_ref create_authid_from(const LEX_CSTRING &user,
                                const LEX_CSTRING &host);
 bool roles_rename_authid(THD *thd, TABLE *edge_table, TABLE *defaults_table,
