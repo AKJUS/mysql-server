@@ -1,6 +1,6 @@
 /*****************************************************************************
 
-Copyright (c) 2020, 2025, Oracle and/or its affiliates.
+Copyright (c) 2020, 2026, Oracle and/or its affiliates.
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License, version 2.0, as published by the
@@ -392,10 +392,8 @@ struct Builder {
 
   /** Check for duplicates in the first block
   @param[in] dupcheck           Files to check for duplicates.
-  @param[in,out] dup            For collecting duplicate key information.
   @return DB_SUCCESS or error code. */
-  [[nodiscard]] dberr_t check_duplicates(Thread_ctxs &dupcheck,
-                                         Dup *dup) noexcept;
+  [[nodiscard]] dberr_t check_duplicates(Thread_ctxs &dupcheck) noexcept;
 
   /** Cleanup DDL after error in online build
   Note: To be called if DDL must cleanup due to error in online build. Pages

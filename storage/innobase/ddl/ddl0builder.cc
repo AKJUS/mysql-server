@@ -1,6 +1,6 @@
 /*****************************************************************************
 
-Copyright (c) 2020, 2025, Oracle and/or its affiliates.
+Copyright (c) 2020, 2026, Oracle and/or its affiliates.
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License, version 2.0, as published by the
@@ -1701,10 +1701,11 @@ dberr_t Builder::dtuple_copy_blobs(dtuple_t *dtuple, ulint *offsets,
   return DB_SUCCESS;
 }
 
-dberr_t Builder::check_duplicates(Thread_ctxs &dupcheck, Dup *dup) noexcept {
+dberr_t Builder::check_duplicates(Thread_ctxs &dupcheck) noexcept {
   Merge_cursor cursor(this, nullptr, m_local_stage);
   const auto buffer_size = m_ctx.scan_buffer_size(m_thread_ctxs.size());
 
+  Dup dup = {m_index, m_ctx.m_table, m_ctx.m_col_map, 0};
   size_t n_files_to_check{};
 
   for (auto thread_ctx : dupcheck) {
@@ -1730,7 +1731,7 @@ dberr_t Builder::check_duplicates(Thread_ctxs &dupcheck, Dup *dup) noexcept {
 
   /* For secondary indexes we have to compare all the columns for the index,
   this includes the cluster index primary key columns too. */
-  Compare_key compare_key(m_index, dup, !m_sort_index->is_clustered());
+  Compare_key compare_key(m_index, &dup, !m_sort_index->is_clustered());
 
   const auto n_compare = dict_index_get_n_unique_in_tree(m_index);
 
@@ -1745,6 +1746,9 @@ dberr_t Builder::check_duplicates(Thread_ctxs &dupcheck, Dup *dup) noexcept {
         return DB_CORRUPTION;
       }
       if (cmp == 0) {
+        if (set_error(DB_DUPLICATE_KEY)) {
+          dup.report();
+        }
         return DB_DUPLICATE_KEY;
       }
     }
@@ -1853,7 +1857,6 @@ dberr_t Builder::create_merge_sort_tasks() noexcept {
 
   Thread_ctxs dupcheck{};
   size_t n_runs_to_merge{};
-  Dup dup = {m_index, m_ctx.m_table, m_ctx.m_col_map, 0};
 
   for (auto thread_ctx : m_thread_ctxs) {
     ut_a(thread_ctx->m_file.m_n_recs == 0);
@@ -1890,12 +1893,9 @@ dberr_t Builder::create_merge_sort_tasks() noexcept {
            (n_single == 0 && n_multiple + n_empty == dupcheck.size()));
     }
 #endif /* UNIV_DEBUG */
-    auto err = check_duplicates(dupcheck, &dup);
+    auto err = check_duplicates(dupcheck);
 
     if (err != DB_SUCCESS) {
-      if (err == DB_DUPLICATE_KEY) {
-        dup.report();
-      }
       return err;
     }
   }
