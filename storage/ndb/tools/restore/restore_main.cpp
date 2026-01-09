@@ -2569,7 +2569,7 @@ static void *start_restore_worker(void *data) {
   RestoreThreadData *rdata = (RestoreThreadData *)data;
   rdata->m_result = do_restore(rdata);
   if (rdata->m_result == NdbToolsProgramExitCode::FAILED) {
-    info << "Thread " << rdata->m_part_id << " failed, exiting" << endl;
+    info.println("Thread %u failed, exiting", rdata->m_part_id);
     ga_error_thread = rdata->m_part_id;
   }
   return 0;
