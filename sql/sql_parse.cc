@@ -3060,12 +3060,17 @@ int mysql_execute_command(THD *thd, bool first_level) {
   /*
     If there is a CREATE TABLE...START TRANSACTION command which
     is not yet committed or rollbacked, then we should allow only
-    BINLOG INSERT, COMMIT or ROLLBACK command.
+    EMPTY QUERY, BINLOG INSERT, COMMIT and ROLLBACK commands.
+
+    Note: Empty query is possible during binlog replay as mysql client
+    can send queries starting with comments (particularly '#').
+
     TODO: Should we really check name of table when we cable BINLOG INSERT ?
   */
   if (thd->m_transactional_ddl.inited() && lex->sql_command != SQLCOM_COMMIT &&
       lex->sql_command != SQLCOM_ROLLBACK &&
-      lex->sql_command != SQLCOM_BINLOG_BASE64_EVENT) {
+      lex->sql_command != SQLCOM_BINLOG_BASE64_EVENT &&
+      lex->sql_command != SQLCOM_EMPTY_QUERY) {
     my_error(ER_STATEMENT_NOT_ALLOWED_AFTER_START_TRANSACTION, MYF(0));
     binlog_gtid_end_transaction(thd);
     return 1;
