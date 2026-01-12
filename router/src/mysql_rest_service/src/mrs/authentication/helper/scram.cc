@@ -30,6 +30,7 @@
 #include <vector>
 
 #include "helper/container/generic.h"
+#include "helper/json/error.h"
 #include "helper/json/rapid_json_to_struct.h"
 #include "helper/json/serializer_to_text.h"
 #include "helper/json/text_to.h"
@@ -235,9 +236,12 @@ class ScramJsonParser : public ScramParser {
       const std::string &auth_data) override {
     auto result = helper::json::text_to_handler<JsonAuthInitRequest>(auth_data);
 
-    auth_message_auth_init = scram_pack(result);
+    if (!result.has_value()) throw helper::json::ErrorJsonParse(result.error());
 
-    return result;
+    const auto &client_auth_init = *result;
+    auth_message_auth_init = scram_pack(client_auth_init);
+
+    return client_auth_init;
   }
 
   std::string set_challange(const ScramServerAuthChallange &challange,
@@ -259,8 +263,13 @@ class ScramJsonParser : public ScramParser {
 
   ScramClientAuthContinue set_continue(const std::string &auth_data) override {
     auto result = helper::json::text_to_handler<JsonAuthContinue>(auth_data);
-    auth_message_continue = scram_pack(result);
-    return result;
+
+    if (!result.has_value()) throw helper::json::ErrorJsonParse(result.error());
+
+    const auto &client_auth_continue = *result;
+    auth_message_continue = scram_pack(client_auth_continue);
+
+    return client_auth_continue;
   }
 
   bool is_json() const override { return true; }

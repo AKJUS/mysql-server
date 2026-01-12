@@ -34,6 +34,21 @@ namespace endpoint {
 
 using OptionalIndexNames = OptionEndpoint::OptionalIndexNames;
 
+static json::ParseFileSharingOptions::Result parse_file_sharing_options(
+    const std::string &options) {
+  auto result =
+      helper::json::text_to_handler<mrs::json::ParseFileSharingOptions>(
+          options);
+
+  if (!result) {
+    log_error(
+        "Failed to parse 'OptionEndpoint' options from db_objects JSON "
+        "configuration");
+  }
+
+  return result.value_or(mrs::json::ParseFileSharingOptions::Result{});
+}
+
 OptionEndpoint::OptionEndpoint(UniversalId service_id,
                                EndpointConfigurationPtr configuration,
                                HandlerFactoryPtr factory)
@@ -65,8 +80,7 @@ void OptionEndpoint::update() {
     using namespace helper::json;
     using namespace mrs::json;
 
-    // Get options for current endpoint.
-    auto fs = text_to_handler<ParseFileSharingOptions>(opt.value());
+    auto fs = parse_file_sharing_options(opt.value());
 
     directory_indexes_ = fs.directory_index_directive_;
 

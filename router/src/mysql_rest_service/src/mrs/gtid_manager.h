@@ -245,7 +245,15 @@ class GtidManager {
   };
 
   GtidOptions parse_json_options(const std::string &options) {
-    return helper::json::text_to_handler<ParseGtidOptions>(options);
+    auto result = helper::json::text_to_handler<ParseGtidOptions>(options);
+
+    if (!result) {
+      log_error(
+          "Failed to parse 'GtidManager' options from global JSON "
+          "configuration");
+    }
+
+    return result.value_or(ParseGtidOptions::Result());
   }
 
   bool needs_update(AddressContext *ctxt) {

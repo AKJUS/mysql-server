@@ -47,6 +47,7 @@
 #include "helper/container/generic.h"
 #include "helper/container/map.h"
 #include "helper/generate_uuid.h"
+#include "helper/json/error.h"
 #include "helper/json/rapid_json_to_map.h"
 #include "helper/json/rapid_json_to_struct.h"
 #include "helper/json/text_to.h"
@@ -56,6 +57,7 @@
 #include "helper/token/jwt.h"
 
 #include "http/base/headers.h"
+#include "http/base/method.h"
 #include "mysql/harness/logging/logging.h"
 #include "mysql/harness/string_utils.h"
 
@@ -191,7 +193,15 @@ class ParseAuthenticationOptions
 };
 
 auto parse_json_options(const std::string &options) {
-  return helper::json::text_to_handler<ParseAuthenticationOptions>(options);
+  auto result =
+      helper::json::text_to_handler<ParseAuthenticationOptions>(options);
+
+  if (!result) {
+    log_error(
+        "Failed to parse 'AuthorizeManager' from global JSON configuration");
+  }
+
+  return result.value_or(ParseAuthenticationOptions::Result{});
 }
 
 void throw_max_rate_exceeded(milliseconds ms) {
@@ -688,7 +698,8 @@ AuthorizeParameters extract_parameters(const Container &container,
   return result;
 }
 
-AuthorizeParameters get_authorize_parameters(::http::base::Request *request) {
+AuthorizeParameters get_authorize_parameters(rest::RequestContext &ctxt) {
+  auto request = ctxt.request;
   const auto method = request->get_method();
   const auto &uri = request->get_uri();
 
@@ -702,8 +713,7 @@ AuthorizeParameters get_authorize_parameters(::http::base::Request *request) {
   //  }
   if (method != HttpMethod::Get && method != HttpMethod::Post)
     throw http::Error{HttpStatusCode::BadRequest,
-                      "Bad request - authorization must be either done in POST "
-                      "or GET request."};
+                      "Authorization must be done using POST or GET request."};
 
   if (method == HttpMethod::Get) {
     return extract_parameters(uri.get_query_elements(), true);
@@ -713,7 +723,16 @@ AuthorizeParameters get_authorize_parameters(::http::base::Request *request) {
   auto body_object_fields = helper::json::text_to_handler<
       helper::json::RapidReaderHandlerToMapOfSimpleValues>(
       request->get_input_body());
-  return extract_parameters(body_object_fields);
+
+  if (!body_object_fields) {
+    // The 'post_authentication' flag is a temporary workaround for the issue
+    // with redirection after an invalid POST authentication request.
+    // It will be removed once the proper fix is implemented.
+    ctxt.post_authentication = true;
+    throw helper::json::ErrorJsonParse();
+  }
+
+  return extract_parameters(*body_object_fields);
 }
 
 SessionPtr AuthorizeManager::get_session_id_from_cookie(
@@ -740,7 +759,6 @@ bool AuthorizeManager::authorize(const std::string &proto,
     log_debug("Session source: cookie");
     ctxt.session = session;
   }
-
   log_debug(
       "AuthorizeManager::authorize(service_id:%s, session_id:%s, "
       "can_use_jwt:%s)",
@@ -749,8 +767,7 @@ bool AuthorizeManager::authorize(const std::string &proto,
 
   AuthorizeHandlerPtr selected_handler;
 
-  auto [use_jwt, url_session_id, auth_app] =
-      get_authorize_parameters(ctxt.request);
+  auto [use_jwt, url_session_id, auth_app] = get_authorize_parameters(ctxt);
 
   log_debug(
       "AuthorizeManager::authorize - use_jwt:%s, url_session_id:%s, "

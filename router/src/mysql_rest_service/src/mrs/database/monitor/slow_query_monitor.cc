@@ -76,7 +76,15 @@ class ParseSlowQueryOptions
 };
 
 auto parse_slow_query_options(const std::string &options) {
-  return helper::json::text_to_handler<ParseSlowQueryOptions>(options);
+  auto result = helper::json::text_to_handler<ParseSlowQueryOptions>(options);
+
+  if (!result) {
+    log_error(
+        "Failed to parse 'SlowQueryMonitor' options from global JSON "
+        "configuration");
+  }
+
+  return result.value_or(ParseSlowQueryOptions::Result{});
 }
 
 }  // namespace

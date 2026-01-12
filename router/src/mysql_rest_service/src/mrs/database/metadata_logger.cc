@@ -256,7 +256,16 @@ class ParseMetadataLoggerOptions
 };
 
 auto parse_json_options(const std::string &options) {
-  return helper::json::text_to_handler<ParseMetadataLoggerOptions>(options);
+  auto result =
+      helper::json::text_to_handler<ParseMetadataLoggerOptions>(options);
+
+  if (!result) {
+    log_error(
+        "Failed to parse 'MetadataLogger' options from global JSON "
+        "configuration");
+  }
+
+  return result.value_or(ParseMetadataLoggerOptions::Result{});
 }
 
 }  // namespace

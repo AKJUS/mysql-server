@@ -57,10 +57,8 @@ class WwwAuthenticationHandler : public interface::AuthorizeHandler {
 
  protected:
   bool validate_redirection_url(const std::optional<std::string> &url);
-  std::optional<Credentials> authorize_method_get(RequestContext &ctxt,
-                                                  Session *session);
-  std::optional<Credentials> authorize_method_post(RequestContext &ctxt,
-                                                   Session *session);
+  Credentials authorize_method_get(RequestContext &ctxt, Session *session);
+  Credentials authorize_method_post(RequestContext &ctxt, Session *session);
 
   virtual bool verify_credential(const Credentials &credentials,
                                  SqlSessionCached *out_cache,

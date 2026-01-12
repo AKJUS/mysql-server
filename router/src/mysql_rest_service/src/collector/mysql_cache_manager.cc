@@ -94,8 +94,17 @@ class ParseCacheOptions
 };
 
 CacheOptions parse_json_options(const std::string &options) {
-  return helper::json::text_to_handler<ParseCacheOptions>(options);
+  auto result = helper::json::text_to_handler<ParseCacheOptions>(options);
+
+  if (!result) {
+    log_error(
+        "Failed to parse 'MysqlCacheManager' options from global JSON "
+        "configuration");
+  }
+
+  return result.value_or(ParseCacheOptions::Result{});
 }
+
 }  // namespace
 
 using Object = MysqlCacheManager::Object;

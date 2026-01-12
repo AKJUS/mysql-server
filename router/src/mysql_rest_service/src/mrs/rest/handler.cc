@@ -193,7 +193,12 @@ mrs::interface::Options parse_json_options(
     const std::optional<std::string> &options) {
   if (!options.has_value()) return {};
 
-  return helper::json::text_to_handler<ParseOptions>(options.value());
+  // Ignore parse errors here, as there may be multiple handlers defined for the
+  // same JSON configuration. Error reporting will be handled by the parent
+  // object, such as Endpoint.
+  auto result = helper::json::text_to_handler<ParseOptions>(options.value());
+
+  return result.value_or(ParseOptions::Result{});
 }
 
 Handler::Handler(const Protocol protocol, const std::string &url_host,
