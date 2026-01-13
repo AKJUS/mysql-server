@@ -3864,7 +3864,7 @@ bool BackupRestore::endOfTuples() {
   return !get_fatal_error();
 }
 
-BackupRestore::TransScheduler::TransScheduler(){};
+BackupRestore::TransScheduler::TransScheduler() {}
 
 void BackupRestore::TransScheduler::init(Uint32 maxTransactions) {
   /* Set hash table size larger to keep bucket chain lengths low */
@@ -4022,7 +4022,7 @@ bool BackupRestore::TransScheduler::requestRowAccess(
 
   /* Cannot execute yet */
   return false;
-};
+}
 
 restore_callback_t *BackupRestore::TransScheduler::notifyRowAccessComplete(
     restore_callback_t *completedTrans) {
