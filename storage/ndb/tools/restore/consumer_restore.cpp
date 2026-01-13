@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2004, 2025, Oracle and/or its affiliates.
+   Copyright (c) 2004, 2026, Oracle and/or its affiliates.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License, version 2.0,
@@ -3865,7 +3865,7 @@ bool BackupRestore::endOfTuples() {
   return !get_fatal_error();
 }
 
-BackupRestore::TransScheduler::TransScheduler(){};
+BackupRestore::TransScheduler::TransScheduler() {}
 
 void BackupRestore::TransScheduler::init(Uint32 maxTransactions) {
   /* Set hash table size larger to keep bucket chain lengths low */
@@ -4023,7 +4023,7 @@ bool BackupRestore::TransScheduler::requestRowAccess(
 
   /* Cannot execute yet */
   return false;
-};
+}
 
 restore_callback_t *BackupRestore::TransScheduler::notifyRowAccessComplete(
     restore_callback_t *completedTrans) {
