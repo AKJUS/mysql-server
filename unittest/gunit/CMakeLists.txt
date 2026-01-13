@@ -152,6 +152,7 @@ SET(TESTS
   mysys_my_rdtsc
   mysys_my_read
   mysys_my_symlink
+  mysys_my_system
   mysys_my_time
   mysys_my_write
   mysys_pathfuncs
@@ -358,6 +359,7 @@ MYSQL_ADD_EXECUTABLE(merge_small_tests-t ${ALL_SMALL_TESTS}
   ENABLE_EXPORTS
   EXCLUDE_FROM_GCOV
   LINK_LIBRARIES sqlgunitlib gunit_small extra::rapidjson extra::boost
+    library_mysys
   )
 IF(TARGET merge_small_tests-t)
   DOWNGRADE_STRINGOP_WARNINGS(merge_small_tests-t)
@@ -383,7 +385,7 @@ FOREACH(test ${TESTS})
     COMPILE_DEFINITIONS ${DISABLE_PSI_DEFINITIONS}
     ENABLE_EXPORTS
     EXCLUDE_FROM_ALL
-    LINK_LIBRARIES sqlgunitlib gunit_small extra::boost
+    LINK_LIBRARIES sqlgunitlib gunit_small extra::boost library_mysys
     SKIP_INSTALL
     ADD_GCOV_TEST ${test}
   )

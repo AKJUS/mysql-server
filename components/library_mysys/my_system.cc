@@ -124,17 +124,18 @@ static inline uint64_t total_physical_memory() noexcept {
     GlobalMemoryStatusEx(&ms);
     mem = ms.ullTotalPhys;
 #elif defined(HAVE_UNISTD_H) /* _WIN32 */
-    assert(should_use_container_config);
-    if (*should_use_container_config) {
-      mem = my_cgroup_mem_limit();
-      if (mem != 0) {
-        return mem;
-      }
-    }
     long pages = sysconf(_SC_PHYS_PAGES);
     long pagesize = sysconf(_SC_PAGESIZE);
     if (pages > 0 && pagesize > 0) {
-      mem = static_cast<uint64_t>(pages * pagesize);
+      mem = static_cast<uint64_t>(pages) * static_cast<uint64_t>(pagesize);
+    }
+    assert(should_use_container_config);
+    if (should_use_container_config && *should_use_container_config) {
+      const uint64_t cgroup_mem = my_cgroup_mem_limit();
+      /* Use cgroup_mem if sysconf fails */
+      if (cgroup_mem != 0 && (mem == 0 || cgroup_mem <= mem)) {
+        return cgroup_mem;
+      }
     }
 #else
 #error "Missing implementation of sysconf or GlobalMemoryStatusEx"

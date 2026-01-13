@@ -23,6 +23,8 @@
 
 #pragma once
 
+#include <optional>
+
 /**
   Determines if the current process is running in a container.
   @return true if running in either cgroup v1 or cgroup v2, false otherwise
