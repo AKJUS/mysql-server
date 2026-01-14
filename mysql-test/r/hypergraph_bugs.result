@@ -2537,3 +2537,132 @@ EXPLAIN
 -> Zero rows (Impossible WHERE)  (cost=0..0 rows=0)
 
 DROP TABLE t;
+#
+# Bug#38763106 - sort with limit in hypergraph gets wrong result
+#
+CREATE TABLE t1 (char_0_col CHAR(0) COLLATE utf8mb4_general_ci NOT NULL);
+INSERT INTO t1 VALUES (''), ('');
+ANALYZE TABLE t1;
+Table	Op	Msg_type	Msg_text
+test.t1	analyze	status	OK
+EXPLAIN FORMAT=TREE
+SELECT DISTINCT char_0_col FROM t1;
+EXPLAIN
+-> Limit: 1 row(s)  (rows=1)
+    -> Table scan on t1  (rows=2)
+
+EXPLAIN FORMAT=TREE
+SELECT char_0_col FROM t1
+ORDER BY char_0_col LIMIT 2;
+EXPLAIN
+-> Limit: 2 row(s)  (rows=2)
+    -> Table scan on t1  (rows=2)
+
+# Test 1: Basic LIMIT 1 (original bug case)
+SELECT * FROM t1 ORDER BY char_0_col LIMIT 1;
+char_0_col
+
+# Test 2: LIMIT equals number of rows
+SELECT * FROM t1 ORDER BY char_0_col LIMIT 2;
+char_0_col
+
+
+# Test 3: LIMIT greater than number of rows
+SELECT * FROM t1 ORDER BY char_0_col LIMIT 5;
+char_0_col
+
+
+# Test 4: LIMIT with OFFSET 0 (should behave like LIMIT 1)
+SELECT * FROM t1 ORDER BY char_0_col LIMIT 1 OFFSET 0;
+char_0_col
+
+# Test 5: LIMIT with OFFSET 1 (skip first row)
+SELECT * FROM t1 ORDER BY char_0_col LIMIT 1 OFFSET 1;
+char_0_col
+
+# Test 6: LIMIT with OFFSET equal to total rows (no rows)
+SELECT * FROM t1 ORDER BY char_0_col LIMIT 1 OFFSET 2;
+char_0_col
+# Test 7: LIMIT with OFFSET greater than total rows (no rows)
+SELECT * FROM t1 ORDER BY char_0_col LIMIT 1 OFFSET 5;
+char_0_col
+# Test 8: Multiple rows with various LIMIT values
+INSERT INTO t1 VALUES (''), (''), ('');
+SELECT * FROM t1 ORDER BY char_0_col LIMIT 1;
+char_0_col
+
+SELECT * FROM t1 ORDER BY char_0_col LIMIT 3;
+char_0_col
+
+
+
+SELECT * FROM t1 ORDER BY char_0_col LIMIT 10;
+char_0_col
+
+
+
+
+
+# Test 9: LIMIT with OFFSET on larger dataset
+SELECT * FROM t1 ORDER BY char_0_col LIMIT 2 OFFSET 1;
+char_0_col
+
+
+SELECT * FROM t1 ORDER BY char_0_col LIMIT 2 OFFSET 3;
+char_0_col
+
+
+# Test 10: Verify with COUNT to ensure correct row counts
+SELECT COUNT(*) FROM (
+SELECT * FROM t1 ORDER BY char_0_col LIMIT 1
+) AS derived;
+COUNT(*)
+1
+SELECT COUNT(*) FROM (
+SELECT * FROM t1 ORDER BY char_0_col LIMIT 3
+) AS derived;
+COUNT(*)
+3
+SELECT COUNT(*) FROM (
+SELECT * FROM t1 ORDER BY char_0_col LIMIT 1 OFFSET 2
+) AS derived;
+COUNT(*)
+1
+# Test 11: DESC order with LIMIT
+SELECT * FROM t1 ORDER BY char_0_col DESC LIMIT 1;
+char_0_col
+
+SELECT * FROM t1 ORDER BY char_0_col DESC LIMIT 2 OFFSET 1;
+char_0_col
+
+
+# Test 12: Explicit hypergraph hint (ensure it works)
+SELECT /*+ SET_VAR(optimizer_switch="hypergraph_optimizer=on") */
+* FROM t1 ORDER BY char_0_col LIMIT 1;
+char_0_col
+
+# Test 13: Verify old optimizer still works (regression check)
+SELECT /*+ SET_VAR(optimizer_switch="hypergraph_optimizer=off") */
+* FROM t1 ORDER BY char_0_col LIMIT 1;
+char_0_col
+
+# Test 14: LIMIT 0 (edge case - should return no rows)
+SELECT * FROM t1 ORDER BY char_0_col LIMIT 0;
+char_0_col
+# Test 15: Large OFFSET that skips all rows
+SELECT * FROM t1 ORDER BY char_0_col LIMIT 1 OFFSET 100;
+char_0_col
+# Test 16: DISTINCT with zero-length key should yield 1 row
+SELECT DISTINCT char_0_col FROM t1 ORDER BY char_0_col;
+char_0_col
+
+# Test 17: DISTINCT with LIMIT should still yield at most 1
+SELECT DISTINCT char_0_col FROM t1 ORDER BY char_0_col LIMIT 5;
+char_0_col
+
+# Test 18: DISTINCT with hypergraph hint
+SELECT /*+ SET_VAR(optimizer_switch="hypergraph_optimizer=on") */
+DISTINCT char_0_col FROM t1 ORDER BY char_0_col;
+char_0_col
+
+DROP TABLE t1;

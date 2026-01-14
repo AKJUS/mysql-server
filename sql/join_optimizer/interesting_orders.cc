@@ -747,7 +747,13 @@ void LogicalOrderings::AddFDsFromConstItems(THD *thd) {
       continue;
     }
 
-    if (m_items[item_idx].item->const_for_execution()) {
+    const Item &item = *m_items[item_idx].item;
+
+    // Add a FD for items that are known to be constant, and for items that are
+    // effectively constant because their type allows only a single value (for
+    // example CHAR(0) NOT NULL, which only allows the empty string).
+    if (item.const_for_execution() ||
+        (item.max_length == 0 && !item.is_nullable())) {
       // Add {} → item.
       FunctionalDependency fd;
       fd.type = FunctionalDependency::FD;
