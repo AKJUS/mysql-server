@@ -28,10 +28,13 @@
 #include <string>
 
 #include "lex_string.h"
+#include "my_inttypes.h"
 
 class Create_field;
 class Item;
+class Item_field;
 class THD;
+struct TABLE;
 
 struct Sql_masking_policy_spec {
   LEX_CSTRING policy_name{NULL_CSTR};
@@ -122,12 +125,42 @@ bool validate_masking_policy_syntax(THD *thd, LEX_CSTRING argument_name,
                                     Item *expr);
 
 /**
+  Parse and resolve the column’s masking expression under the column’s security
+  context.
+
+  Replaces the policy argument with the actual Item_field and keeps name
+  resolution otherwise empty to prevent references to other columns.
+
+  @param thd        Thread context
+  @param item_field Column reference substituted for the policy argument
+  @param spec       Masking policy specification (previously fetched)
+  @return a pointer to the resolved Item on success, or nullptr on error (error
+  is reported)
+*/
+Item *resolve_masking_expression(THD *thd, Item_field *item_field,
+                                 const Sql_masking_policy_spec &spec);
+
+/**
   Validates masking policies for CREATE/ALTER TABLE.
 
+  Performs validation in three categories and delegates details to helpers:
+   - Column eligibility for masking
+  (validate_masking_policy_column_constraints()).
+   - Masking function resolution and post-resolve validation
+  (validate_masking_function_post_resolve()).
+   - Column/function type compatibility (compatible_types()).
+
+  See the referenced helpers for detailed rules and rationale.
+
+  @param thd    Thread context
+  @param buf    Row buffer used to back a temporary Field instance
+  @param table  Table being created/altered
   @param field  Column definition being validated
   @retval true  Validation failed (error was reported)
   @retval false Validation succeeded
 */
-bool validate_masking_policy_for_create_alter_table(const Create_field &field);
+bool validate_masking_policy_for_create_alter_table(THD *thd, uchar *buf,
+                                                    TABLE *table,
+                                                    const Create_field &field);
 
 #endif  // SQL_MASKING_POLICY_INCLUDED

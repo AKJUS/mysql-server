@@ -10976,6 +10976,12 @@ ER_MASKING_POLICY_INVALID_COLUMN_REFERENCE 42000
 ER_MASKING_POLICY_INCOMPATIBLE_COLUMN_FEATURE 42000
   eng "Column '%s' cannot have a MASKING POLICY and %s."
 
+ER_MASKING_POLICY_INCOMPATIBLE_TYPES 42000
+  eng "MASKING POLICY expression has an incompatible type."
+
+ER_MASKING_POLICY_NON_DETERMINISTIC_FUNC 42000
+  eng "MASKING POLICY expression is non-deterministic."
+
 #
 #  End of 9.x error messages (server-to-client).
 #

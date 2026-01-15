@@ -5136,6 +5136,16 @@ class Derived_expr_parser_state : public Parser_state {
   Item *result;
 };
 
+class Masking_policy_expr_parser_state : public Parser_state {
+ public:
+  Masking_policy_expr_parser_state();
+  void set_result(Item *result) { m_result = result; }
+  Item *result() const { return m_result; }
+
+ private:
+  Item *m_result{nullptr};
+};
+
 struct st_lex_local : public LEX {
   static void *operator new(size_t size) noexcept {
     return (*THR_MALLOC)->Alloc(size);

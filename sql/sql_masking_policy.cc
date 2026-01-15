@@ -23,12 +23,16 @@
 
 #include "sql/sql_masking_policy.h"
 
+#include <cassert>
 #include <optional>
 #include <span>
+#include <string>
 #include <string_view>
 #include <utility>
 
+#include "field_types.h"
 #include "lex_string.h"
+#include "my_alloc.h"
 #include "my_inttypes.h"
 #include "my_sys.h"
 #include "mysql/components/my_service.h"
@@ -36,12 +40,15 @@
 #include "mysql/components/services/mysql_string.h"
 #include "mysql/components/services/object_policy_service.h"
 #include "mysql/strings/m_ctype.h"
+#include "mysql/udf_registration_types.h"
+#include "mysql_com.h"
 #include "mysqld_error.h"
 #include "sql/auth/sql_security_ctx.h"
 #include "sql/create_field.h"
 #include "sql/derror.h"
 #include "sql/enum_query_type.h"
 #include "sql/field.h"
+#include "sql/field_common_properties.h"
 #include "sql/item.h"
 #include "sql/item_cmpfunc.h"
 #include "sql/item_func.h"
@@ -51,12 +58,12 @@
 #include "sql/sql_class.h"
 #include "sql/sql_const.h"
 #include "sql/sql_error.h"
+#include "sql/sql_lex.h"
+#include "sql/sql_parse.h"
 #include "sql/table.h"
 #include "sql_string.h"
 #include "string_with_len.h"
 #include "template_utils.h"
-
-struct MEM_ROOT;
 
 constexpr char kComponentUnavailable[] = "component is unavailable";
 constexpr char kStringConversionFailed[] = "string conversion failed";
@@ -394,16 +401,218 @@ bool validate_masking_policy_syntax(THD *thd, LEX_CSTRING argument_name,
   return false;
 }
 
+/// Check if both items have compatible (simple-string) types and collation.
+/// Returns true if compatible, false otherwise.
+static bool compatible_string_types(const Item_field *col, const Item *expr) {
+  assert(col->result_type() == STRING_RESULT);
+  assert(expr->result_type() == STRING_RESULT);
+
+  if (col->collation.collation != expr->collation.collation) {
+    return false;
+  }
+
+  const enum_field_types col_type = col->data_type();
+  const enum_field_types expr_type = expr->data_type();
+
+  if (col_type == expr_type) {
+    return true;
+  }
+
+  return is_simple_string_type(col_type) && is_simple_string_type(expr_type);
+}
+
+/// Returns true if type is a plain integer or YEAR.
+static bool is_simple_integer_or_year_type(enum_field_types type) {
+  return is_integer_type(type) || type == MYSQL_TYPE_YEAR;
+}
+
+/// Returns true if the types of the two items are identical, or if both are
+/// "simple" integers (including YEAR). "Simple" excludes types with special
+/// semantics such as BIT.
+static bool compatible_int_types(const Item_field *col, const Item *expr) {
+  assert(col->result_type() == INT_RESULT);
+  assert(expr->result_type() == INT_RESULT);
+  const enum_field_types type1 = col->data_type();
+  const enum_field_types type2 = expr->data_type();
+  return type1 == type2 || (is_simple_integer_or_year_type(type1) &&
+                            is_simple_integer_or_year_type(type2));
+}
+
+/// Returns true if both items have the same temporal type (DATETIME and
+/// TIMESTAMP are considered the same type) with the same fractional seconds
+/// precision (FSP).
+static bool compatible_temporal_types(const Item_field *col, const Item *expr) {
+  return col->is_temporal_with_date() == expr->is_temporal_with_date() &&
+         col->is_temporal_with_time() == expr->is_temporal_with_time() &&
+         col->decimals == expr->decimals;
+}
+
+/// Checks whether the column and resolved masking expression are
+/// type-compatible for masking. Assumes both Items are resolved. Policy:
+///  - Result kinds (Item_result) must match.
+///  - REAL_RESULT: identical precision; data_type() must match
+///    (both FLOAT or both DOUBLE).
+///  - INT_RESULT: identical types or both simple integers (including YEAR).
+///  - DECIMAL_RESULT: identical scale (decimals). Precision may differ.
+///  - STRING_RESULT: handled as either:
+///      * temporal types: same temporal family (DATE, TIME,
+///        DATETIME/TIMESTAMP)
+///        and identical FSP (Item::decimals),
+///      * simple string types: identical collation; types may differ if both
+///        are simple string types (CHAR/VARCHAR/BLOB/TEXT variants), or
+///      * other string-result types: require identical data_type() to avoid
+///        semantic shifts (e.g., JSON/geometry).
+///    This guarantees identical comparison and ordering semantics.
+/// Other result kinds are not expected here. Returns true if compatible.
+static bool compatible_types(const Item_field *col, const Item *expr) {
+  const Item_result cr = col->result_type();
+  const Item_result er = expr->result_type();
+
+  if (cr != er) {
+    return false;
+  }
+
+  switch (cr) {
+    case REAL_RESULT:
+      return col->data_type() == expr->data_type();
+    case INT_RESULT:
+      return compatible_int_types(col, expr);
+    case DECIMAL_RESULT:
+      return col->decimals == expr->decimals;
+    case STRING_RESULT:
+      // Temporal columns (DATE/TIME/DATETIME/TIMESTAMP) must be handled
+      // separately. They are string-result items, but they are not compatible
+      // under the generic string rules.
+      if (col->is_temporal()) return compatible_temporal_types(col, expr);
+      return compatible_string_types(col, expr);
+    case INVALID_RESULT:
+    case ROW_RESULT:
+      break;
+  }
+
+  assert(false);
+  return false;
+}
+
+/// Validates that the resolved masking expression is appropriate for the
+/// specified column: checks type compatibility and that the expression is
+/// deterministic. Reports errors for incompatible/unsafe masking policies.
+/// Rationale: users permitted to see the unmasked value must observe behavior
+/// identical to a column without a policy: both presentation and semantics must
+/// match. In particular, comparison and ordering must not change (same
+/// collation/charset), and numeric precision/scale must be preserved;
+/// the expression must be deterministic.
+/// Assumes: mask_expr is fully resolved (types, collation/charset,
+/// nullability).
+static bool validate_masking_policy_for_column(Item_field *item_field,
+                                               Item *mask_expr) {
+  if (!compatible_types(item_field, mask_expr)) {
+    my_error(ER_MASKING_POLICY_INCOMPATIBLE_TYPES, MYF(0));
+    return true;
+  }
+
+  if (mask_expr->is_non_deterministic()) {
+    my_error(ER_MASKING_POLICY_NON_DETERMINISTIC_FUNC, MYF(0));
+    return true;
+  }
+
+  return false;
+}
+
+// Parse and resolve the masking expression under the column’s security
+// context. Returns nullptr on failure (error is reported).
+Item *resolve_masking_expression(THD *thd, Item_field *item_field,
+                                 const Sql_masking_policy_spec &spec) {
+  Masking_policy_expr_parser_state parser_state;
+  if (parser_state.init(thd, spec.masking_expression.str,
+                        spec.masking_expression.length)) {
+    return nullptr;
+  }
+
+  // The masking expression must have the same security context as the column
+  // reference in order to determine if masking should be performed or not.
+  // Apart from that, the name resolution context should be empty, as the
+  // masking expression should not be able to reference other columns than the
+  // masked column.
+  auto *const context = new (thd->mem_root) Name_resolution_context{
+      .security_ctx = item_field->context->security_ctx};
+  if (context == nullptr || thd->lex->push_context(context)) {
+    return nullptr;
+  }
+
+  if (parse_sql(thd, &parser_state, nullptr)) {
+    return nullptr;
+  }
+
+  if (validate_masking_policy_syntax(thd, spec.argument_name,
+                                     parser_state.result())) {
+    return nullptr;
+  }
+
+  Item *mask_expr =
+      TransformItem(parser_state.result(), [&](Item *item) -> Item * {
+        if (item->type() == Item::FIELD_ITEM) {
+          if (validate_policy_argument_reference(down_cast<Item_field *>(item),
+                                                 spec.argument_name)) {
+            return nullptr;
+          }
+          return item_field;
+        }
+        return item;
+      });
+
+  if (mask_expr->fix_fields(thd, &mask_expr)) {
+    return nullptr;
+  }
+
+  thd->lex->pop_context();
+
+  // After resolving the masking expression, enforce additional constraints that
+  // cannot be checked before parsing (type, determinism).
+  if (validate_masking_policy_for_column(item_field, mask_expr)) {
+    return nullptr;
+  }
+
+  return mask_expr;
+}
+
 // Validates masking policies for CREATE/ALTER TABLE.
-bool validate_masking_policy_for_create_alter_table(const Create_field &field) {
+// Performs column-eligibility, masking-function, and type-compatibility checks.
+// See sql_masking_policy.h for details.
+bool validate_masking_policy_for_create_alter_table(THD *thd, uchar *buf,
+                                                    TABLE *table,
+                                                    const Create_field &field) {
   if (field.m_masking_policy_name.length == 0) return false;
 
   if (validate_masking_policy_column_constraints(field)) {
     return true;
   }
 
-  // TODO: Validate that the policy expression resolves when assigned to this
-  // column.
+  // Do not fail if the policy is not defined at DDL time; skip validation.
+  std::string reason;
+  std::optional<Sql_masking_policy_spec> spec_opt =
+      get_masking_policy_spec(thd, field.m_masking_policy_name, &reason);
+  if (!spec_opt.has_value()) {
+    return false;
+  }
 
-  return false;
+  // Create a fake field with a real data buffer in which to store the value.
+  Field *regfield = make_field(field, table->s, buf + 1, buf, /*null_bit=*/0);
+  if (regfield == nullptr) {
+    return true;
+  }
+  regfield->init(table);
+  regfield->set_masking_policy(field.m_masking_policy_name);
+  if ((field.flags & NOT_NULL_FLAG) == 0) {
+    regfield->set_null();
+  }
+
+  Item_field *item_field = new (thd->mem_root) Item_field{regfield};
+  if (item_field == nullptr) return true;
+  item_field->context = new (thd->mem_root) Name_resolution_context;
+  if (item_field->context == nullptr) return true;
+
+  // resolve_masking_expression() performs all required validation and
+  // error reporting; only successful return means policy is valid.
+  return resolve_masking_expression(thd, item_field, *spec_opt) == nullptr;
 }

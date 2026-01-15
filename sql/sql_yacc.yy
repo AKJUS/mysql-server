@@ -1490,6 +1490,8 @@ CHARSET_INFO *warn_on_deprecated_user_defined_collation(
 
 %token<lexer.keyword> MASKING_SYM       1240     /* MYSQL */
 %token<lexer.keyword> POLICY_SYM        1241     /* MYSQL */
+%token GRAMMAR_SELECTOR_MASKING_EXPR 1242  /* synthetic token: starts data
+                                              masking expression */
 
 /*
   NOTE! When adding new non-standard keywords, make sure they are added to the
@@ -2411,6 +2413,11 @@ start_entry:
          {
            ITEMIZE($2, &$2);
            static_cast<Derived_expr_parser_state *>(YYP)->result= $2;
+         }
+        | GRAMMAR_SELECTOR_MASKING_EXPR expr END_OF_INPUT
+         {
+           ITEMIZE($2, &$2);
+           static_cast<Masking_policy_expr_parser_state *>(YYP)->set_result($2);
          }
         ;
 

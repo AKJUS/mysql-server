@@ -791,7 +791,8 @@ bool fill_dd_columns_from_create_fields(THD *thd, dd::Abstract_table *tab_obj,
     col_obj->set_engine_attribute(field.m_engine_attribute);
     col_obj->set_secondary_engine_attribute(field.m_secondary_engine_attribute);
 
-    if (validate_masking_policy_for_create_alter_table(field)) {
+    if (validate_masking_policy_for_create_alter_table(thd, buf, &table,
+                                                       field)) {
       return true;
     }
   }

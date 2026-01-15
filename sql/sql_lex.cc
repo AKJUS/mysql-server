@@ -1235,6 +1235,10 @@ Common_table_expr_parser_state::Common_table_expr_parser_state()
 
 Derived_expr_parser_state::Derived_expr_parser_state()
     : Parser_state(GRAMMAR_SELECTOR_DERIVED_EXPR), result(nullptr) {}
+
+Masking_policy_expr_parser_state::Masking_policy_expr_parser_state()
+    : Parser_state{GRAMMAR_SELECTOR_MASKING_EXPR} {}
+
 /*
 ** Calc type of integer; long integer, longlong integer or real.
 ** Returns smallest type that match the string.
