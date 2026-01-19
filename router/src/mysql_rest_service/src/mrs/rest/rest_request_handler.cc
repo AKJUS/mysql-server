@@ -346,7 +346,15 @@ void RestRequestHandler::trace_http(const char *type,
     });
   }
 
+  // The length header is not available at this point because it is added
+  // just before sending the payload to the client.
   if (auto in_len = buffer.length()) {
+    logger_.info([&]() {
+      return std::string("HTTP ")
+          .append(type)
+          .append(" body-length: ")
+          .append(std::to_string(in_len));
+    });
     const bool has_token =
         buffer.get().find("accessToken") != std::string::npos ||
         buffer.get().find("password") != std::string::npos;
@@ -536,6 +544,7 @@ Handler::HttpResult RestRequestHandler::handle_request_impl(
   logger_.debug([&]() {
     return std::string("RestRequestHandler(service_id:")
         .append(service_id.to_string())
+        .append(")::")
         .append("dispatch(method:")
         .append(get_http_method_name(ctxt.request->get_method()))
         .append(", path:")
