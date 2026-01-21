@@ -2161,6 +2161,7 @@ int do_restore(RestoreThreadData *thrdata) {
   }
   restoreLogger.log_debug("Iterate over data");
   restoreLogger.log_info("[restore_data] Start restoring table data");
+  int snapshotstart = -1;
   if (ga_restore || ga_print) {
     Uint32 fragmentsTotal = 0;
     Uint32 fragmentsRestored = 0;
@@ -2368,6 +2369,9 @@ int do_restore(RestoreThreadData *thrdata) {
         return NdbToolsProgramExitCode::FAILED;
       }
 
+      // Save snapshotstart to skip open log file again if restore epoch
+      snapshotstart = logIter.isSnapshotstartBackup();
+
       const LogEntry *logEntry = 0;
 
       restoreLogger.log_info("[restore_log] Restore log entries");
@@ -2500,34 +2504,37 @@ int do_restore(RestoreThreadData *thrdata) {
 
   if (ga_restore_epoch) {
     restoreLogger.log_info("[restore_epoch] Restoring epoch");
-    RestoreLogIterator logIter(metaData, &free_data_callback, (void *)thrdata,
-                               opt_read_size);
+    if (snapshotstart == -1) {
+      RestoreLogIterator logIter(metaData, &free_data_callback, (void *)thrdata,
+                                 opt_read_size);
 #ifdef ERROR_INSERT
-    if (_error_insert > 0) {
-      logIter.error_insert(_error_insert);
-    }
+      if (_error_insert > 0) {
+        logIter.error_insert(_error_insert);
+      }
 #endif
 
-    if (!logIter.openFile()) {
-      restoreLogger.log_error("Failed to open data file. Exiting...");
-      return NdbToolsProgramExitCode::FAILED;
-    }
-    Scope_guard close_log_file_on_error(CloseFileUnchecked{logIter});
+      if (!logIter.openFile()) {
+        restoreLogger.log_error("Failed to open data file. Exiting...");
+        return NdbToolsProgramExitCode::FAILED;
+      }
+      Scope_guard close_log_file_on_error(CloseFileUnchecked{logIter});
 
-    if (!logIter.readHeader()) {
-      err << "Failed to read snapshot info from log file. Exiting..." << endl;
-      return NdbToolsProgramExitCode::FAILED;
-    }
-    close_log_file_on_error.release();
-    /*
-     * Only header is read. Rest of file may be unread. And by that for example
-     * file checksum can not be checked at close. In many use cases the log
-     * file has been consumed and check above and we are sloppy here and skip
-     * the extra checks in close by using the abort variant of close.
-     */
-    logIter.closeFile(/* abort */ true);
+      if (!logIter.readHeader()) {
+        err << "Failed to read snapshot info from log file. Exiting..." << endl;
+        return NdbToolsProgramExitCode::FAILED;
+      }
+      close_log_file_on_error.release();
+      /*
+       * Only header is read. Rest of file may be unread. And by that for
+       * example file checksum can not be checked at close. In many use cases
+       * the log file has been consumed and checked by an earlier ndb_restore
+       * run and we are sloppy here and skip the extra checks in close by using
+       * the abort variant of close.
+       */
+      logIter.closeFile(/* abort */ true);
 
-    bool snapshotstart = logIter.isSnapshotstartBackup();
+      snapshotstart = logIter.isSnapshotstartBackup();
+    }
     for (i = 0; i < g_consumers.size(); i++)
       if (!g_consumers[i]->update_apply_status(metaData, snapshotstart)) {
         restoreLogger.log_error("Restore: Failed to restore epoch");
