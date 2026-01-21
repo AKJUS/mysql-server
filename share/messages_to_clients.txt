@@ -10922,6 +10922,9 @@ ER_AUDIT_LOG_JSON_FILTER_DOES_NOT_EXIST_USER
 ER_LH_CUSTOM_DATA_PLACEMENT_OVERRIDES
   eng "Custom data placement set for '%s.%s' table overrides %s data placement."
 
+ER_LH_AVRO_FILES_DATA_TYPE_MISMATCH
+  eng "File %s: Col '%s' has different data type compared to other Avro files."
+
 #
 #  End of 9.x error messages (server-to-client).
 #
