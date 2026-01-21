@@ -1385,33 +1385,8 @@ bool BackupFile::validateBackupFile() {
 }
 
 BackupFile::~BackupFile() {
-  int r = 0;
-  if (m_xfile.is_open()) {
-    r = m_xfile.close(false);
-  }
-
-  if (m_file.is_open() && m_file.close() == -1) {
-    r = -1;
-  }
-
-  if (r == -1) {
-    const ndb_off_t data_pos = m_xfile.get_data_pos();
-    const ndb_off_t data_size = m_xfile.get_data_size();
-    if (data_pos != data_size) {
-      restoreLogger.log_warning(
-          "Warning: All data was not read, can not check file "
-          "consistency. Data read %jd of %jd bytes.",
-          intmax_t{data_pos}, intmax_t{data_size});
-    } else {
-      restoreLogger.log_warning(
-          "Warning: File consistency error, may be checksum failure.");
-    }
-#ifdef ERROR_INSERT
-    if (m_error_insert == NDB_RESTORE_ERROR_INSERT_ABORT_ON_CLOSE_ERROR) {
-      ::abort();
-    }
-#endif
-  }
+  require(!m_xfile.is_open());
+  require(!m_file.is_open());
 
   if (m_buffer != 0) {
     free(m_buffer);
@@ -1419,6 +1394,9 @@ BackupFile::~BackupFile() {
 }
 
 bool BackupFile::openFile() {
+  require(!m_xfile.is_open());
+  require(!m_file.is_open());
+
   int r;
   m_file_size = 0;
   m_file_pos = 0;
@@ -1478,6 +1456,32 @@ bool BackupFile::openFile() {
   }
   m_file.close();
   return false;
+}
+
+bool BackupFile::closeFile(bool abort) {
+  require(m_file.is_open());
+  require(m_xfile.is_open());
+
+  int r1 = m_xfile.close(abort);
+  int r2 = m_file.close();
+  if (!abort && (r1 || r2)) {
+    const ndb_off_t data_pos = m_xfile.get_data_pos();
+    const ndb_off_t data_size = m_xfile.get_data_size();
+    if (data_pos != data_size) {
+      restoreLogger.log_warning(
+          "Warning: All data was not read, can not check file "
+          "consistency. Data read %jd of %jd bytes.",
+          intmax_t{data_pos}, intmax_t{data_size});
+    } else
+      restoreLogger.log_warning(
+          "Warning: File consistency error, may be checksum failure.");
+#ifdef ERROR_INSERT
+    if (m_error_insert == NDB_RESTORE_ERROR_INSERT_ABORT_ON_CLOSE_ERROR) {
+      ::abort();
+    }
+#endif
+  }
+  return (r1 == 0) && (r2 == 0);
 }
 
 int BackupFile::buffer_get_ptr_ahead(void **p_buf_ptr, Uint32 size,
@@ -1707,9 +1711,8 @@ void BackupFile::setName(const char *p, const char *n) {
 }
 
 bool BackupFile::readHeader() {
-  if (!openFile()) {
-    return false;
-  }
+  require(m_xfile.is_open());
+  require(m_file.is_open());
 
   Uint32 oldsz = sizeof(BackupFormat::FileHeader_pre_backup_version);
   int r = buffer_read(&m_fileHeader, oldsz, 1);
