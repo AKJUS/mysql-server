@@ -10032,9 +10032,14 @@ int main(int argc, char **argv) {
   } else {
     // No explicit hypergraph option? Ask the server hypergraph is enabled.
     std::string optimizer_switch;
-    if (query_get_string(&con->mysql, "SHOW VARIABLES LIKE 'optimizer_switch'",
-                         1, &optimizer_switch)) {
-      die("Failed to get optimizer_switch from server");
+    std::string query = "SHOW VARIABLES LIKE 'optimizer_switch'";
+    if (query_get_string(&con->mysql, query.c_str(), 1, &optimizer_switch)) {
+      // Ignore non critical errors, allow the script to continue on server
+      // with expired password.
+      uint err = mysql_errno(&con->mysql);
+      if (ER_MUST_CHANGE_PASSWORD != err &&
+          ER_MUST_CHANGE_PASSWORD_LOGIN != err)
+        die("Failed to get optimizer_switch from server");
     }
     // It is tempting to FLUSH STATUS, but this modifies the database, and will
     // cause misc tests (with implicit assumptions about database state)
