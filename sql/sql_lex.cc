@@ -4920,6 +4920,8 @@ bool Query_block::walk(Item_processor processor, enum_walk walk, uchar *arg) {
       }
     }
   }
+
+  if (qualify_cond() && qualify_cond()->walk(processor, walk, arg)) return true;
   return false;
 }
 
