@@ -1,7 +1,7 @@
 # Copyright The OpenTelemetry Authors
 # SPDX-License-Identifier: Apache-2.0
 
-cmake_minimum_required(VERSION 3.16)
+do_not_cmake_minimum_required(VERSION 3.16)
 
 if(POLICY CMP0092)
   # https://cmake.org/cmake/help/latest/policy/CMP0092.html#policy:CMP0092 Make
@@ -292,7 +292,7 @@ endif()
 if((NOT WITH_API_ONLY)
    AND WITH_HTTP_CLIENT_CURL
    AND WITH_OTLP_HTTP_COMPRESSION)
-  include("${opentelemetry-cpp_SOURCE_DIR}/cmake/zlib.cmake")
+  do_not_include("${opentelemetry-cpp_SOURCE_DIR}/cmake/zlib.cmake")
 endif()
 
 #
@@ -300,7 +300,7 @@ endif()
 #
 
 if((NOT WITH_API_ONLY) AND WITH_HTTP_CLIENT_CURL)
-  include("${opentelemetry-cpp_SOURCE_DIR}/cmake/curl.cmake")
+  do_not_include("${opentelemetry-cpp_SOURCE_DIR}/cmake/curl.cmake")
 endif()
 
 #
@@ -308,7 +308,7 @@ endif()
 #
 
 if(WITH_PROMETHEUS)
-  include("${opentelemetry-cpp_SOURCE_DIR}/cmake/prometheus-cpp.cmake")
+  do_not_include("${opentelemetry-cpp_SOURCE_DIR}/cmake/prometheus-cpp.cmake")
 endif()
 
 #
@@ -322,10 +322,10 @@ if(WITH_OTLP_GRPC
   # find or fetch grpc before protobuf to allow protobuf to be built in-tree as
   # a grpc submodule.
   if(WITH_OTLP_GRPC)
-    include("${opentelemetry-cpp_SOURCE_DIR}/cmake/grpc.cmake")
+    do_not_include("${opentelemetry-cpp_SOURCE_DIR}/cmake/grpc.cmake")
   endif()
 
-  include("${opentelemetry-cpp_SOURCE_DIR}/cmake/protobuf.cmake")
+  do_not_include("${opentelemetry-cpp_SOURCE_DIR}/cmake/protobuf.cmake")
 
   include("${opentelemetry-cpp_SOURCE_DIR}/cmake/opentelemetry-proto.cmake")
 endif()
@@ -346,7 +346,7 @@ else()
 endif()
 
 if((NOT WITH_API_ONLY) AND USE_NLOHMANN_JSON)
-  include("${opentelemetry-cpp_SOURCE_DIR}/cmake/nlohmann-json.cmake")
+  do_not_include("${opentelemetry-cpp_SOURCE_DIR}/cmake/nlohmann-json.cmake")
 endif()
 
 #
@@ -354,7 +354,7 @@ endif()
 #
 
 if(WITH_OPENTRACING)
-  include("${opentelemetry-cpp_SOURCE_DIR}/cmake/opentracing-cpp.cmake")
+  do_not_include("${opentelemetry-cpp_SOURCE_DIR}/cmake/opentracing-cpp.cmake")
 endif()
 
 if(OTELCPP_MAINTAINER_MODE)

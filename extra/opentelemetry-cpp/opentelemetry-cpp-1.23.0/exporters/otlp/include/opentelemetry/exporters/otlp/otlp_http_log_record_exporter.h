@@ -46,6 +46,11 @@ public:
   OtlpHttpLogRecordExporter(const OtlpHttpLogRecordExporterOptions &options,
                             const OtlpHttpLogRecordExporterRuntimeOptions &runtime_options);
 
+// MySQL
+  OtlpHttpLogRecordExporter(const OtlpHttpLogRecordExporterOptions &options,
+                            const OtlpHttpLogRecordExporterRuntimeOptions &runtime_options,
+                            std::unique_ptr<OtlpHttpClient> http_client);
+
   /**
    * Creates a recordable that stores the data in a JSON object
    */
@@ -85,6 +90,8 @@ private:
   std::unique_ptr<OtlpHttpClient> http_client_;
   // For testing
   friend class OtlpHttpLogRecordExporterTestPeer;
+
+public: // MySQL
   /**
    * Create an OtlpHttpLogRecordExporter using the specified http client.
    * Only tests can call this constructor directly.

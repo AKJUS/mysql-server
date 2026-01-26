@@ -271,6 +271,7 @@ private:
   friend class OtlpHttpLogRecordExporterTestPeer;
   friend class OtlpHttpMetricExporterTestPeer;
 
+public: /* MySQL */
   /**
    * Create an OtlpHttpClient using the specified http client.
    * Only tests can call this constructor directly.
@@ -280,6 +281,7 @@ private:
   OtlpHttpClient(OtlpHttpClientOptions &&options,
                  std::shared_ptr<ext::http::client::HttpClient> http_client);
 
+private:
   // Stores if this HTTP client had its Shutdown() method called
   std::atomic<bool> is_shutdown_;
 

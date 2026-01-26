@@ -1,6 +1,8 @@
 # Copyright The OpenTelemetry Authors
 # SPDX-License-Identifier: Apache-2.0
 
+# Local MySQL change: protobuf::libprotobuf -> ext::libprotobuf
+
 # Some prebuilt or installed targets may have different CONFIG settings than
 # what we use to configure otel-cpp. This file applies patches to the imported
 # targets in order to use compatible CONFIG settings for fallback.
@@ -11,8 +13,8 @@ project_build_tools_patch_default_imported_config(ZLIB::ZLIB)
 # protobuf targets
 if(Protobuf_FOUND)
   project_build_tools_patch_default_imported_config(
-    utf8_range::utf8_range utf8_range::utf8_validity protobuf::libprotobuf-lite
-    protobuf::libprotobuf protobuf::libprotoc)
+    utf8_range::utf8_range utf8_range::utf8_validity ext::libprotobuf-lite
+    ext::libprotobuf protobuf::libprotoc)
 endif()
 
 # cares targets
