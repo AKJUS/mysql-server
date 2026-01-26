@@ -132,9 +132,11 @@ target_compile_definitions(
     $<$<BOOL:${JSON_LegacyDiscardedValueComparison}>:JSON_USE_LEGACY_DISCARDED_VALUE_COMPARISON=1>
 )
 
+# SYSTEM BEFORE, in case this exists: /usr/include/nlohmann/json.hpp
+# This should be the ...../single_include/ directory, see above.
 target_include_directories(
     ${NLOHMANN_JSON_TARGET_NAME}
-    ${NLOHMANN_JSON_SYSTEM_INCLUDE} INTERFACE
+    SYSTEM BEFORE INTERFACE
     $<BUILD_INTERFACE:${NLOHMANN_JSON_INCLUDE_BUILD_DIR}>
     $<INSTALL_INTERFACE:${NLOHMANN_JSON_INCLUDE_INSTALL_DIR}>
 )
