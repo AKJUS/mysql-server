@@ -153,6 +153,10 @@ bool SafeCounterHandle::clearWaitingFor(SafeCounterManager &mgr,
   return false;
 }
 
+const char *SafeCounter::getText(char *buf) const {
+  return m_nodes.getText(buf);
+}
+
 SafeCounter::~SafeCounter() {
   bool clear = m_count == 0;
   bool isnull = m_ptr.i == RNIL;

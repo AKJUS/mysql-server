@@ -4506,6 +4506,8 @@ class Dbdict : public SimulatedBlock {
                                   Uint32 *parent_to_child,
                                   Uint32 *child_to_parent) const;
 
+  void dumpSchemaTransaction(SchemaTransPtr schemaTransPtr);
+
  public:
   void send_drop_file(Signal *, Uint32, Uint32, DropFileImplReq::RequestInfo);
   void send_drop_fg(Signal *, Uint32, Uint32,

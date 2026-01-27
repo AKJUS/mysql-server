@@ -16141,8 +16141,7 @@ void Dbtc::execDUMP_STATE_ORD(Signal *signal) {
     return;
   }
 #endif
-  if (arg == DumpStateOrd::DihTcSumaNodeFailCompleted &&
-      signal->getLength() == 2) {
+  if (arg == DumpStateOrd::LogNodeFailProgress && signal->getLength() == 2) {
     jam();
     NodeId nodeId = signal->theData[1];
     if (nodeId < MAX_NODES && nodeId < NDB_ARRAY_SIZE(capiConnectClosing)) {
