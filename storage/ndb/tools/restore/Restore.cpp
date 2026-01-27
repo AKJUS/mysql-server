@@ -1395,7 +1395,17 @@ BackupFile::~BackupFile() {
   }
 
   if (r == -1) {
-    restoreLogger.log_warning("Warning: File did not close correctly.");
+    const ndb_off_t data_pos = m_xfile.get_data_pos();
+    const ndb_off_t data_size = m_xfile.get_data_size();
+    if (data_pos != data_size) {
+      restoreLogger.log_warning(
+          "Warning: All data was not read, can not check file "
+          "consistency. Data read %jd of %jd bytes.",
+          intmax_t{data_pos}, intmax_t{data_size});
+    } else {
+      restoreLogger.log_warning(
+          "Warning: File consistency error, may be checksum failure.");
+    }
 #ifdef ERROR_INSERT
     if (m_error_insert == NDB_RESTORE_ERROR_INSERT_ABORT_ON_CLOSE_ERROR) {
       ::abort();
