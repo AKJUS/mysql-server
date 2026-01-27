@@ -1394,6 +1394,11 @@ BackupFile::~BackupFile() {
 
   if (r == -1) {
     restoreLogger.log_warning("Warning: File did not close correctly.");
+#ifdef ERROR_INSERT
+    if (m_error_insert == NDB_RESTORE_ERROR_INSERT_ABORT_ON_CLOSE_ERROR) {
+      ::abort();
+    }
+#endif
   }
 
   if (m_buffer != 0) {
