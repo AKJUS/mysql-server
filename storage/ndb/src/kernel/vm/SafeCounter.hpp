@@ -174,7 +174,7 @@ class SafeCounter {
   bool isWaitingFor(Uint32 nodeId) const;
   bool done() const;
 
-  const char *getText() const; /* ? needed for, some portability issues */
+  const char *getText(char *buf) const;
 
   SafeCounter &operator=(const NdbNodeBitmask &);
   SafeCounter &operator=(const NodeReceiverGroup &);

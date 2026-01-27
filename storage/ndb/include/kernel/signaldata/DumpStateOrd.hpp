@@ -137,6 +137,7 @@ class DumpStateOrd {
     // 1222-1225 DICT
     DictDumpLockQueue = 1228,
     DictDumpGetTabInfoQueue = 1229,
+    DictDumpSchemaTransactions = 1230,
     LqhDumpAllDefinedTabs = 1332,
     LqhDumpNoLogPages = 1333,
     LqhDumpOneScanRec = 2300,
@@ -237,7 +238,7 @@ class DumpStateOrd {
     DihMinTimeBetweenLCP = 7017,
     DihMaxTimeBetweenLCP = 7018,
     // Check if blocks are done with handling the failure of another node.
-    DihTcSumaNodeFailCompleted = 7019,  // DIH+TC+SUMA
+    LogNodeFailProgress = 7019,  // Sent to multiple block types
     // 7020
     // 7021
     // 7022
