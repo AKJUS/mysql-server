@@ -632,16 +632,24 @@ class RestoreLogger {
   ~RestoreLogger();
   void log_info(const char *fmt, ...) ATTRIBUTE_FORMAT(printf, 2, 3);
   void log_debug(const char *fmt, ...) ATTRIBUTE_FORMAT(printf, 2, 3);
+  void log_warning(const char *fmt, ...) ATTRIBUTE_FORMAT(printf, 2, 3);
   void log_error(const char *fmt, ...) ATTRIBUTE_FORMAT(printf, 2, 3);
   void setThreadPrefix(const char *prefix);
   const char *getThreadPrefix() const;
+  void set_print_log_level(bool print_LL);
+  bool get_print_log_level() const;
   void set_print_timestamp(bool print_TS);
-  bool get_print_timestamp();
+  bool get_print_timestamp() const;
 
  private:
+  void vlog_ll(FilteredNdbOut &out, const char *ll, const char *fmt, va_list ap)
+      ATTRIBUTE_FORMAT(printf, 3, 0);
+
   NdbMutex *m_mutex;
   char timestamp[64];
+  // If both print_timestamp and print_log_level use g_eventLogger format
   bool print_timestamp;
+  bool print_log_level;
 };
 
 NdbOut &operator<<(NdbOut &ndbout, const TableS &);
