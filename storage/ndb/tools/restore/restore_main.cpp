@@ -37,6 +37,7 @@
 #include "my_getopt.h"
 #include "portlib/NdbTick.h"
 #include "portlib/ssl_applink.h"
+#include "util/cstrbuf.h"
 #include "util/ndb_openssl_evp.h"  // ndb_openssl_evp::library_init()
 #include "util/require.h"
 
@@ -101,6 +102,7 @@ const char *opt_ndb_table = NULL;
 unsigned int opt_verbose;
 unsigned int opt_hex_format;
 bool opt_show_part_id = true;
+bool opt_show_node_id;
 bool opt_show_log_level;
 unsigned int opt_progress_frequency;
 NDB_TICKS g_report_prev;
@@ -455,6 +457,9 @@ static struct my_option my_long_options[] = {
      "Include log level in log message. Deprecated, log level will always "
      "be included in future.",
      &opt_show_log_level, nullptr, nullptr, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
+    {"show-node-id", 256,
+     "Prefix log messages with node of that ndb_restore uses",
+     &opt_show_node_id, nullptr, nullptr, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
     {"show-part-id", 256, "Prefix log messages with backup part ID",
      &opt_show_part_id, nullptr, nullptr, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
 #ifdef ERROR_INSERT
@@ -1811,11 +1816,12 @@ int do_restore(RestoreThreadData *thrdata) {
   init_progress();
 
   Vector<BackupConsumer *> &g_consumers = thrdata->m_consumers;
-  char threadName[15] = "";
-  if (opt_show_part_id)
-    BaseString::snprintf(threadName, sizeof(threadName), "[part %u] ",
-                         thrdata->m_part_id);
-  restoreLogger.setThreadPrefix(threadName);
+  cstrbuf<30> threadName;
+  if (opt_show_node_id)
+    threadName.appendf("Node %u: ", g_cluster_connection->node_id());
+  if (opt_show_part_id) threadName.appendf("[part %u] ", thrdata->m_part_id);
+  require(!threadName.is_truncated());
+  restoreLogger.setThreadPrefix(threadName.c_str());
 
   /**
    * we must always load meta data, even if we will only print it to stdout
