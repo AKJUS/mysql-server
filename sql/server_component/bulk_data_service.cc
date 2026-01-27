@@ -380,6 +380,11 @@ static int format_char_column(const Column_text &text_col,
 
   size_t copy_size{0};
 
+  if (text_col.m_data_len > field_size) {
+    error_details.m_column_length = sql_col.m_data_len;
+    return ER_TOO_BIG_FIELDLENGTH;
+  }
+
   if (text_col.is_ext()) {
     assert(text_col.m_data_len == 20);
     memcpy(field_data, text_col.m_data_ptr, text_col.m_data_len);
