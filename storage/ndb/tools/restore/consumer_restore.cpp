@@ -2139,7 +2139,7 @@ bool BackupRestore::table_compatible_check(TableS &tableS) {
     }
 
     if (contains_unique_indexes) {
-      restoreLogger.log_error(
+      restoreLogger.log_warning(
           "WARNING: Table %s contains unique indexes. "
           "This can cause ndb_restore failures with duplicate key errors "
           "while restoring data. To avoid duplicate key errors, use "
@@ -2359,7 +2359,7 @@ bool BackupRestore::table_compatible_check(TableS &tableS) {
        * a single shared mapping index rather than per
        * ndb_restore / slice / thread indices
        */
-      restoreLogger.log_info(
+      restoreLogger.log_warning(
           "Warning : Primary key extended in DB with "
           "allow-pk-changes, and --restore-data but without "
           "--disable-indexes.  A final --rebuild-indexes step "
@@ -2477,7 +2477,7 @@ bool BackupRestore::table_compatible_check(TableS &tableS) {
           return false;
         }
         if (col_in_kernel_pk) {
-          restoreLogger.log_info(
+          restoreLogger.log_warning(
               "Warning : Table: %s column: %s "
               "is part of primary key and involves "
               "a lossy conversion.  Risk of row loss "
@@ -4105,7 +4105,7 @@ bool BackupRestore::tryCreatePkMappingIndex(TableS *table,
 
         oldPkColsAvailable++;
       } else {
-        restoreLogger.log_info(
+        restoreLogger.log_warning(
             "Warning : Table %s primary key column %s "
             "no longer exists in DB.",
             table->getTableName(), attrDesc->m_column->getName());
@@ -4802,7 +4802,7 @@ bool BackupRestore::endOfLogEntrys() {
   if (get_fatal_error()) return false;
 
   if (m_pk_update_warning_count > 0) {
-    restoreLogger.log_info(
+    restoreLogger.log_warning(
         "Warning : --ignore-extended-pk-updates resulted in %llu "
         "modifications to extended primary key columns being "
         "ignored.",

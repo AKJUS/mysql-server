@@ -43,9 +43,11 @@
 #include <NdbThread.h>
 #include "../src/kernel/vm/Emulator.hpp"
 #include "kernel/signaldata/FsOpenReq.hpp"
+#include "m_string.h"
 #include "portlib/NdbMem.h"
 #include "portlib/ndb_file.h"
 #include "restore_tables.h"
+#include "util/cstrbuf.h"
 #include "util/ndb_opts.h"
 
 using byte = unsigned char;
@@ -1391,7 +1393,7 @@ BackupFile::~BackupFile() {
   }
 
   if (r == -1) {
-    restoreLogger.log_error("Warning: File did not close correctly.");
+    restoreLogger.log_warning("Warning: File did not close correctly.");
   }
 
   if (m_buffer != 0) {
@@ -2433,55 +2435,66 @@ RestoreLogger::RestoreLogger() : print_timestamp(true) {
 
 RestoreLogger::~RestoreLogger() { NdbMutex_Destroy(m_mutex); }
 
+void RestoreLogger::vlog_ll(FilteredNdbOut &out, const char *ll,
+                            const char *fmt, va_list ap) {
+  if (print_log_level) {
+    // Strip fmt prefix if it already contains log level prefix.
+    int ll_len = strlen(ll);
+    if (native_strncasecmp(fmt, ll, ll_len) == 0) {
+      const char *p = fmt + ll_len;
+      if (*p == ' ') p++;
+      if (*p == ':' || *p == '!') {
+        p++;
+        while (*p == ' ') p++;
+        fmt = p;
+      }
+    }
+  }
+
+  NdbMutex_Lock(m_mutex);
+  cstrbuf<100 + LOG_MSGLEN> msg;
+
+  if (print_timestamp) {
+    Logger::format_timestamp(time(NULL), timestamp, sizeof(timestamp));
+    msg.append(timestamp);
+    msg.append(" ");
+  }
+  if (print_log_level) msg.appendf("%s: ", ll);
+  msg.append(getThreadPrefix());
+  msg.vappendf(fmt, ap);
+  assert(!msg.is_truncated());
+  msg.replace_end_if_truncated("...");
+
+  out << msg.c_str() << endl;
+  NdbMutex_Unlock(m_mutex);
+}
+
 void RestoreLogger::log_error(const char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
-  char buf[LOG_MSGLEN];
-  vsnprintf(buf, sizeof(buf), fmt, ap);
+  vlog_ll(err, "ERROR", fmt, ap);
   va_end(ap);
+}
 
-  NdbMutex_Lock(m_mutex);
-  if (print_timestamp) {
-    Logger::format_timestamp(time(NULL), timestamp, sizeof(timestamp));
-    err << timestamp << " ";
-  }
-
-  err << getThreadPrefix() << buf << endl;
-  NdbMutex_Unlock(m_mutex);
+void RestoreLogger::log_warning(const char *fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  vlog_ll(info, "WARNING", fmt, ap);
+  va_end(ap);
 }
 
 void RestoreLogger::log_info(const char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
-  char buf[LOG_MSGLEN];
-  vsnprintf(buf, sizeof(buf), fmt, ap);
+  vlog_ll(info, "INFO", fmt, ap);
   va_end(ap);
-
-  NdbMutex_Lock(m_mutex);
-  if (print_timestamp) {
-    Logger::format_timestamp(time(NULL), timestamp, sizeof(timestamp));
-    info << timestamp << " ";
-  }
-
-  info << getThreadPrefix() << buf << endl;
-  NdbMutex_Unlock(m_mutex);
 }
 
 void RestoreLogger::log_debug(const char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
-  char buf[LOG_MSGLEN];
-  vsnprintf(buf, sizeof(buf), fmt, ap);
+  vlog_ll(debug, "DEBUG", fmt, ap);
   va_end(ap);
-
-  NdbMutex_Lock(m_mutex);
-  if (print_timestamp) {
-    Logger::format_timestamp(time(NULL), timestamp, sizeof(timestamp));
-    debug << timestamp << " ";
-  }
-
-  debug << getThreadPrefix() << buf << endl;
-  NdbMutex_Unlock(m_mutex);
 }
 
 void RestoreLogger::setThreadPrefix(const char *prefix) {
@@ -2497,11 +2510,17 @@ const char *RestoreLogger::getThreadPrefix() const {
   return prefix;
 }
 
+void RestoreLogger::set_print_log_level(bool print_LL) {
+  print_log_level = print_LL;
+}
+
+bool RestoreLogger::get_print_log_level() const { return print_log_level; }
+
 void RestoreLogger::set_print_timestamp(bool print_TS) {
   print_timestamp = print_TS;
 }
 
-bool RestoreLogger::get_print_timestamp() { return print_timestamp; }
+bool RestoreLogger::get_print_timestamp() const { return print_timestamp; }
 
 NdbOut &operator<<(NdbOut &ndbout, const TableS &table) {
   ndbout << "-- " << table.getTableName() << " --" << endl;
