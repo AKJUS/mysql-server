@@ -2200,6 +2200,11 @@ int do_restore(RestoreThreadData *thrdata) {
 
       RestoreDataIterator dataIter(metaData, &free_data_callback,
                                    (void *)thrdata, opt_read_size);
+#ifdef ERROR_INSERT
+      if (_error_insert > 0) {
+        dataIter.error_insert(_error_insert);
+      }
+#endif
 
       if (!dataIter.validateBackupFile()) {
         restoreLogger.log_error(
@@ -2323,6 +2328,11 @@ int do_restore(RestoreThreadData *thrdata) {
     if (_restore_data || _print_log || _print_sql_log) {
       RestoreLogIterator logIter(metaData, &free_data_callback, (void *)thrdata,
                                  opt_read_size);
+#ifdef ERROR_INSERT
+      if (_error_insert > 0) {
+        logIter.error_insert(_error_insert);
+      }
+#endif
 
       restoreLogger.log_info("[restore_log] Read log file header");
 
@@ -2462,6 +2472,11 @@ int do_restore(RestoreThreadData *thrdata) {
     restoreLogger.log_info("[restore_epoch] Restoring epoch");
     RestoreLogIterator logIter(metaData, &free_data_callback, (void *)thrdata,
                                opt_read_size);
+#ifdef ERROR_INSERT
+    if (_error_insert > 0) {
+      logIter.error_insert(_error_insert);
+    }
+#endif
 
     if (!logIter.readHeader()) {
       err << "Failed to read snapshot info from log file. Exiting..." << endl;
