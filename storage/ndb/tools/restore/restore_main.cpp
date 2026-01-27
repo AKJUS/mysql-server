@@ -101,6 +101,7 @@ const char *opt_ndb_table = NULL;
 unsigned int opt_verbose;
 unsigned int opt_hex_format;
 bool opt_show_part_id = true;
+bool opt_show_log_level;
 unsigned int opt_progress_frequency;
 NDB_TICKS g_report_prev;
 Vector<BaseString> g_databases;
@@ -450,6 +451,10 @@ static struct my_option my_long_options[] = {
     {"skip-broken-objects", 256, "Skip broken object when parsing backup",
      &ga_skip_broken_objects, nullptr, nullptr, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0,
      0},
+    {"show-log-level", 256,
+     "Include log level in log message. Deprecated, log level will always "
+     "be included in future.",
+     &opt_show_log_level, nullptr, nullptr, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
     {"show-part-id", 256, "Prefix log messages with backup part ID",
      &opt_show_part_id, nullptr, nullptr, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
 #ifdef ERROR_INSERT
@@ -705,6 +710,7 @@ bool readArguments(Ndb_opts &opts, char ***pargv) {
     }
     exitHandler(NdbToolsProgramExitCode::WRONG_ARGS);
   }
+  restoreLogger.set_print_log_level(opt_show_log_level);
   if (!opt_timestamp_printouts) {
     restoreLogger.set_print_timestamp(false);
   }
