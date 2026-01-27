@@ -4996,6 +4996,8 @@ void Dbdict::restartCreateObj_parse(Signal *signal, SegmentedSectionPtr ptr,
   }
   ndbrequire(!hasError(error));
 
+  op_ptr.p->m_state = SchemaOp::OS_PARSED;
+
   /* For table objects create triggers for fully replicated, maybe */
   if (memcmp(info.m_opType, "CTa", 4) == 0)
     createSubOps(signal, op_ptr);
@@ -5081,6 +5083,8 @@ void Dbdict::restartDropObj(Signal *signal, Uint32 tableId,
     progError(__LINE__, NDBD_EXIT_RESTORE_SCHEMA, msg);
   }
   ndbrequire(!hasError(error));
+
+  op_ptr.p->m_state = SchemaOp::OS_PARSED;
 
   restart_nextOp(signal);
 }
@@ -26088,7 +26092,7 @@ void Dbdict::dropFK_commit(Signal *signal, SchemaOpPtr op_ptr) {
   getOpRec(op_ptr, dropFKRecPtr);
   DropFKImplReq *impl_req = &dropFKRecPtr.p->m_request;
   impl_req->requestType = DropFKImplReq::RT_COMMIT;
-  sendTransConf(signal, trans_ptr);
+  sendTransConf(signal, op_ptr);
 }
 
 void Dbdict::send_drop_fk_req(Signal *signal, SchemaOpPtr op_ptr) {
@@ -29349,7 +29353,7 @@ void Dbdict::slave_run_start(Signal *signal, const SchemaTransImplReq *req) {
   trans_ptr.p->m_obj_id = objId;
   trans_log(trans_ptr);
 
-  sendTransConf(signal, trans_ptr);
+  sendTransConfImpl(signal, trans_ptr);
   return;
 
 err:
@@ -29359,7 +29363,7 @@ err:
   trans_ptr.p->trans_key = trans_key;
   trans_ptr.p->m_masterRef = req->senderRef;
   setError(trans_ptr.p->m_error, error);
-  sendTransRef(signal, trans_ptr);
+  sendTransRefImpl(signal, trans_ptr);
 }
 
 void Dbdict::slave_run_parse(Signal *signal, SchemaTransPtr trans_ptr,
@@ -29418,7 +29422,7 @@ void Dbdict::slave_run_parse(Signal *signal, SchemaTransPtr trans_ptr,
   if (hasError(error)) {
     jam();
     setError(trans_ptr, error);
-    sendTransRef(signal, trans_ptr);
+    sendTransRefImpl(signal, trans_ptr);
     return;
   }
   sendTransConf(signal, op_ptr);
@@ -29589,7 +29593,7 @@ void Dbdict::slave_commit_mutex_unlocked(Signal *signal, Uint32 transPtrI,
 
 void Dbdict::sendTransConfRelease(Signal *signal, SchemaTransPtr trans_ptr) {
   jam();
-  sendTransConf(signal, trans_ptr);
+  sendTransConfImpl(signal, trans_ptr);
 
   if ((!trans_ptr.p->m_isMaster) &&
       trans_ptr.p->m_state == SchemaTrans::TS_ENDING) {
@@ -29634,6 +29638,14 @@ void Dbdict::update_op_state(SchemaOpPtr op_ptr) {
     case SchemaOp::OS_COMPLETING:
       jam();
       op_ptr.p->m_state = SchemaOp::OS_COMPLETED;
+      if (!op_ptr.p->m_opbck_ptr.isNull()) {
+        jam();
+        /* We are a linked helper operation, update state of
+         * buddy op defined in transaction
+         */
+        ndbrequire(op_ptr.p->m_opbck_ptr.p->m_state == SchemaOp::OS_COMPLETING);
+        op_ptr.p->m_opbck_ptr.p->m_state = SchemaOp::OS_COMPLETED;
+      }
       break;
     case SchemaOp::OS_COMPLETED:
       ndbabort();
@@ -29644,10 +29656,11 @@ void Dbdict::sendTransConf(Signal *signal, SchemaOpPtr op_ptr) {
   jam();
   SchemaTransPtr trans_ptr = op_ptr.p->m_trans_ptr;
   update_op_state(op_ptr);
-  sendTransConf(signal, trans_ptr);
+  validateSchemaTransaction(trans_ptr);
+  sendTransConfImpl(signal, trans_ptr);
 }
 
-void Dbdict::sendTransConf(Signal *signal, SchemaTransPtr trans_ptr) {
+void Dbdict::sendTransConfImpl(Signal *signal, SchemaTransPtr trans_ptr) {
   ndbrequire(!trans_ptr.isNull());
   ndbrequire(signal->getNoOfSections() == 0);
 
@@ -29684,10 +29697,12 @@ void Dbdict::sendTransRef(Signal *signal, SchemaOpPtr op_ptr) {
 
   update_op_state(op_ptr);
 
-  sendTransRef(signal, trans_ptr);
+  validateSchemaTransaction(trans_ptr);
+
+  sendTransRefImpl(signal, trans_ptr);
 }
 
-void Dbdict::sendTransRef(Signal *signal, SchemaTransPtr trans_ptr) {
+void Dbdict::sendTransRefImpl(Signal *signal, SchemaTransPtr trans_ptr) {
   D("sendTransRef");
   ndbrequire(hasError(trans_ptr.p->m_error));
 
@@ -30378,6 +30393,51 @@ bool Dbdict::findCallback(Callback &callback, Uint32 any_key) {
   callback.m_callbackFunction = 0;
   callback.m_callbackData = 0;
   return false;
+}
+
+void Dbdict::validateSchemaTransaction(SchemaTransPtr schemaTransPtr) {
+  /* Check that schema transaction state + operation list
+   * state conform to invariants
+   */
+
+  /* To begin with, require that operation list states
+   * are strictly ascending.
+   * e.g. if we have n ops in the transaction, the states
+   * should advance in an orderly way as the transaction
+   * rolls forward or back.
+   */
+  bool ok = true;
+  Uint32 minOpState = SchemaOp::OS_COMPLETED;
+  {
+    LocalSchemaOp_list list(c_schemaOpPool, schemaTransPtr.p->m_op_list);
+    SchemaOpPtr schemaOp;
+    list.first(schemaOp);
+
+    while (!schemaOp.isNull()) {
+      if (likely(SchemaOp::weight(schemaOp.p->m_state) <=
+                 SchemaOp::weight(minOpState))) {
+        jam();
+        minOpState = schemaOp.p->m_state;
+      } else {
+        jam();
+        g_eventLogger->error(
+            "Dbdict::validateSchemaTransction operation state "
+            "invariant broken at op %u as weight(%u) > weight(%u) (%u>%u)",
+            schemaOp.i, schemaOp.p->m_state, minOpState,
+            SchemaOp::weight(schemaOp.p->m_state),
+            SchemaOp::weight(minOpState));
+        ok = false;
+      }
+
+      list.next(schemaOp);
+    }
+  }
+
+  if (unlikely(!ok)) {
+    g_eventLogger->error("Dbdict::validateSchemaTransaction() failure");
+    dumpSchemaTransaction(schemaTransPtr);
+    ndbabort();
+  }
 }
 
 // MODULE: CreateHashMap
