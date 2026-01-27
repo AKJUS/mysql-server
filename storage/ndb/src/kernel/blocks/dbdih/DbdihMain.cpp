@@ -25461,8 +25461,8 @@ void Dbdih::execDUMP_STATE_ORD(Signal *signal) {
     }
   }
 
-  if (arg == DumpStateOrd::DihTcSumaNodeFailCompleted &&
-      signal->getLength() == 2 && signal->theData[1] < MAX_NDB_NODES) {
+  if (arg == DumpStateOrd::LogNodeFailProgress && signal->getLength() == 2 &&
+      signal->theData[1] < MAX_NDB_NODES) {
     jam();
     char buf2[8 + 1];
     NodeRecordPtr nodePtr;
@@ -25477,6 +25477,7 @@ void Dbdih::execDUMP_STATE_ORD(Signal *signal) {
     infoEvent(" m_NF_COMPLETE_REP: %s m_nodefailSteps: %s",
               nodePtr.p->m_NF_COMPLETE_REP.getText(),
               nodePtr.p->m_nodefailSteps.getText(buf2));
+    return;
   }
 
   if (arg == 7020 && signal->getLength() > 3) {

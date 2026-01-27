@@ -3536,9 +3536,12 @@ void Qmgr::checkStartInterface(Signal *signal, NDB_TICKS now) {
             /**
              * Also dump DIH nf-state
              */
-            signal->theData[0] = DumpStateOrd::DihTcSumaNodeFailCompleted;
+            signal->theData[0] = DumpStateOrd::LogNodeFailProgress;
             signal->theData[1] = nodePtr.i;
             sendSignal(DBDIH_REF, GSN_DUMP_STATE_ORD, signal, 2, JBB);
+
+            /* Dump DICT state */
+            sendSignal(DBDICT_REF, GSN_DUMP_STATE_ORD, signal, 2, JBB);
           }
         } else {
           /* API/MGMD */
@@ -3592,7 +3595,7 @@ void Qmgr::checkStartInterface(Signal *signal, NDB_TICKS now) {
               for (Uint32 i = 0;
                    i < NDB_ARRAY_SIZE(nodePtr.p->m_failconf_blocks); i++) {
                 if (nodePtr.p->m_failconf_blocks[i] != 0) {
-                  signal->theData[0] = DumpStateOrd::DihTcSumaNodeFailCompleted;
+                  signal->theData[0] = DumpStateOrd::LogNodeFailProgress;
                   signal->theData[1] = nodePtr.i;
                   const Uint32 dstRef =
                       numberToRef(nodePtr.p->m_failconf_blocks[i], 0);
