@@ -126,6 +126,8 @@ usr/lib/mysql/plugin/debug/component_test_component_deinit_no_deadlock.so
 usr/lib/mysql/plugin/debug/component_test_component_init_fail.so
 usr/lib/mysql/plugin/debug/component_test_component_init_then_register.so
 usr/lib/mysql/plugin/debug/component_test_mysql_command_services.so
+usr/lib/mysql/plugin/debug/component_test_telemetry_resource_provider.so
+usr/lib/mysql/plugin/debug/component_test_telemetry_secret_provider.so
 usr/lib/mysql/plugin/debug/test_services_command_services.so
 usr/lib/mysql/plugin/debug/component_udf_reg_3_func.so
 usr/lib/mysql/plugin/debug/component_udf_reg_avg_func.so
@@ -272,8 +274,6 @@ usr/lib/mysql/plugin/debug/component_keyring_aws.so
   SET (DEB_INSTALL_DEBUG_TEST_PLUGINS "${DEB_INSTALL_DEBUG_TEST_PLUGINS}
 usr/lib/mysql/plugin/debug/component_test_global_priv_registration.so
 usr/lib/mysql/plugin/debug/component_test_page_track_component.so
-usr/lib/mysql/plugin/debug/component_test_telemetry_resource_provider.so
-usr/lib/mysql/plugin/debug/component_test_telemetry_secret_provider.so
 ")
 
 ENDIF()
