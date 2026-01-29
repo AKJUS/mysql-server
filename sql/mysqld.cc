@@ -13177,6 +13177,9 @@ bool mysqld_get_one_option(int optid,
       push_deprecated_warn_no_replacement(nullptr,
                                           "--innodb_native_foreign_keys");
       break;
+    case OPT_CASCADE_TRIGGERS:
+      push_deprecated_warn_no_replacement(nullptr, "--enable_cascade_triggers");
+      break;
   }
   return false;
 }

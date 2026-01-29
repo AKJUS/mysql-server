@@ -10982,6 +10982,15 @@ ER_MASKING_POLICY_INCOMPATIBLE_TYPES 42000
 ER_MASKING_POLICY_NON_DETERMINISTIC_FUNC 42000
   eng "MASKING POLICY expression is non-deterministic."
 
+ER_FK_MAX_TABLES_IN_CASCADE_CHAIN_EXCEEDED
+  eng "Foreign key cascade delete/update exceeds max tables limit of %d."
+
+ER_FK_CASCADE_TRIGGER_UPDATING_FK_COLUMNS_NOT_SUPPORTED
+  eng "Updating a foreign key column in a child-table trigger during a foreign key cascade operation is not allowed."
+
+ER_CANT_UPDATE_USED_TABLE_IN_FK_CASCADE
+  eng "Can not update table '%-.192s' in a foreign key cascade action induced by a stored function/trigger because the table is already used in foreign key cascade handling."
+
 #
 #  End of 9.x error messages (server-to-client).
 #

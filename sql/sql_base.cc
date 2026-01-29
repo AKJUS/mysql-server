@@ -4490,29 +4490,35 @@ bool add_fk_tables_to_table_list(THD *thd, Table_ref ***query_tables_last_ptr,
     my_casedn_str(&my_charset_utf8mb3_tolower_ci, tbl_str);
   }
 
-  if (is_foreign_key_table_opened(thd, db_str, tbl_str, fk_name)) {
+  bool is_unused_table = false;
+  if (is_foreign_key_table_opened(thd, db_str, tbl_str, fk_name,
+                                  &is_unused_table)) {
     DBUG_PRINT("fk",
                ("add_fk_tables_to_table_list:Table %s.%s for foreign key %s "
                 "found in opentables",
                 db_str, tbl_str, fk_name));
 
+    if (thd->locked_tables_mode != LTM_LOCK_TABLES) return false;
+
     // Tables locked under lock table mode need not be added again.
-    if (thd->locked_tables_mode == LTM_LOCK_TABLES) {
-      if (!cascade) {
-        if (!thd->mdl_context.owns_equal_or_stronger_lock(
-                MDL_key::TABLE, db_str, tbl_str, MDL_SHARED_READ_ONLY)) {
-          my_error(ER_TABLE_NOT_LOCKED, MYF(0), tbl_str);
-          return true;
-        }
-      } else {
-        if (!thd->mdl_context.owns_equal_or_stronger_lock(
-                MDL_key::TABLE, db_str, tbl_str, MDL_SHARED_NO_READ_WRITE)) {
-          my_error(ER_TABLE_NOT_LOCKED_FOR_WRITE, MYF(0), tbl_str);
-          return true;
-        }
+    if (!is_unused_table) return false;
+
+    // Table is locked under lock tables and not opened yet.
+    // Handle LOCK TABLE error case. For more information, refer
+    // open_and_process_routine() LOCK TABLE handling code comment
+    if (!cascade) {
+      if (!thd->mdl_context.owns_equal_or_stronger_lock(
+              MDL_key::TABLE, db_str, tbl_str, MDL_SHARED_READ_ONLY)) {
+        my_error(ER_TABLE_NOT_LOCKED, MYF(0), tbl_str);
+        return true;
+      }
+    } else {
+      if (!thd->mdl_context.owns_equal_or_stronger_lock(
+              MDL_key::TABLE, db_str, tbl_str, MDL_SHARED_NO_READ_WRITE)) {
+        my_error(ER_TABLE_NOT_LOCKED_FOR_WRITE, MYF(0), tbl_str);
+        return true;
       }
     }
-    return false;
   }
 
   DBUG_PRINT("fk", ("add_fk_tables_to_table_list:Table %s.%s for foreign key "
@@ -4545,6 +4551,7 @@ bool add_fk_tables_to_table_list(THD *thd, Table_ref ***query_tables_last_ptr,
 
   @param  thd                   Thread context.
   @param  prelocking_ctx        Prelocking context of the statement.
+  @param  table_ref             Table list element to be processed
   @param  share                 Table's share.
   @param  is_insert             Indicates whether statement is going to INSERT
                                 into the table.
@@ -4560,8 +4567,8 @@ bool add_fk_tables_to_table_list(THD *thd, Table_ref ***query_tables_last_ptr,
   @return  false on success, true on error.
 */
 static bool process_table_fks(THD *thd, Query_tables_list *prelocking_ctx,
-                              TABLE_SHARE *share, bool is_insert,
-                              bool is_update, bool is_delete,
+                              Table_ref *table_ref, TABLE_SHARE *share,
+                              bool is_insert, bool is_update, bool is_delete,
                               Table_ref *belong_to_view,
                               bool is_update_on_child, bool *need_prelocking) {
   bool ret = false;
@@ -4674,18 +4681,35 @@ static bool process_table_fks(THD *thd, Query_tables_list *prelocking_ctx,
               fk_p->referencing_table_name.str,
               fk_p->referencing_table_name.length, normalize_db_names,
               name_normalize_type, false, belong_to_view);
-        } else if (!is_self_ref_key) {
-          enum_mdl_type mdl_type = MDL_SHARED_WRITE;
-          if (is_lock_table_cmd) mdl_type = MDL_SHARED_NO_READ_WRITE;
+        } else {
           uint8 dml_action =
               static_cast<uint8>(1 << static_cast<int>(TRG_EVENT_UPDATE));
-          ret = add_fk_tables_to_table_list(
-              thd, &prelocking_ctx->query_tables_last,
-              fk_p->referencing_table_db.str, fk_p->referencing_table_db.length,
-              fk_p->referencing_table_name.str,
-              fk_p->referencing_table_name.length, fk_p->fk_name.str, true,
-              dml_action, TL_WRITE, mdl_type);
-          if (ret) break;
+          if (is_self_ref_key) {
+            if (is_delete && table_ref->table->triggers) {
+              /*
+                 Self referencing key with ON DELETE SET NULL fires
+                 UPDATE triggers during cascade action. Since Table_ref for self
+                 referencing is not added to the table_list, adding tables and
+                 routines of UPDATE triggers here.
+              */
+              uint8_t trg_event_map_bkup = table_ref->trg_event_map;
+              table_ref->trg_event_map = dml_action;
+              table_ref->table->triggers->add_tables_and_routines_for_triggers(
+                  thd, prelocking_ctx, table_ref);
+              table_ref->trg_event_map = trg_event_map_bkup;
+            }
+          } else {
+            enum_mdl_type mdl_type = MDL_SHARED_WRITE;
+            if (is_lock_table_cmd) mdl_type = MDL_SHARED_NO_READ_WRITE;
+            ret = add_fk_tables_to_table_list(
+                thd, &prelocking_ctx->query_tables_last,
+                fk_p->referencing_table_db.str,
+                fk_p->referencing_table_db.length,
+                fk_p->referencing_table_name.str,
+                fk_p->referencing_table_name.length, fk_p->fk_name.str, true,
+                dml_action, TL_WRITE, mdl_type);
+            if (ret) break;
+          }
         }
       }
 
@@ -5109,9 +5133,10 @@ static bool open_and_process_routine(
 
           DBUG_PRINT("fk",
                      ("process_table_fks called:%s", share->table_name.str));
-          if (process_table_fks(thd, prelocking_ctx, share, false, is_update,
-                                is_delete, rt->belong_to_view, false,
-                                need_prelocking))
+          if (process_table_fks(thd, prelocking_ctx,
+                                nullptr /* not used in non-SQL FK*/, share,
+                                false, is_update, is_delete, rt->belong_to_view,
+                                false, need_prelocking))
             return true;
         }
       }
@@ -6506,9 +6531,10 @@ bool DML_prelocking_strategy::handle_table(THD *thd,
 
       DBUG_PRINT("fk", ("DML_prelocking_strategy::handle_table called:%s",
                         table_list->table->s->table_name.str));
-      if (process_table_fks(thd, prelocking_ctx, table_list->table->s,
-                            is_insert, is_update, is_delete,
-                            table_list->belong_to_view, true, need_prelocking))
+      if (process_table_fks(thd, prelocking_ctx, table_list,
+                            table_list->table->s, is_insert, is_update,
+                            is_delete, table_list->belong_to_view, true,
+                            need_prelocking))
         return true;
     }
   }

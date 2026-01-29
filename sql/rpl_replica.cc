@@ -6195,6 +6195,7 @@ static void *handle_slave_worker(void *arg) {
   }
 
   thd->variables.restrict_fk_on_non_standard_key = false;
+  thd->variables.enable_cascade_triggers = false;
 
   thd_manager->add_thd(thd);
   thd_added = true;
@@ -7198,6 +7199,7 @@ extern "C" void *handle_slave_sql(void *arg) {
       }
 
       thd->variables.restrict_fk_on_non_standard_key = false;
+      thd->variables.enable_cascade_triggers = false;
 
       rli->transaction_parser.reset();
 

@@ -363,6 +363,10 @@ The following options may be given as the first argument:
  before storage engine initialization, where each plugin
  is identified as name=library, where name is the plugin
  name and library is the plugin library in plugin_dir.
+ --enable-cascade-triggers 
+ Execute trigger on child tables during foreign key
+ cascade operations for SQL Engine foreign key
+ handling(i.e. innodb_native_foreign_keys = OFF).
  --enable-secondary-engine-statistics 
  When this option is enabled, the hypergraph query
  optimizer may fetchstatistics from the secondary engine,
@@ -1718,6 +1722,7 @@ delayed-queue-size 1000
 disabled-storage-engines 
 disconnect-on-expired-password TRUE
 div-precision-increment 4
+enable-cascade-triggers FALSE
 enable-secondary-engine-statistics TRUE
 end-markers-in-json FALSE
 enforce-gtid-consistency ON

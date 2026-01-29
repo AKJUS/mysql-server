@@ -427,6 +427,7 @@ struct PRINT_EVENT_INFO {
   my_thread_id thread_id;
   bool thread_id_printed;
   uint8_t default_table_encryption;
+  uint8_t enable_cascade_triggers;
 
   PRINT_EVENT_INFO();
 
@@ -1501,6 +1502,10 @@ class Query_log_event : public virtual mysql::binlog::event::Query_event,
   /** Whether or not the statement represented by this event requires
       `Q_DEFAULT_TABLE_ENCRYPTION` to be logged along aside. */
   bool needs_default_table_encryption{false};
+
+  /** Whether or not the statement represented by this event requires
+      `Q_ENABLE_CASCADE_TRIGGERS` to be logged along aside. */
+  bool need_enable_cascade_triggers{false};
 };
 
 /**

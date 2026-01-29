@@ -518,6 +518,12 @@ struct System_variables {
     @sa Sys_restrict_fk_on_non_standard_key
   */
   bool restrict_fk_on_non_standard_key;
+
+  /**
+    Activate child table trigger execution during SQL foreign key cascade.
+    @sa Sys_enable_cascade_triggers
+  */
+  bool enable_cascade_triggers;
 };
 
 static_assert(std::is_trivially_copyable<System_variables>::value);

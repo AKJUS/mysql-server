@@ -7689,6 +7689,42 @@ Sys_var_bool Sys_innodb_native_foreign_keys(
     PERSIST_AS_READONLY READ_ONLY GLOBAL_VAR(innodb_native_foreign_keys),
     CMD_LINE(OPT_ARG, OPT_INNODB_FOREIGN_KEYS), DEFAULT(false), NO_MUTEX_GUARD,
     NOT_IN_BINLOG, ON_CHECK(nullptr), ON_UPDATE(nullptr));
+
+/**
+  Warn usage of enable_cascade_triggers variable. When it is set
+  to false, warning should include triggers do not fire during FK cascade.
+*/
+bool enable_cascade_triggers_check(sys_var *self, THD *thd, set_var *setv) {
+  if (setv->save_result.ulonglong_value == 0)
+    push_warning_printf(
+        thd, Sql_condition::SL_WARNING, ER_WARN_DEPRECATED_WITH_NOTE,
+        ER_THD(thd, ER_WARN_DEPRECATED_WITH_NOTE), self->name.str,
+        "Triggers on child table will not fire during foreign key cascade.");
+  else {
+    if (!is_sql_fk_checks_enabled(thd)) {
+      push_warning_printf(
+          thd, Sql_condition::SL_WARNING, ER_WARN_DEPRECATED_WITH_NOTE,
+          ER_THD(thd, ER_WARN_DEPRECATED_WITH_NOTE), self->name.str,
+          "Enabling trigger execution on child table is supported only with "
+          "SQL Foreign Key handling "
+          "(i.e with innodb_native_foreign_keys = OFF).");
+    } else {
+      push_warning_printf(thd, Sql_condition::SL_WARNING,
+                          ER_WARN_DEPRECATED_SYNTAX_NO_REPLACEMENT,
+                          ER_THD(thd, ER_WARN_DEPRECATED_SYNTAX_NO_REPLACEMENT),
+                          self->name.str);
+    }
+  }
+  return false;
+}
+
+Sys_var_bool Sys_enable_cascade_triggers(
+    "enable_cascade_triggers",
+    "Execute trigger on child tables during foreign key cascade operations for "
+    "SQL Engine foreign key handling(i.e. innodb_native_foreign_keys = OFF).",
+    SESSION_VAR(enable_cascade_triggers),
+    CMD_LINE(OPT_ARG, OPT_CASCADE_TRIGGERS), DEFAULT(false), NO_MUTEX_GUARD,
+    IN_BINLOG, ON_CHECK(enable_cascade_triggers_check), ON_UPDATE(nullptr));
 }  // namespace
 
 #ifndef NDEBUG
