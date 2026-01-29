@@ -45,6 +45,7 @@
 #include "../../src/ndbapi/NdbInfo.hpp"
 #include "m_ctype.h"
 #include "my_sys.h"
+#include "util/ndb_barrier.h"
 #include "util/require.h"
 
 static int changeStartPartitionedTimeout(NDBT_Context *ctx, NDBT_Step *step) {
@@ -10119,6 +10120,7 @@ int runMixedLoadExtra(NDBT_Context *ctx, NDBT_Step *step) {
 }
 
 int runPrepareUpdatesTransaction(NDBT_Context *ctx, NDBT_Step *step) {
+  ndb::scoped_barrier steps_barrier(*ctx->getStepsBarrierPtr());
   int result = NDBT_OK;
   int records = ctx->getNumRecords();
   int batch = std::min(100, records / step->getStepTypeCount());
@@ -10129,8 +10131,6 @@ int runPrepareUpdatesTransaction(NDBT_Context *ctx, NDBT_Step *step) {
   prefix = prefix + "Step thread " + std::to_string(step_num) + ": " +
            __func__ + ": ";
   const char *step_prefix = prefix.c_str();
-
-  Uint32 restart_count = 0;
   int i = 0;
   while (!ctx->isTestStopped()) {
     g_info << i << ": ";
@@ -10140,14 +10140,14 @@ int runPrepareUpdatesTransaction(NDBT_Context *ctx, NDBT_Step *step) {
     restarter.waitClusterStarted();
     CHK_NDB_READY(pNdb);
 
-    restart_count = ctx->getProperty("RESTART_COUNT", restart_count);
-
     int nodeid = restarter.getDbNodeId(rand() % restarter.getNumDbNodes());
+
+    ndbout_c("%sPreparing transaction on node %d.", step_prefix, nodeid);
 
     HugoOperations hugoOps(*ctx->getTab());
 
     if (hugoOps.startTransaction(pNdb, nodeid, 0) != NDBT_OK) {
-      ndbout << step_prefix << "Failed to start transaction" << endl;
+      ndbout_c("%sFailed to start transaction.", step_prefix);
       hugoOps.closeTransaction(pNdb);
       continue;
     }
@@ -10159,27 +10159,24 @@ int runPrepareUpdatesTransaction(NDBT_Context *ctx, NDBT_Step *step) {
     for (int j = 0; j < batch; j++) {
       int record_no = step_num * batch + j;
       if (hugoOps.pkUpdateRecord(pNdb, record_no, 1, rand())) {
-        ndbout << step_prefix
-               << "Failed to update record number = " << record_no << endl;
+        ndbout_c("%sFailed to update record number = %d.", step_prefix,
+                 record_no);
       } else {
         op_count++;
       }
     }
     if (hugoOps.execute_NoCommit(pNdb) != 0) {
-      ndbout << step_prefix << "Failed to execute no commit" << endl;
+      ndbout_c("%sFailed to execute no commit.", step_prefix);
       hugoOps.closeTransaction(pNdb);
       continue;
     }
-    ndbout_c(
-        "%sPrepared transaction with %d updates on node %d "
-        "(current restart %d)",
-        step_prefix, op_count, nodeid, restart_count);
+    ndbout_c("%sPrepared transaction with %d updates on node %d.", step_prefix,
+             op_count, nodeid);
 
-    // Wait for a restart
-    while (!ctx->isTestStopped() &&
-           ctx->getProperty("RESTART_COUNT", restart_count) == restart_count) {
-      NdbSleep_SecSleep(1);
-    }
+    steps_barrier.arrive_and_wait();  // Transaction is prepared
+
+    ndbout_c("%sWaiting for node restart to complete.", step_prefix);
+    steps_barrier.arrive_and_wait();  // Wait for a restart
 
     hugoOps.closeTransaction(pNdb);
 
@@ -10189,6 +10186,7 @@ int runPrepareUpdatesTransaction(NDBT_Context *ctx, NDBT_Step *step) {
 }
 
 int runSlowCompleteNF(NDBT_Context *ctx, NDBT_Step *step) {
+  ndb::scoped_barrier steps_barrier(*ctx->getStepsBarrierPtr());
   int result = NDBT_OK;
   NdbRestarter restarter;
   // Error codes to slow down completion of transactions
@@ -10201,7 +10199,6 @@ int runSlowCompleteNF(NDBT_Context *ctx, NDBT_Step *step) {
     return NDBT_SKIPPED;
   }
 
-  Uint32 restart_count = 0;
   for (int i = 0; i < loops && result == NDBT_OK && !ctx->isTestStopped();
        i++) {
     for (unsigned j = 0; j < std::size(err_codes) && !ctx->isTestStopped();
@@ -10212,8 +10209,8 @@ int runSlowCompleteNF(NDBT_Context *ctx, NDBT_Step *step) {
              << endl;
       restarter.insertErrorInAllNodes(errorCode);
 
-      /* Give some time for things to get stuck in slowness */
-      NdbSleep_MilliSleep(1000);
+      ndbout << "Waiting for transactions to be prepared." << endl;
+      steps_barrier.arrive_and_wait();  // Wait for transactions preparation
 
       const int id = restarter.getNode(NdbRestarter::NS_RANDOM);
       ndbout << "Restart node " << id << endl;
@@ -10253,9 +10250,9 @@ int runSlowCompleteNF(NDBT_Context *ctx, NDBT_Step *step) {
         result = NDBT_FAILED;
         break;
       }
-      restart_count++;
-      ndbout << "Restart " << restart_count << " completed." << endl;
-      ctx->setProperty("RESTART_COUNT", restart_count);
+
+      ndbout << "Restart completed." << endl;
+      steps_barrier.arrive_and_wait();  // Restart done
     }
   }
 

@@ -395,4 +395,4 @@ max-time: 240
 
 cmd: testNodeRestart
 args: -n PreparedUpdatesNF -l 1 T1
-max-time: 900
+max-time: 300
