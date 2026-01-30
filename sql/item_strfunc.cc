@@ -5745,6 +5745,16 @@ longlong Item_func_current_auth_id_type_in::val_int() {
   assert(fixed);
   assert(arg_count == 1);
 
+#ifndef NDEBUG
+  DBUG_EXECUTE_IF("current_auth_id_in_cached", {
+    if (m_called) {
+      my_error(ER_INTERNAL_ERROR, MYF(0), "called more than once");
+      return error_int();
+    }
+  });
+  m_called = true;
+#endif
+
   StringBuffer<STRING_BUFFER_USUAL_SIZE> buffer;
   String *arg_str = eval_string_arg(system_charset_info, args[0], &buffer);
   if (arg_str == nullptr) {

@@ -1925,6 +1925,11 @@ class Item_func_current_auth_id_type_in : public Item_bool_func {
   */
   Name_resolution_context *m_name_resolution_ctx = nullptr;
 
+#ifndef NDEBUG
+  // Keeps track of whether this function has been called. For testing only.
+  bool m_called = false;
+#endif
+
   /**
     Checks if the user or role in the security context is part of the
     comma-separated list. Subclasses override this to check for correct auth ID

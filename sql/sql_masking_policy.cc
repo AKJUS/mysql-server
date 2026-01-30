@@ -578,6 +578,33 @@ static bool validate_masking_policy_for_column(Item_field *item_field,
   return false;
 }
 
+/*
+  The masking policy gatekeeper is constant within a query, so it should be
+  evaluated once per execution. In WHERE, the optimizer already wraps such
+  expressions in Item_cache via cache_const_expr_analyzer/transformer. That
+  mechanism does not apply to other clauses such as the SELECT list, so we
+  explicitly wrap the gatekeeper in Item_cache here (regardless of clause) to
+  ensure single evaluation per query.
+*/
+static Item *wrap_gatekeeper_in_item_cache(Item *mask_expr) {
+  return TransformItem(mask_expr, [](Item *item) -> Item * {
+    if (item->type() != Item::FUNC_ITEM) return item;
+    if (!item->const_for_execution()) return item;
+    switch (down_cast<Item_func *>(item)->functype()) {
+      case Item_func::CURRENT_USER_IN_FUNC:
+      case Item_func::CURRENT_ROLE_IN_FUNC: {
+        Item_cache *cache = Item_cache::get_cache(item);
+        if (cache == nullptr || cache->setup(item)) {
+          return nullptr;
+        }
+        return cache;
+      }
+      default:
+        return item;
+    }
+  });
+}
+
 // Parse and resolve the masking expression under the column’s security
 // context. Returns nullptr on failure (error is reported).
 Item *resolve_masking_expression(THD *thd, Item_field *item_field,
@@ -625,6 +652,9 @@ Item *resolve_masking_expression(THD *thd, Item_field *item_field,
   }
 
   thd->lex->pop_context();
+
+  mask_expr = wrap_gatekeeper_in_item_cache(mask_expr);
+  if (mask_expr == nullptr) return nullptr;
 
   // After resolving the masking expression, enforce additional constraints that
   // cannot be checked before parsing (type, determinism).
