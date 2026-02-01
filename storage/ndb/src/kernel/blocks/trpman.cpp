@@ -26,6 +26,7 @@
 #include "trpman.hpp"
 #include "TransporterRegistry.hpp"
 #include "portlib/NdbTCP.h"
+#include "portlib/NdbTick.h"
 #include "signaldata/CloseComReqConf.hpp"
 #include "signaldata/DisconnectRep.hpp"
 #include "signaldata/DumpStateOrd.hpp"
@@ -498,6 +499,7 @@ void Trpman::execDBINFO_SCANREQ(Signal *signal) {
       jam();
       TrpId trpId = cursor->data[0];
 
+      NDB_TICKS now = NdbTick_getCurrentTicks();
       while (trpId <= globalTransporterRegistry.get_transporter_count()) {
         if (globalTransporterRegistry.get_transporter(trpId) == nullptr ||
             globalTransporterRegistry.is_inactive_trp(trpId) ||
@@ -558,6 +560,23 @@ void Trpman::execDBINFO_SCANREQ(Signal *signal) {
 
         /* Transporter type */
         row.write_uint32(globalTransporterRegistry.get_transporter_type(trpId));
+
+        /* Heartbeat interval (ms) */
+        const NodeInfo::NodeType type = getNodeInfo(nodeId).getType();
+        bool is_db = (type == NodeInfo::DB);
+        if (!is_db || trpId == m_dbHbSenderTrp) {
+          Uint32 heartbeat_interval = is_db ? m_hbDbDb : m_hbDbApi;
+          row.write_uint32(heartbeat_interval);
+        } else {
+          row.write_null();  // heartbeat_interval
+        }
+
+        /* Last receive (us) */
+        NDB_TICKS last_recv = globalTransporterRegistry.get_last_recv(trpId);
+        if (NdbTick_IsValid(last_recv))
+          row.write_uint64(NdbTick_Elapsed(last_recv, now).microSec());
+        else
+          row.write_null();  // last_recv
 
         ndbinfo_send_row(signal, req, row, rl);
         trpId++;

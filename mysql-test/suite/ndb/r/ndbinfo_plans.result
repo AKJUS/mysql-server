@@ -62,7 +62,7 @@ index_columns	20	80
 ndb$acc_operations	15	64
 ndb$backup_id	1	20
 ndb$blocks	29	20
-ndb$columns	566	44
+ndb$columns	568	44
 ndb$config_nodes	34	28
 ndb$config_params	168	120
 ndb$config_values	332	24
@@ -108,7 +108,7 @@ ndb$threads	26	40
 ndb$threadstat	22	144
 ndb$transactions	5	44
 ndb$transactions_full	5	44
-ndb$transporter_details	32	112
+ndb$transporter_details	32	124
 ndb$transporters	32	64
 
 ## List the tables where estimated size equals actual size.
