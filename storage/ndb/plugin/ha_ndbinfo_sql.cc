@@ -671,7 +671,9 @@ static struct view {
      "   WHEN 1 THEN \"TCP\""
      "   WHEN 3 THEN \"SHM\""
      "   ELSE NULL "
-     " END AS type "
+     " END AS type, "
+     " heartbeat_interval, "
+     " last_recv "
      "FROM `ndbinfo`.`ndb$transporter_details`"},
     {"ndbinfo", "transporters",
      "SELECT node_id, remote_node_id, "
