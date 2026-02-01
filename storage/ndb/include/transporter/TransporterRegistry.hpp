@@ -476,6 +476,9 @@ class TransporterRegistry {
   Uint64 get_send_buffer_max_alloc_bytes(TrpId trpId) const;
   Uint64 get_send_buffer_max_used_bytes(TrpId trpId) const;
 
+  NDB_TICKS get_last_recv(TrpId trpId) const;
+  void set_last_recv(TrpId trpId, NDB_TICKS last_recv);
+
   /**
    * prepareSend
    *

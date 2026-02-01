@@ -50,6 +50,7 @@
 #include "NdbSpin.h"
 #include "OutputStream.hpp"
 #include "portlib/NdbTCP.h"
+#include "portlib/NdbTick.h"
 
 #include <mgmapi/mgmapi.h>
 #include <mgmapi/mgmapi_debug.h>
@@ -1684,6 +1685,7 @@ Uint32 TransporterRegistry::performReceive(TransporterReceiveHandle &recvdata,
    * bytes. The m_has_data_transporters bitmap was set already in
    * pollReceive for SHM transporters.
    */
+  NDB_TICKS last_recv = NdbTick_getCurrentTicks();
   for (Uint32 trp_id = recvdata.m_recv_transporters.find_first();
        trp_id != BitmaskImpl::NotFound;
        trp_id = recvdata.m_recv_transporters.find_next(trp_id + 1)) {
@@ -1716,6 +1718,7 @@ Uint32 TransporterRegistry::performReceive(TransporterReceiveHandle &recvdata,
 #endif
         int nBytes = t->doReceive(recvdata);
         if (nBytes > 0) {
+          t->set_last_recv(last_recv);
           recvdata.transporter_recv_from(node_id);
           recvdata.m_has_data_transporters.set(trp_id);
         }
@@ -1805,6 +1808,7 @@ Uint32 TransporterRegistry::performReceive(TransporterReceiveHandle &recvdata,
         SHM_Transporter *t_shm = (SHM_Transporter *)t;
         Uint32 *readPtr, *eodPtr, *endPtr;
         t_shm->getReceivePtr(&readPtr, &eodPtr, &endPtr);
+        t->set_last_recv(last_recv);
         recvdata.transporter_recv_from(node_id);
         Uint32 *newPtr = unpack(recvdata, readPtr, eodPtr, endPtr, node_id,
                                 trp_id, stopReceiving);
@@ -3408,6 +3412,18 @@ Uint64 TransporterRegistry::get_send_buffer_max_used_bytes(TrpId trpId) const {
   assert(trpId < MAX_NTRANSPORTERS);
   assert(allTransporters[trpId] != nullptr);
   return allTransporters[trpId]->get_max_used_bytes();
+}
+
+NDB_TICKS TransporterRegistry::get_last_recv(TrpId trpId) const {
+  assert(trpId < MAX_NTRANSPORTERS);
+  assert(allTransporters[trpId] != nullptr);
+  return allTransporters[trpId]->get_last_recv();
+}
+
+void TransporterRegistry::set_last_recv(TrpId trpId, NDB_TICKS last_recv) {
+  assert(trpId < MAX_NTRANSPORTERS);
+  assert(allTransporters[trpId] != nullptr);
+  allTransporters[trpId]->set_last_recv(last_recv);
 }
 
 void TransporterRegistry::get_trps_for_node(NodeId nodeId, TrpId *trp_ids,
