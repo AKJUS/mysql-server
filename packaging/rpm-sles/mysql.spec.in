@@ -912,6 +912,7 @@ fi
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_mysqlbackup.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_query_attributes.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_reference_cache.so
+%attr(755, root, root) %{_libdir}/mysql/plugin/component_telemetry.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_validate_password.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_connection_control.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/connection_control.so
@@ -977,7 +978,6 @@ fi
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_masking_functions.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_mle.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_scheduler.so
-%attr(755, root, root) %{_libdir}/mysql/plugin/component_telemetry.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_option_tracker.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_group_replication_flow_control_stats.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_group_replication_resource_manager.so
@@ -1018,6 +1018,7 @@ fi
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_mysqlbackup.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_query_attributes.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_reference_cache.so
+%attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_telemetry.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_validate_password.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_connection_control.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/connection_control.so
@@ -1067,7 +1068,6 @@ fi
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_masking_functions.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_mle.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_scheduler.so
-%attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_telemetry.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_option_tracker.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_group_replication_flow_control_stats.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_group_replication_resource_manager.so
@@ -1607,6 +1607,9 @@ fi
 %endif # with_router
 
 %changelog
+* Mon Feb  2 2026 Marc Alff <marc.alff@oracle.com> - 9.7.0
+- Moved component_telemetry to community
+
 * Wed Jan 28 2026 Marc Alff <marc.alff@oracle.com> - 9.7.0
 - Moved telemetry_client to community
 - Moved component_test_telemetry_resource_provider to community

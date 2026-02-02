@@ -616,6 +616,7 @@ rm -r $(readlink var) var
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_classic_hashing.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_query_attributes.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_reference_cache.so
+%attr(755, root, root) %{_libdir}/mysql/plugin/component_telemetry.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_connection_control.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/connection_control.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/ddl_rewriter.so
@@ -709,7 +710,6 @@ rm -r $(readlink var) var
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_masking_functions.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_mle.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_scheduler.so
-%attr(755, root, root) %{_libdir}/mysql/plugin/component_telemetry.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_option_tracker.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_group_replication_flow_control_stats.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_group_replication_elect_prefers_most_updated.so
@@ -738,6 +738,9 @@ rm -r $(readlink var) var
 %dir %attr(750, mysql, mysql) /var/lib/mysql-keyring
 
 %changelog
+* Mon Feb  2 2026 Marc Alff <marc.alff@oracle.com> - 9.7.0
+- Moved component_telemetry to community
+
 * Wed Jan 28 2026 Marc Alff <marc.alff@oracle.com> - 9.7.0
 - Moved telemetry_client to community
 

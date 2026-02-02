@@ -886,6 +886,7 @@ fi
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_classic_hashing.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_query_attributes.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_reference_cache.so
+%attr(755, root, root) %{_libdir}/mysql/plugin/component_telemetry.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_connection_control.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/connection_control.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/ddl_rewriter.so
@@ -934,6 +935,7 @@ fi
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_classic_hashing.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_query_attributes.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_reference_cache.so
+%attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_telemetry.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_connection_control.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/connection_control.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/ddl_rewriter.so
@@ -1443,6 +1445,9 @@ fi
 %endif # with_router
 
 %changelog
+* Mon Feb  2 2026 Marc Alff <marc.alff@oracle.com> - 9.7.0
+- Added component_telemetry to community
+
 * Wed Jan 28 2026 Marc Alff <marc.alff@oracle.com> - 9.7.0
 - Moved component_test_telemetry_resource_provider to community
 - Moved component_test_telemetry_secret_provider to community

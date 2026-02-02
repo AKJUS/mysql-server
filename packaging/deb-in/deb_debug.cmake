@@ -75,6 +75,7 @@ usr/lib/mysql/plugin/debug/component_mysqlbackup.so
 usr/lib/mysql/plugin/debug/component_validate_password.so
 usr/lib/mysql/plugin/debug/component_query_attributes.so
 usr/lib/mysql/plugin/debug/component_reference_cache.so
+usr/lib/mysql/plugin/debug/component_telemetry.so
 usr/lib/mysql/plugin/debug/component_connection_control.so
 usr/lib/mysql/plugin/debug/ddl_rewriter.so
 usr/lib/mysql/plugin/debug/group_replication.so
@@ -240,7 +241,6 @@ usr/lib/mysql/plugin/debug/component_masking.so
 usr/lib/mysql/plugin/debug/component_masking_functions.so
 usr/lib/mysql/plugin/debug/component_mle.so
 usr/lib/mysql/plugin/debug/component_scheduler.so
-usr/lib/mysql/plugin/debug/component_telemetry.so
 usr/lib/mysql/plugin/debug/component_option_tracker.so
 usr/lib/mysql/plugin/debug/component_group_replication_flow_control_stats.so
 usr/lib/mysql/plugin/debug/component_group_replication_elect_prefers_most_updated.so
