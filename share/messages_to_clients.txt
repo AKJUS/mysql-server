@@ -10765,7 +10765,7 @@ ER_JDV_NULL_UPDATE_VALUE
 ER_JDV_UPDATE_VALUE_NOT_FIXED
   eng "Update values must be fixed (not require resolving)."
 
-ER_JDV_FEATURE_EDITION_LIMIT
+OBSOLETE_ER_JDV_FEATURE_EDITION_LIMIT
   eng "Feature not available in this edition."
 
 ER_JDV_CANNOT_BE_USED_WITH

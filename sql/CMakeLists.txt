@@ -677,12 +677,6 @@ IF(BUILD_IS_SINGLE_CONFIG)
   ENDIF()
 ENDIF()
 
-IF (WITH_INTERNAL)
-  LIST(REMOVE_ITEM SQL_SHARED_SOURCES
-      json_duality_view/dml.cc
-      )
-ENDIF()
-
 # BISON_TARGET(<Name> <YaccInput> <CodeOutput>
 #              [COMPILE_FLAGS <flags>]
 #              [DEFINES_FILE <file>]
