@@ -716,6 +716,10 @@ double EstimateIndexRangeScanCost(const TABLE *table, unsigned key_idx,
    @returns The estimated cost of the index scan.
 */
 inline double EstimateIndexScanCost(const TABLE *table, unsigned key_idx) {
+  if (IsClusteredPrimaryKey(table, key_idx)) {
+    return EstimateTableScanCost(table);
+  }
+
   return EstimateIndexRangeScanCost(table, key_idx, RangeScanType::kSingleRange,
                                     1.0, table->file->stats.records);
 }

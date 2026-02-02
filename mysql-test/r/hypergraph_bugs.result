@@ -395,7 +395,7 @@ EXPLAIN
             -> Table scan on t2  (rows=10)
             -> Hash
                 -> Inner hash join (t1.x = t3.x)  (rows=10)
-                    -> Table scan on t1  (rows=10)
+                    -> Index scan on t1 using PRIMARY  (rows=10)
                     -> Hash
                         -> Table scan on t3  (rows=10)
 
@@ -1332,7 +1332,7 @@ test.t2	analyze	status	OK
 EXPLAIN ANALYZE SELECT * FROM t1 WHERE t1.a IN (SELECT t2.l FROM t2);
 EXPLAIN
 -> Hash semijoin (FirstMatch) (t1.a = t2.l)  (rows=10) (actual rows=10 loops=1)
-    -> Table scan on t1  (rows=30) (actual rows=30 loops=1)
+    -> Index scan on t1 using PRIMARY  (rows=30) (actual rows=30 loops=1)
     -> Hash
         -> Table scan on t2  (rows=20) (actual rows=20 loops=1)
 
@@ -1424,7 +1424,7 @@ EXPLAIN FORMAT=TREE SELECT * FROM t1 x1
 WHERE x1.a IN (SELECT x2.b FROM t1 x2);
 EXPLAIN
 -> Hash semijoin (FirstMatch) (x1.a = x2.b)  (rows=10)
-    -> Table scan on x1  (rows=30)
+    -> Index scan on x1 using PRIMARY  (rows=30)
     -> Hash
         -> Table scan on x2  (rows=30)
 
@@ -1659,7 +1659,7 @@ EXPLAIN
     -> Inner hash join (t1.pk = t2.x)  (rows=12)
         -> Table scan on t2  (rows=12)
         -> Hash
-            -> Table scan on t1  (rows=12)
+            -> Index scan on t1 using PRIMARY  (rows=12)
 
 EXPLAIN FORMAT=TREE SELECT SQL_SMALL_RESULT DISTINCT t1.x, t2.x FROM t AS t1, t AS t2
 WHERE t1.pk = t2.x ORDER BY t2.x;
@@ -1670,7 +1670,7 @@ EXPLAIN
             -> Inner hash join (t1.pk = t2.x)  (rows=12)
                 -> Table scan on t2  (rows=12)
                 -> Hash
-                    -> Table scan on t1  (rows=12)
+                    -> Index scan on t1 using PRIMARY  (rows=12)
 
 EXPLAIN FORMAT=TREE SELECT SQL_BIG_RESULT DISTINCT t1.x, t1.pk FROM t AS t1, t AS t2
 WHERE t1.pk = t2.x ORDER BY t1.x;
@@ -1679,7 +1679,7 @@ EXPLAIN
     -> Inner hash join (t1.pk = t2.x)  (rows=12)
         -> Table scan on t2  (rows=12)
         -> Hash
-            -> Table scan on t1  (rows=12)
+            -> Index scan on t1 using PRIMARY  (rows=12)
 
 EXPLAIN FORMAT=TREE SELECT SQL_SMALL_RESULT DISTINCT t1.x, t1.pk FROM t AS t1, t AS t2
 WHERE t1.pk = t2.x ORDER BY t1.x;
@@ -1690,16 +1690,16 @@ EXPLAIN
             -> Inner hash join (t1.pk = t2.x)  (rows=12)
                 -> Table scan on t2  (rows=12)
                 -> Hash
-                    -> Table scan on t1  (rows=12)
+                    -> Index scan on t1 using PRIMARY  (rows=12)
 
 EXPLAIN FORMAT=TREE SELECT SQL_BIG_RESULT DISTINCT t1.pk, t2.x FROM t AS t1, t AS t2
 WHERE t1.pk = t2.x ORDER BY t2.x;
 EXPLAIN
 -> Sort with duplicate removal: t2.x  (rows=3.46)
     -> Inner hash join (t1.pk = t2.x)  (rows=12)
-        -> Table scan on t2  (rows=12)
+        -> Covering index scan on t1 using PRIMARY  (rows=12)
         -> Hash
-            -> Covering index scan on t1 using PRIMARY  (rows=12)
+            -> Table scan on t2  (rows=12)
 
 EXPLAIN FORMAT=TREE SELECT SQL_SMALL_RESULT DISTINCT t1.pk, t2.x FROM t AS t1, t AS t2
 WHERE t1.pk = t2.x ORDER BY t2.x;
@@ -1708,9 +1708,9 @@ EXPLAIN
     -> Table scan on <temporary>  (rows=3.46)
         -> Temporary table with deduplication  (rows=3.46)
             -> Inner hash join (t1.pk = t2.x)  (rows=12)
-                -> Table scan on t2  (rows=12)
+                -> Covering index scan on t1 using PRIMARY  (rows=12)
                 -> Hash
-                    -> Covering index scan on t1 using PRIMARY  (rows=12)
+                    -> Table scan on t2  (rows=12)
 
 DROP TABLE t;
 #
@@ -2923,3 +2923,37 @@ PERCENT_RANK() OVER ( ORDER BY SEC_TO_TIME(3600) RANGE INTERVAL 7 QUARTER PRECED
 0
 0
 DROP TABLE A;
+#
+# Bug#38473156: hypergraph optimizer errors out on an
+#               otherwise valid query the mysql optimizer
+#               executes just fine.
+#
+CREATE TABLE t1 (
+id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+col1 INT UNSIGNED NOT NULL,
+col2 INT UNSIGNED NOT NULL,
+data JSON DEFAULT NULL,
+PRIMARY KEY (id),
+KEY idx_col1 (col1),
+KEY idx_col2 (col2)
+);
+INSERT INTO t1 (col1, col2, data)
+VALUES (111, 222, JSON_OBJECT('data', REPEAT('LotsOfData', 250000)));
+EXPLAIN FORMAT=tree SELECT * FROM t1 ORDER BY id;
+EXPLAIN
+-> Index scan on t1 using PRIMARY  (rows=1)
+
+set optimizer_trace="enabled=on";
+SELECT * FROM t1 ORDER BY id;
+WITH trace_vals AS (
+SELECT REGEXP_SUBSTR(trace, 'INDEX_SCAN, cost=[0-9.]+', 1, 1) AS idx_line,
+REGEXP_SUBSTR(trace, 'TABLE_SCAN, cost=[0-9.]+', 1, 1) AS tbl_line
+FROM INFORMATION_SCHEMA.OPTIMIZER_TRACE
+) SELECT (CAST(SUBSTRING_INDEX(idx_line, 'cost=', -1) AS DECIMAL(20,10)) =
+CAST(SUBSTRING_INDEX(tbl_line, 'cost=', -1) AS DECIMAL(20,10)))
+AS costs_equal
+FROM trace_vals;
+costs_equal
+1
+set optimizer_trace="enabled=off";
+DROP TABLE t1;

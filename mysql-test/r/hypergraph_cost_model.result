@@ -88,7 +88,7 @@ EXPLAIN
 # Scanning along the primary index should be slightly more expensive than a table scan.
 EXPLAIN FORMAT=TREE SELECT * FROM t1 ORDER BY p;
 EXPLAIN
--> Index scan on t1 using PRIMARY  (cost=0.518..518 rows=1000)
+-> Index scan on t1 using PRIMARY  (cost=0.516..516 rows=1000)
 
 # Index scans on non-covering indexes are much more expensive than scans on covering or primary indexes.
 # We have to force scanning along the secondary index as otherwise sorting would be chosen.

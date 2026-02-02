@@ -40,25 +40,25 @@ EXPLAIN FORMAT=TREE SELECT a,c,d,sum(e) FROM t1 GROUP BY a,c,d WITH ROLLUP;
 EXPLAIN
 -> Group aggregate with rollup: sum(t1.e)  (rows=6.25)
     -> Sort: t1.a, t1.c, t1.d  (rows=5)
-        -> Table scan on t1  (rows=5)
+        -> Index scan on t1 using PRIMARY  (rows=5)
 
 EXPLAIN FORMAT=TREE SELECT a,d,c,sum(e) FROM t1 GROUP BY a,d,c WITH ROLLUP;
 EXPLAIN
 -> Group aggregate with rollup: sum(t1.e)  (rows=6.25)
     -> Sort: t1.a, t1.d, t1.c  (rows=5)
-        -> Table scan on t1  (rows=5)
+        -> Index scan on t1 using PRIMARY  (rows=5)
 
 EXPLAIN FORMAT=TREE SELECT c,a,d,sum(e) FROM t1 GROUP BY c,a,d WITH ROLLUP;
 EXPLAIN
 -> Group aggregate with rollup: sum(t1.e)  (rows=6.25)
     -> Sort: t1.c, t1.a, t1.d  (rows=5)
-        -> Table scan on t1  (rows=5)
+        -> Index scan on t1 using PRIMARY  (rows=5)
 
 EXPLAIN FORMAT=TREE SELECT d,a,c,sum(e) FROM t1 GROUP BY d,a,c WITH ROLLUP;
 EXPLAIN
 -> Group aggregate with rollup: sum(t1.e)  (rows=6.25)
     -> Sort: t1.d, t1.a, t1.c  (rows=5)
-        -> Table scan on t1  (rows=5)
+        -> Index scan on t1 using PRIMARY  (rows=5)
 
 EXPLAIN FORMAT=TREE SELECT c,d,b,sum(e) FROM t1 GROUP BY c,d,b WITH ROLLUP;
 EXPLAIN
@@ -70,13 +70,13 @@ EXPLAIN FORMAT=TREE SELECT d,c,a,sum(e) FROM t1 GROUP BY d,c,a WITH ROLLUP;
 EXPLAIN
 -> Group aggregate with rollup: sum(t1.e)  (rows=6.25)
     -> Sort: t1.d, t1.c, t1.a  (rows=5)
-        -> Table scan on t1  (rows=5)
+        -> Index scan on t1 using PRIMARY  (rows=5)
 
 EXPLAIN FORMAT=TREE SELECT b,a,sum(e) FROM t1 GROUP BY b,a WITH ROLLUP;
 EXPLAIN
 -> Group aggregate with rollup: sum(t1.e)  (rows=4.73)
     -> Sort: t1.b, t1.a  (rows=5)
-        -> Table scan on t1  (rows=5)
+        -> Index scan on t1 using PRIMARY  (rows=5)
 
 EXPLAIN FORMAT=TREE SELECT b,sum(e) FROM t1 GROUP BY b WITH ROLLUP;
 EXPLAIN
@@ -115,7 +115,7 @@ EXPLAIN FORMAT=TREE SELECT c,d,a,sum(e) FROM t1 GROUP BY c,d,a WITH ROLLUP;
 EXPLAIN
 -> Group aggregate with rollup: sum(t1.e)  (rows=6.25)
     -> Sort: t1.c, t1.d, t1.a  (rows=5)
-        -> Table scan on t1  (rows=5)
+        -> Index scan on t1 using PRIMARY  (rows=5)
 
 SELECT c,d,a,sum(e) FROM t1 GROUP BY c,d,a WITH ROLLUP;
 c	d	a	sum(e)
@@ -135,7 +135,7 @@ EXPLAIN FORMAT=TREE SELECT c,d,a,b,sum(e) FROM t1 GROUP BY c,d,a,b WITH ROLLUP;
 EXPLAIN
 -> Group aggregate with rollup: sum(t1.e)  (rows=7.78)
     -> Sort: t1.c, t1.d, t1.a, t1.b  (rows=5)
-        -> Table scan on t1  (rows=5)
+        -> Index scan on t1 using PRIMARY  (rows=5)
 
 SELECT c,d,a,b,sum(e) FROM t1 GROUP BY c,d,a,b WITH ROLLUP;
 c	d	a	b	sum(e)
@@ -189,7 +189,7 @@ EXPLAIN FORMAT=TREE SELECT d,a,c,sum(e) FROM t1 GROUP BY d,a,c;
 EXPLAIN
 -> Group aggregate: sum(t1.e)  (rows=2.24)
     -> Sort: t1.d, t1.a, t1.c  (rows=5)
-        -> Table scan on t1  (rows=5)
+        -> Index scan on t1 using PRIMARY  (rows=5)
 
 SELECT d,a,c,sum(e) FROM t1 GROUP BY d,a,c;
 d	a	c	sum(e)
@@ -202,7 +202,7 @@ EXPLAIN FORMAT=TREE SELECT a,d,c,sum(e) FROM t1 GROUP BY a,d,c;
 EXPLAIN
 -> Group aggregate: sum(t1.e)  (rows=2.24)
     -> Sort: t1.a, t1.d, t1.c  (rows=5)
-        -> Table scan on t1  (rows=5)
+        -> Index scan on t1 using PRIMARY  (rows=5)
 
 SELECT a,d,c,sum(e) FROM t1 GROUP BY a,d,c;
 a	d	c	sum(e)
@@ -227,7 +227,7 @@ EXPLAIN FORMAT=TREE SELECT a,c,e,sum(d) FROM t1 GROUP BY a,c,e;
 EXPLAIN
 -> Group aggregate: sum(t1.d)  (rows=2.24)
     -> Sort: t1.a, t1.c, t1.e  (rows=5)
-        -> Table scan on t1  (rows=5)
+        -> Index scan on t1 using PRIMARY  (rows=5)
 
 DROP TABLE t1;
 #
@@ -375,7 +375,7 @@ EXPLAIN ANALYZE SELECT 1 FROM t1 GROUP BY a,e,c+0;
 EXPLAIN
 -> Table scan on <temporary>  (rows=501) (actual rows=595 loops=1)
     -> Temporary table with deduplication  (rows=501) (actual rows=595 loops=1)
-        -> Table scan on t1  (rows=1000) (actual rows=1000 loops=1)
+        -> Index scan on t1 using PRIMARY  (rows=1000) (actual rows=1000 loops=1)
 
 CREATE TABLE t2 (
 c1 INT,
@@ -821,7 +821,7 @@ EXPLAIN FORMAT=TREE select sql_small_result avg(id2) from tb1 t1 group by id;
 EXPLAIN
 -> Table scan on <temporary>  (rows=12)
     -> Aggregate using temporary table  (rows=12)
-        -> Table scan on t1  (rows=12)
+        -> Index scan on t1 using PRIMARY  (rows=12)
 
 truncate tb1;
 analyze table tb1;

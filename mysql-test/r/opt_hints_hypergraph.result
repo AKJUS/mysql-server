@@ -2720,9 +2720,9 @@ EXPLAIN
 -> Group aggregate: avg(t2.f1)  (rows=1)
     -> Sort: t1.f1  (rows=1)
         -> Inner hash join (no condition)  (rows=1)
-            -> Covering index range scan on t2 using k1 over (f2 = 'SIR')  (rows=1)
+            -> Covering index scan on t1 using PRIMARY  (rows=1)
             -> Hash
-                -> Covering index scan on t1 using PRIMARY  (rows=1)
+                -> Covering index range scan on t2 using k1 over (f2 = 'SIR')  (rows=1)
 
 # SELECT SQL_BUFFER_RESULT should use temporary table
 EXPLAIN FORMAT=TREE SELECT SQL_BUFFER_RESULT avg(t2.f1) FROM t1, t2 where t2.f2 = 'SIR' GROUP BY t1.f1;
@@ -2732,9 +2732,9 @@ EXPLAIN
         -> Group aggregate: avg(t2.f1)  (rows=1)
             -> Sort: t1.f1  (rows=1)
                 -> Inner hash join (no condition)  (rows=1)
-                    -> Covering index range scan on t2 using k1 over (f2 = 'SIR')  (rows=1)
+                    -> Covering index scan on t1 using PRIMARY  (rows=1)
                     -> Hash
-                        -> Covering index scan on t1 using PRIMARY  (rows=1)
+                        -> Covering index range scan on t2 using k1 over (f2 = 'SIR')  (rows=1)
 
 # SELECT SQL_BIG_RESULT should not use temporary table
 EXPLAIN FORMAT=TREE SELECT SQL_BIG_RESULT avg(t2.f1) FROM t1, t2 where t2.f2 = 'SIR' GROUP BY t1.f1;
@@ -2742,9 +2742,9 @@ EXPLAIN
 -> Group aggregate: avg(t2.f1)  (rows=1)
     -> Sort: t1.f1  (rows=1)
         -> Inner hash join (no condition)  (rows=1)
-            -> Covering index range scan on t2 using k1 over (f2 = 'SIR')  (rows=1)
+            -> Covering index scan on t1 using PRIMARY  (rows=1)
             -> Hash
-                -> Covering index scan on t1 using PRIMARY  (rows=1)
+                -> Covering index range scan on t2 using k1 over (f2 = 'SIR')  (rows=1)
 
 DROP TABLE t1, t2;
 #

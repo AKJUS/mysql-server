@@ -3550,7 +3550,7 @@ EXPLAIN
 -> Hash semijoin (FirstMatch) (otr.v = itr.val), (otr.rf = itr.rf)  (rows=1.84)
     -> Table scan on otr  (rows=15)
     -> Hash
-        -> Table scan on itr  (rows=6)
+        -> Index scan on itr using PRIMARY  (rows=6)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -3678,7 +3678,7 @@ EXPLAIN
 -> Hash semijoin (FirstMatch) (otr.vn = itr.valn), (otr.rf = itr.rf)  (rows=1.84)
     -> Table scan on otr  (rows=15)
     -> Hash
-        -> Table scan on itr  (rows=6)
+        -> Index scan on itr using PRIMARY  (rows=6)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -7308,7 +7308,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=2.45)
             -> Materialize  (rows=2.45)
                 -> Sort with duplicate removal: itr.val, itr.rf  (rows=2.45)
-                    -> Table scan on itr  (rows=6)
+                    -> Index scan on itr using PRIMARY  (rows=6)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -7432,7 +7432,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=2.45)
             -> Materialize  (rows=2.45)
                 -> Sort with duplicate removal: itr.val, itr.rf  (rows=2.45)
-                    -> Table scan on itr  (rows=6)
+                    -> Index scan on itr using PRIMARY  (rows=6)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -7672,7 +7672,7 @@ EXPLAIN
             -> Table scan on derived_1_2  (rows=2.45)
                 -> Materialize  (rows=2.45)
                     -> Sort with duplicate removal: itr.val, itr.rf  (rows=2.45)
-                        -> Table scan on itr  (rows=6)
+                        -> Index scan on itr using PRIMARY  (rows=6)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -7775,7 +7775,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=2.45)
             -> Materialize  (rows=2.45)
                 -> Sort with duplicate removal: itr.val, itr.rf  (rows=2.45)
-                    -> Table scan on itr  (rows=6)
+                    -> Index scan on itr using PRIMARY  (rows=6)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -7919,7 +7919,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=2.45)
             -> Materialize  (rows=2.45)
                 -> Sort with duplicate removal: itr.valn, itr.rf  (rows=2.45)
-                    -> Table scan on itr  (rows=6)
+                    -> Index scan on itr using PRIMARY  (rows=6)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1

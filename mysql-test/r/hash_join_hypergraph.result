@@ -1318,7 +1318,7 @@ EXPLAIN
                 -> Table scan on t1  (rows=1)
         -> Hash
             -> Hash semijoin (FirstMatch) (ta4.f1 = t4.f1)  (rows=1)
-                -> Covering index scan on ta4 using f2  (rows=6)
+                -> Covering index scan on ta4 using PRIMARY  (rows=6)
                 -> Hash
                     -> Table scan on t4  (rows=1)
 
@@ -1438,8 +1438,8 @@ EXPLAIN
                 -> Table scan on alias2  (rows=1)
                 -> Index lookup on alias3 using <auto_key0> (col_int_key = alias2.col_int_key, col_varchar_key = alias2.col_varchar_key)  (rows=0.01)
                     -> Materialize  (rows=1)
-                        -> Sort with duplicate removal: sq1_alias1.pk  (rows=1)
-                            -> Table scan on sq1_alias1  (rows=1)
+                        -> Remove duplicates from input grouped on sq1_alias1.pk  (rows=1)
+                            -> Index scan on sq1_alias1 using PRIMARY  (rows=1)
     -> Hash
         -> Table scan on sq2_alias1  (rows=20)
 

@@ -221,10 +221,11 @@ test.t1	analyze	status	OK
 test.t2	analyze	status	OK
 EXPLAIN format=TREE SELECT * FROM t1 WHERE t1.i IN (SELECT t2.i FROM t2);
 EXPLAIN
--> Nested loop inner join (LooseScan)  (rows=2.83)
+-> Inner hash join (LooseScan) (t1.i = t2.i)  (rows=2.83)
     -> Remove duplicates from input grouped on t2.i  (rows=2.83)
         -> Covering index scan on t2 using i1  (rows=8)
-    -> Single-row covering index lookup on t1 using PRIMARY (i = t2.i)  (rows=1)
+    -> Hash
+        -> Covering index scan on t1 using PRIMARY  (rows=8)
 
 EXPLAIN format=JSON SELECT * FROM t1 WHERE t1.i IN (SELECT t2.i FROM t2);
 EXPLAIN
@@ -260,33 +261,34 @@ EXPLAIN
         "estimated_first_row_cost": "elided"
       },
       {
+        "heading": "Hash",
         "covering": true,
-        "operation": "Single-row covering index lookup on t1 using PRIMARY (i = t2.i)",
+        "operation": "Covering index scan on t1 using PRIMARY",
         "index_name": "PRIMARY",
         "table_name": "t1",
         "access_type": "index",
-        "key_columns": [
-          "i"
-        ],
         "schema_name": "test",
         "used_columns": [
           "i"
         ],
         "estimated_rows": "elided",
-        "lookup_condition": "i = t2.i",
-        "index_access_type": "index_lookup",
-        "lookup_references": [
-          "test.t2.i"
-        ],
+        "index_access_type": "index_scan",
         "estimated_total_cost": "elided",
         "estimated_first_row_cost": "elided"
       }
     ],
     "join_type": "inner join",
-    "operation": "Nested loop inner join (LooseScan)",
+    "operation": "Inner hash join (LooseScan) (t1.i = t2.i)",
     "access_type": "join",
+    "join_columns": [
+      "test.t1.i",
+      "test.t2.i"
+    ],
     "estimated_rows": "elided",
-    "join_algorithm": "nested_loop",
+    "hash_condition": [
+      "(t1.i = t2.i)"
+    ],
+    "join_algorithm": "hash",
     "semijoin_strategy": "loosescan",
     "estimated_total_cost": "elided",
     "estimated_first_row_cost": "elided"
@@ -744,7 +746,7 @@ EXPLAIN
             -> Group aggregate: group_concat(t2.b separator ',')
                 -> Sort: t1.a
                     -> Left hash join (t1.a = t2.a)
-                        -> Table scan on t1
+                        -> Index scan on t1 using PRIMARY
                         -> Hash
                             -> Table scan on t2
 
@@ -765,15 +767,18 @@ EXPLAIN
                       {
                         "inputs": [
                           {
-                            "operation": "Table scan on t1",
+                            "covering": false,
+                            "operation": "Index scan on t1 using PRIMARY",
+                            "index_name": "PRIMARY",
                             "table_name": "t1",
-                            "access_type": "table",
+                            "access_type": "index",
                             "schema_name": "test",
                             "used_columns": [
                               "a",
                               "b"
                             ],
                             "estimated_rows": "elided",
+                            "index_access_type": "index_scan",
                             "estimated_total_cost": "elided",
                             "estimated_first_row_cost": "elided"
                           },

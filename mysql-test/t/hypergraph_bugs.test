@@ -2502,4 +2502,44 @@ FROM A;
 
 DROP TABLE A;
 
+--echo #
+--echo # Bug#38473156: hypergraph optimizer errors out on an
+--echo #               otherwise valid query the mysql optimizer
+--echo #               executes just fine.
+--echo #
+
+CREATE TABLE t1 (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  col1 INT UNSIGNED NOT NULL,
+  col2 INT UNSIGNED NOT NULL,
+  data JSON DEFAULT NULL,
+  PRIMARY KEY (id),
+  KEY idx_col1 (col1),
+  KEY idx_col2 (col2)
+);
+
+INSERT INTO t1 (col1, col2, data)
+  VALUES (111, 222, JSON_OBJECT('data', REPEAT('LotsOfData', 250000)));
+
+let $query = SELECT * FROM t1 ORDER BY id;
+--replace_regex $elide_costs
+eval EXPLAIN FORMAT=tree $query;
+set optimizer_trace="enabled=on";
+--disable_result_log
+eval $query;
+--enable_result_log
+
+WITH trace_vals AS (
+  SELECT REGEXP_SUBSTR(trace, 'INDEX_SCAN, cost=[0-9.]+', 1, 1) AS idx_line,
+         REGEXP_SUBSTR(trace, 'TABLE_SCAN, cost=[0-9.]+', 1, 1) AS tbl_line
+    FROM INFORMATION_SCHEMA.OPTIMIZER_TRACE
+) SELECT (CAST(SUBSTRING_INDEX(idx_line, 'cost=', -1) AS DECIMAL(20,10)) =
+          CAST(SUBSTRING_INDEX(tbl_line, 'cost=', -1) AS DECIMAL(20,10)))
+         AS costs_equal
+  FROM trace_vals;
+
+set optimizer_trace="enabled=off";
+
+DROP TABLE t1;
+
 --source include/disable_hypergraph.inc
