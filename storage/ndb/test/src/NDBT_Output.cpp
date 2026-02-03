@@ -25,10 +25,13 @@
 
 #include "NDBT_Output.hpp"
 
-FileOutputStream gerr_fileoutputstream(stderr);
-FileOutputStream gwarning_fileoutputstream(stderr);
-FileOutputStream ginfo_fileoutputstream(stdout);
 FileOutputStream gdebug_fileoutputstream(stdout);
+FileOutputStream ginfo_fileoutputstream(stdout, &gdebug_fileoutputstream,
+                                        false);
+FileOutputStream gwarning_fileoutputstream(stderr, &ginfo_fileoutputstream,
+                                           true);
+FileOutputStream gerr_fileoutputstream(stderr, &gwarning_fileoutputstream,
+                                       true);
 
 FilteredNdbOut g_err(gerr_fileoutputstream, 0, 2);
 FilteredNdbOut g_warning(gwarning_fileoutputstream, 1, 2);

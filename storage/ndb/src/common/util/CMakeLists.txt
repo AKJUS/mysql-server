@@ -110,6 +110,7 @@ FOREACH(tests
     ndb_openssl_evp
     ndbxfrm_file
     NdbSqlUtil
+    OutputStream
     md5_hash
     LogBuffer
     testSimpleProperties

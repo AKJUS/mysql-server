@@ -255,9 +255,13 @@ bool BackupFile::Twiddle(const AttributeDesc *const attr_desc,
   return true;
 }
 
-FilteredNdbOut err(*new FileOutputStream(stderr), 0, 0);
-FilteredNdbOut info(*new FileOutputStream(stdout), 1, 1);
-FilteredNdbOut debug(*new FileOutputStream(stdout), 2, 0);
+static FileOutputStream debug_stream(stdout);
+static FileOutputStream info_stream(stdout, &debug_stream, false);
+static FileOutputStream err_stream(stderr, &info_stream, true);
+
+FilteredNdbOut debug(debug_stream, 2, 0);
+FilteredNdbOut info(info_stream, 1, 1);
+FilteredNdbOut err(err_stream, 0, 0);
 RestoreLogger restoreLogger;
 
 // To decide in what byte order data is
