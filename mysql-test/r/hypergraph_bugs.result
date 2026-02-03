@@ -2698,3 +2698,32 @@ SET optimizer_trace='enabled=off';
 Optimizer trace correctly contains WARNING about inconsistent row counts.
 Optimizer trace correctly omits "This is a bug" message.
 DROP TABLE num, t1, t2;
+#
+# Bug#38822359: Assertion `std::cmp_less(pred_idx,
+#               m_graph->num_where_predicates)' failed.
+#
+CREATE TABLE t(f1 INT PRIMARY KEY, f2 INT, KEY(f2));
+INSERT INTO t VALUES (1, 1), (2, 2), (3, 3);
+ANALYZE TABLE t;
+Table	Op	Msg_type	Msg_text
+test.t	analyze	status	OK
+# Verify that the assertion does not fail, and that t2, t3 and t4 are
+# pruned from the query plan and replaced by "Zero rows".
+EXPLAIN FORMAT=TREE SELECT t1.f1 FROM t AS t1 LEFT JOIN (
+(SELECT DISTINCT * FROM t AS t2 WHERE f2 <> f2) AS dt1,
+(SELECT t4.* FROM t AS t3 STRAIGHT_JOIN t AS t4 ON t4.f1 = t3.f1) AS dt2
+) ON TRUE;
+EXPLAIN
+-> Nested loop left join  (rows=3)
+    -> Covering index scan on t1 using f2  (rows=3)
+    -> Zero rows (impossible WHERE)  (rows=0)
+
+SELECT t1.f1 FROM t AS t1 LEFT JOIN (
+(SELECT DISTINCT * FROM t AS t2 WHERE f2 <> f2) AS dt1,
+(SELECT t4.* FROM t AS t3 STRAIGHT_JOIN t AS t4 ON t4.f1 = t3.f1) AS dt2
+) ON TRUE;
+f1
+1
+2
+3
+DROP TABLE t;

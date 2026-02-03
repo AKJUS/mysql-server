@@ -4708,6 +4708,52 @@ bool CostingReceiver::evaluate_secondary_engine_optimizer_state_request() {
   }
   return false;
 }
+
+/**
+  Build a ZERO_ROWS access path that replaces the given path when the
+  optimizer can prove the subplan produces no rows.
+
+  The function constructs a ZERO_ROWS path based on the supplied path, clears
+  all filter predicates that would be redundant on an empty result, and
+  preserves only delayed predicates that must be evaluated higher in the join
+  tree. Ordering information is preserved from the original path to avoid
+  losing constraints required by ancestors.
+
+  @param thd Thread context; used for memory allocations.
+  @param path The access path that is being pruned away.
+  @param num_where_predicates Number of WHERE predicates in the hypergraph; used
+         to clear the subsumed sargable-join predicate range in
+         delayed_predicates.
+  @param cause Human-readable reason for pruning; stored on the ZERO_ROWS path
+         for tracing and diagnostics.
+  @return The constructed ZERO_ROWS access path.
+*/
+AccessPath *NewZeroRowsFromPrunedPath(THD *thd, AccessPath *path,
+                                      size_t num_where_predicates,
+                                      const char *cause) {
+  AccessPath *zero_path = NewZeroRowsAccessPath(thd, path, cause);
+
+  // Clear all filters, including applied and subsumed sargable join predicates,
+  // since there are no rows to filter out from a ZERO_ROWS path, so a simple
+  // unfiltered ZERO_ROWS access path will do. We keep "delayed_predicates",
+  // since these are the predicates that should be applied higher up in the join
+  // tree, and they might still be needed.
+  zero_path->filter_predicates = OverflowBitset::EmptySet(
+      thd->mem_root, path->filter_predicates.capacity());
+  MutableOverflowBitset delayed_predicates =
+      path->delayed_predicates.Clone(thd->mem_root);
+  // Clear the "subsumed_sargable_join_predicates" part of "delayed_predicates".
+  delayed_predicates.ClearBits(num_where_predicates,
+                               path->delayed_predicates.capacity());
+  zero_path->delayed_predicates = std::move(delayed_predicates);
+
+  // An empty result satisfies all orderings, but we have no way to represent
+  // that, so for now just preserve the ordering of the original path.
+  zero_path->ordering_state = path->ordering_state;
+
+  return zero_path;
+}
+
 /**
   If the ON clause of a left join only references tables on the right side of
   the join, pushing the condition into the right side is a valid thing to do. If
@@ -4938,13 +4984,9 @@ bool CostingReceiver::FoundSubgraphPair(NodeMap left, NodeMap right,
       // happens, and the join is replaced by a ZERO_ROWS path further down. We
       // don't need to care much about the ordering, since we don't propagate
       // the right-hand ordering properties through joins.
-      AccessPath *zero_path = NewZeroRowsAccessPath(
-          m_thd, right_path, "Join condition rejects all rows");
-      zero_path->applied_sargable_join_predicates() =
-          ClearFilterPredicates(right_path->applied_sargable_join_predicates(),
-                                m_graph->num_where_predicates, m_thd->mem_root);
-      zero_path->delayed_predicates = right_path->delayed_predicates;
-      right_path = zero_path;
+      right_path = NewZeroRowsFromPrunedPath(m_thd, right_path,
+                                             m_graph->num_where_predicates,
+                                             "Join condition rejects all rows");
     }
 
     // Can this join be performed in both left-right and right-left order? It
@@ -5031,14 +5073,9 @@ bool CostingReceiver::FoundSubgraphPair(NodeMap left, NodeMap right,
     const auto it = m_access_paths.find(left | right);
     if (it != m_access_paths.end() && !it->second.paths.empty() &&
         !it->second.always_empty) {
-      AccessPath *first_candidate = it->second.paths.front();
-      AccessPath *zero_path =
-          NewZeroRowsAccessPath(m_thd, first_candidate, "impossible WHERE");
-      zero_path->applied_sargable_join_predicates() = ClearFilterPredicates(
-          first_candidate->applied_sargable_join_predicates(),
-          m_graph->num_where_predicates, m_thd->mem_root);
-      zero_path->delayed_predicates = first_candidate->delayed_predicates;
-      zero_path->ordering_state = first_candidate->ordering_state;
+      AccessPath *zero_path = NewZeroRowsFromPrunedPath(
+          m_thd, it->second.paths.front(), m_graph->num_where_predicates,
+          "impossible WHERE");
       ProposeAccessPathWithOrderings(
           left | right, it->second.active_functional_dependencies,
           it->second.obsolete_orderings, zero_path, "empty join");

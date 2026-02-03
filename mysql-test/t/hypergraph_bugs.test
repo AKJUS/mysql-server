@@ -2249,4 +2249,27 @@ if (!$has_bug_msg)
 
 DROP TABLE num, t1, t2;
 
+--echo #
+--echo # Bug#38822359: Assertion `std::cmp_less(pred_idx,
+--echo #               m_graph->num_where_predicates)' failed.
+--echo #
+CREATE TABLE t(f1 INT PRIMARY KEY, f2 INT, KEY(f2));
+INSERT INTO t VALUES (1, 1), (2, 2), (3, 3);
+ANALYZE TABLE t;
+
+let $query =
+    SELECT t1.f1 FROM t AS t1 LEFT JOIN (
+      (SELECT DISTINCT * FROM t AS t2 WHERE f2 <> f2) AS dt1,
+      (SELECT t4.* FROM t AS t3 STRAIGHT_JOIN t AS t4 ON t4.f1 = t3.f1) AS dt2
+    ) ON TRUE;
+
+--echo # Verify that the assertion does not fail, and that t2, t3 and t4 are
+--echo # pruned from the query plan and replaced by "Zero rows".
+--replace_regex $elide_costs
+--eval EXPLAIN FORMAT=TREE $query
+--sorted_result
+--eval $query
+
+DROP TABLE t;
+
 --source include/disable_hypergraph.inc
