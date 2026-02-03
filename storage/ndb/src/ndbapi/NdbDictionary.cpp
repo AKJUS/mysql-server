@@ -1923,6 +1923,14 @@ int NdbDictionary::ForeignKey::getChildColumnNo(unsigned no) const {
   return -1;
 }
 
+bool NdbDictionary::ForeignKey::isParentTable(const Table *table) const {
+  return ((int)m_impl.m_references[0].m_objectId == table->getObjectId());
+}
+
+bool NdbDictionary::ForeignKey::isChildTable(const Table *table) const {
+  return ((int)m_impl.m_references[1].m_objectId == table->getObjectId());
+}
+
 /*****************************************************************
  * Dictionary facade
  */

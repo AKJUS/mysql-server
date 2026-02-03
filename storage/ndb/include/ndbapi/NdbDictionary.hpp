@@ -2246,6 +2246,12 @@ class NdbDictionary {
     int getParentColumnNo(unsigned no) const;
     int getChildColumnNo(unsigned no) const;
 
+    /* Returns true if the given table is the parent table */
+    bool isParentTable(const Table *) const;
+
+    /* Returns true if the given table is the child table */
+    bool isChildTable(const Table *) const;
+
     /**
      * return 0 if child refers to parent PK
      */
