@@ -1718,7 +1718,7 @@ ib_err_t ib_cursor_moveto(ib_crsr_t ib_crsr, /*!< in: InnoDB cursor instance */
 
   ut_a(tuple->type == TPL_TYPE_KEY);
 
-  n_fields = dict_index_get_n_ordering_defined_by_user(prebuilt->index);
+  n_fields = dict_index_get_n_unique_in_tree(prebuilt->index);
 
   if (n_fields == 0 && prebuilt->index->is_clustered() &&
       prebuilt->clust_index_was_generated) {
