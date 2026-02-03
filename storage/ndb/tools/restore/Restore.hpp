@@ -50,6 +50,7 @@
 #define NDB_RESTORE_ERROR_INSERT_FAIL_REPLAY_LOG 3
 #define NDB_RESTORE_ERROR_INSERT_FAIL_RESTORE_TUPLE 4
 #define NDB_RESTORE_ERROR_INSERT_FAIL_LOG_CONSTRAINT 5
+#define NDB_RESTORE_ERROR_INSERT_ABORT_ON_CLOSE_ERROR 6
 
 #endif
 
@@ -426,7 +427,6 @@ class BackupFile {
     reset_buffers();
   }
 
-  bool openFile();
   void setCtlFile(Uint32 nodeId, Uint32 backupId, const char *path);
   void setDataFile(const BackupFile &bf, Uint32 no);
   void setLogFile(const BackupFile &bf, Uint32 no);
@@ -443,6 +443,8 @@ class BackupFile {
   virtual ~BackupFile();
 
  public:
+  bool openFile();
+  bool closeFile(bool abort);
   bool readHeader();
   bool validateFooter();
   bool validateBackupFile();
@@ -472,6 +474,15 @@ class BackupFile {
  private:
   void twiddle_atribute(const AttributeDesc *attr_desc,
                         AttributeData *attr_data);
+};
+
+// Class to be used with Scope_guard
+class CloseFileUnchecked {
+  BackupFile &m_file;
+
+ public:
+  CloseFileUnchecked(BackupFile &file) : m_file(file) {}
+  void operator()() const { m_file.closeFile(true); }
 };
 
 struct DictObject {

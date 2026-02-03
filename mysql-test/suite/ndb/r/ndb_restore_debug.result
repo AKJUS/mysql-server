@@ -215,3 +215,16 @@ a	b
 drop table t1;
 drop table t2;
 drop table t3;
+With a big log (>128K) check that ndb_restore will not fail close
+partially read log file when restoring epochs.
+create table t1 (pk int primary key, data varbinary(20000)) engine=ndb;
+Stall backup completion
+
+Run backup
+Starting backup
+Backup started
+Allow backup to complete...
+
+Waiting for backup to complete
+Backup completed
+drop table t1;
