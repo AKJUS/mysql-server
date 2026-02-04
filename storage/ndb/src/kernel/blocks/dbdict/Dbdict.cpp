@@ -26101,7 +26101,6 @@ void Dbdict::dropFK_fromLocal(Signal *signal, Uint32 op_key, Uint32 ret) {
 void Dbdict::dropFK_commit(Signal *signal, SchemaOpPtr op_ptr) {
   D("dropFK_commit");
   jam();
-  SchemaTransPtr trans_ptr = op_ptr.p->m_trans_ptr;
   DropFKRecPtr dropFKRecPtr;
   getOpRec(op_ptr, dropFKRecPtr);
   DropFKImplReq *impl_req = &dropFKRecPtr.p->m_request;
