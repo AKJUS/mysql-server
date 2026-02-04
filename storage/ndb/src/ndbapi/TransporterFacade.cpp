@@ -161,7 +161,7 @@ void TransporterFacade::reportDisconnect(NodeId nodeId,
   reportDisconnected(nodeId);
 }
 
-void TransporterFacade::transporter_recv_from(NodeId nodeId) {
+void TransporterFacade::transporter_recv_from(NodeId nodeId, TrpId) {
   hb_received(nodeId);
 }
 

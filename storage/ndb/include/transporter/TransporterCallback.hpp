@@ -116,7 +116,7 @@ class TransporterReceiveHandle : public TransporterReceiveData {
    *
    * Used for heartbeat detection by upper layer.
    */
-  virtual void transporter_recv_from(NodeId node) = 0;
+  virtual void transporter_recv_from(NodeId node, TrpId trpId) = 0;
 
   /**
    *

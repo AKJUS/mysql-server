@@ -62,7 +62,7 @@ class TransporterReceiveHandleKernel : public TransporterReceiveHandle {
   void reportDisconnect(NodeId nodeId, Uint32 errNo) override;
   void reportError(NodeId nodeId, TransporterError errorCode,
                    const char *info = nullptr) override;
-  void transporter_recv_from(NodeId node) override;
+  void transporter_recv_from(NodeId node, TrpId trpId) override;
   int checkJobBuffer() override;
   ~TransporterReceiveHandleKernel() override {}
 };
