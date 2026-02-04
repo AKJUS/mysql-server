@@ -3392,7 +3392,7 @@ void Qmgr::checkHeartbeat(Signal *signal) {
       return;
     } else {
       /**----------------------------------------------------------------------
-       * OUR LEFT NEIGHBOUR HAVE KEPT QUIET FOR THREE CONSECUTIVE HEARTBEAT
+       * OUR LEFT NEIGHBOUR HAVE KEPT QUIET FOR FOUR CONSECUTIVE HEARTBEAT
        * PERIODS. THUS WE DECLARE HIM DOWN.
        *----------------------------------------------------------------------*/
       signal->theData[0] = NDB_LE_DeadDueToHeartbeat;
@@ -3433,7 +3433,7 @@ void Qmgr::apiHbHandlingLab(Signal *signal, NDB_TICKS now) {
       if (get_hb_count(TnodePtr.i) > 4) {
         jam();
         /*------------------------------------------------------------------*/
-        /* THE API NODE HAS NOT SENT ANY HEARTBEAT FOR THREE SECONDS.
+        /* THE API NODE HAS NOT SENT ANY HEARTBEAT FOR FOUR HEARTBEATS.
          * WE WILL DISCONNECT FROM IT NOW.
          *------------------------------------------------------------------*/
         /*------------------------------------------------------------------*/
