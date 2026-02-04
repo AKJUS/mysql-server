@@ -452,12 +452,14 @@ static struct my_option my_long_options[] = {
     {"show-log-level", 256,
      "Include log level in log message. Deprecated, log level will always "
      "be included in future.",
-     &opt_show_log_level, nullptr, nullptr, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
+     &opt_show_log_level, nullptr, nullptr, GET_BOOL, NO_ARG, 1, 0, 0, 0, 0, 0},
     {"show-node-id", 256,
      "Prefix log messages with node of that ndb_restore uses",
      &opt_show_node_id, nullptr, nullptr, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
-    {"show-part-id", 256, "Prefix log messages with backup part ID",
-     &opt_show_part_id, nullptr, nullptr, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
+    {"show-part-id", 256,
+     "Prefix log messages with backup part ID for multi part backups. "
+     "Deprecated, default on since 9.7.",
+     &opt_show_part_id, nullptr, nullptr, GET_BOOL, NO_ARG, 1, 0, 0, 0, 0, 0},
 #ifdef ERROR_INSERT
     {"error-insert", OPT_ERROR_INSERT, "Insert errors (testing option)",
      &_error_insert, nullptr, nullptr, GET_INT, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
@@ -1801,7 +1803,8 @@ int do_restore(RestoreThreadData *thrdata) {
   cstrbuf<30> threadName;
   if (opt_show_node_id)
     threadName.appendf("Node %u: ", g_cluster_connection->node_id());
-  if (opt_show_part_id) threadName.appendf("[part %u] ", thrdata->m_part_id);
+  if (opt_show_part_id && (ga_backup_format == BF_MULTI_PART))
+    threadName.appendf("[part %u] ", thrdata->m_part_id);
   require(!threadName.is_truncated());
   restoreLogger.setThreadPrefix(threadName.c_str());
 

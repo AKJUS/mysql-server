@@ -14,7 +14,7 @@ update test.ndb_restore_output set line = trim(trailing '\r' from line);
 # Masking timestamp from the restore output with 'X' to avoid tests
 # running on different dates give 'Result content mismatch'.
 replace_regex /[0-9]*-[0-9]*-[0-9]*[ T][0-9]*:[0-9]*:[0-9]*[.0-9Z:+-]*/XXXX-XX-XX XX:XX:XX/
-              /Node [1-9][0-9]*:/Node XX:/ ;
+              /Node [1-9][0-9]*:/Node XX:/ /part [0-9]/part X/;
 select line as "row" from test.ndb_restore_output
   where line like "%WARNING%" order by line;
 
