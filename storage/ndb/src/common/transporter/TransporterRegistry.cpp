@@ -1719,7 +1719,7 @@ Uint32 TransporterRegistry::performReceive(TransporterReceiveHandle &recvdata,
         int nBytes = t->doReceive(recvdata);
         if (nBytes > 0) {
           t->set_last_recv(last_recv);
-          recvdata.transporter_recv_from(node_id);
+          recvdata.transporter_recv_from(node_id, trp_id);
           recvdata.m_has_data_transporters.set(trp_id);
         }
         more_pending = t->hasPending();
@@ -1809,7 +1809,7 @@ Uint32 TransporterRegistry::performReceive(TransporterReceiveHandle &recvdata,
         Uint32 *readPtr, *eodPtr, *endPtr;
         t_shm->getReceivePtr(&readPtr, &eodPtr, &endPtr);
         t->set_last_recv(last_recv);
-        recvdata.transporter_recv_from(node_id);
+        recvdata.transporter_recv_from(node_id, trp_id);
         Uint32 *newPtr = unpack(recvdata, readPtr, eodPtr, endPtr, node_id,
                                 trp_id, stopReceiving);
         t_shm->updateReceivePtr(recvdata, newPtr);

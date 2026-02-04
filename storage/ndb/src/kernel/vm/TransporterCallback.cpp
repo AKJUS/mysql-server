@@ -955,7 +955,8 @@ void TransporterReceiveHandleKernel::assign_trps(
 }
 #endif
 
-void TransporterReceiveHandleKernel::transporter_recv_from(NodeId nodeId) {
+void TransporterReceiveHandleKernel::transporter_recv_from(NodeId nodeId,
+                                                           TrpId) {
   if (globalData.get_hb_count(nodeId) != 0) {
     globalData.set_hb_count(nodeId) = 0;
   }
