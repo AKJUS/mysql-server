@@ -418,7 +418,7 @@ void ClusterMgr::threadMain() {
             NdbTick_AddMilliseconds(now, cm_node.hbCheckInterval);
         if (cm_node.hbMissed >= 2 && cm_node.hbCheckInterval > 0) {
           g_eventLogger->warning("Node %u missed heartbeat %u from node %u.",
-                                 getOwnNodeId(), cm_node.hbMissed, nodeId);
+                                 getOwnNodeId(), cm_node.hbMissed - 1, nodeId);
         }
       }
 
