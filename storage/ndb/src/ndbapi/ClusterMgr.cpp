@@ -448,7 +448,7 @@ void ClusterMgr::threadMain() {
        * Node can be reported as disconnected in two different ways
        * 1 - Node was reported as connected, hbCheckInterval already configured
        * (arrived as part of an earlier API_REGCONF signal received) but no
-       * API_REGCONF arriving for, at least, 4 * hbCheckInterval milliseconds.
+       * API_REGCONF arriving for, at least, 3 * hbCheckInterval milliseconds.
        * 2 - Node reported as connected, first API_REGCONF missed for more
        * them maxTimeWithoutFirstApiRegConfMillis / minHeartBeatInterval
        * (60 seconds).
