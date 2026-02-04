@@ -532,39 +532,6 @@ bool Sql_cmd_load_table::execute_bulk(THD *thd) {
   // Actions needed to cleanup before leaving scope.
   auto cleanup_guard = create_scope_guard([&]() {
     THD_STAGE_INFO(thd, stage_end);
-    if (m_non_empty_table && success && !info.m_is_dryrun) {
-      auto final_temp_name =
-          table_ref->table->file->bulk_load_generate_temporary_table_name();
-      Table_ref final_table_ref{};
-      final_table_ref.table_name = final_temp_name.c_str();
-      final_table_ref.table_name_length = final_temp_name.length();
-      final_table_ref.db = schema_name.c_str();
-      final_table_ref.db_length = schema_name.length();
-      MDL_REQUEST_INIT(&final_table_ref.mdl_request, MDL_key::TABLE,
-                       final_table_ref.db, final_table_ref.table_name,
-                       MDL_EXCLUSIVE, MDL_TRANSACTION);
-      if (lock_table_names(thd, &final_table_ref, nullptr,
-                           thd->variables.lock_wait_timeout, 0)) {
-        success = false;
-      } else {
-        // mysql_create_like_table  opens the table under the hood so we close
-        // it here for now.
-        rename_table_for_incremental_bulk_load(thd, schema_name, original_name,
-                                               final_temp_name);
-        rename_table_for_incremental_bulk_load(thd, schema_name, temp_name,
-                                               original_name);
-
-        Table_ref old_table_ref;
-
-        old_table_ref.table_name = final_temp_name.c_str();
-        old_table_ref.table_name_length = final_temp_name.length();
-        old_table_ref.db = schema_name.c_str();
-        old_table_ref.db_length = schema_name.length();
-        old_table_ref.alias = old_table_ref.table_name;
-        close_thread_tables(thd);
-        mysql_rm_table(thd, &old_table_ref, false, false);
-      }
-    }
 
     close_thread_tables(thd);
     // End transaction
@@ -674,6 +641,46 @@ bool Sql_cmd_load_table::execute_bulk(THD *thd) {
                              affected_rows)) {
       my_error(ER_INTERNAL_ERROR, MYF(0),
                "BULK LOAD: bulk_driver_service failed");
+      success = false;
+      return true;
+    }
+  }
+
+  if (m_non_empty_table && !info.m_is_dryrun) {
+    auto final_temp_name =
+        table_ref->table->file->bulk_load_generate_temporary_table_name();
+    Table_ref final_table_ref{};
+    final_table_ref.table_name = final_temp_name.c_str();
+    final_table_ref.table_name_length = final_temp_name.length();
+    final_table_ref.db = schema_name.c_str();
+    final_table_ref.db_length = schema_name.length();
+    MDL_REQUEST_INIT(&final_table_ref.mdl_request, MDL_key::TABLE,
+                     final_table_ref.db, final_table_ref.table_name,
+                     MDL_EXCLUSIVE, MDL_TRANSACTION);
+    if (lock_table_names(thd, &final_table_ref, nullptr,
+                         thd->variables.lock_wait_timeout, 0)) {
+      success = false;
+      return true;
+    }
+    if (rename_table_for_incremental_bulk_load(thd, schema_name, original_name,
+                                               final_temp_name)) {
+      success = false;
+      return true;
+    }
+    if (rename_table_for_incremental_bulk_load(thd, schema_name, temp_name,
+                                               original_name)) {
+      success = false;
+      return true;
+    }
+
+    Table_ref old_table_ref;
+    old_table_ref.table_name = final_temp_name.c_str();
+    old_table_ref.table_name_length = final_temp_name.length();
+    old_table_ref.db = schema_name.c_str();
+    old_table_ref.db_length = schema_name.length();
+    old_table_ref.alias = old_table_ref.table_name;
+    close_thread_tables(thd);
+    if (mysql_rm_table(thd, &old_table_ref, false, false)) {
       success = false;
       return true;
     }
