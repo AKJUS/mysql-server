@@ -121,6 +121,8 @@ class NdbRestarter {
 
   int getNodeStatus(int nodeId);  // return NDB_MGM_NODE_STATUS_*
 
+  int getUndefinedNodeId();
+
   /**
    * return 2 vectors with nodeId's (partitions)
    *   so that each partition can survive

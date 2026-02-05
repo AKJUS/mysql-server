@@ -3704,12 +3704,6 @@ void Qmgr::sendApiFailReq(Signal *signal, Uint16 failedNodeNo, bool sumaOnly) {
 
 void Qmgr::execAPI_FAILREQ(Signal *signal) {
   jamEntry();
-  NodeRecPtr failedNodePtr;
-  failedNodePtr.i = signal->theData[0];
-  // signal->theData[1] == QMGR_REF
-  ptrCheckGuard(failedNodePtr, MAX_NODES, nodeRec);
-
-  ndbrequire(getNodeInfo(failedNodePtr.i).getType() != NodeInfo::DB);
 
   api_failed(signal, signal->theData[0], AFC_Notification,
              signal->getSendersBlockRef());
@@ -4122,6 +4116,15 @@ void Qmgr::execUPGRADE_PROTOCOL_ORD(Signal *signal) {
 void Qmgr::api_failed(Signal *signal, Uint32 nodeId, ApiFailureCause afc,
                       Uint32 senderRef) {
   jam();
+
+  const NodeInfo::NodeType nodeType = getNodeInfo(nodeId).getType();
+  if (nodeType != NodeInfo::API && nodeType != NodeInfo::MGM) {
+    g_eventLogger->warning(
+        "Ignoring failed connection report for Node %u of invalid type : %u",
+        nodeId, nodeType);
+    return;
+  }
+
   NodeRecPtr failedNodePtr;
   /**------------------------------------------------------------------------
    *   A COMMUNICATION LINK HAS BEEN DISCONNECTED. WE MUST TAKE SOME ACTION
@@ -4135,7 +4138,7 @@ void Qmgr::api_failed(Signal *signal, Uint32 nodeId, ApiFailureCause afc,
     jam();
     if (unlikely(failedNodePtr.p->failState == NORMAL &&
                  getNodeState().startLevel < NodeState::SL_STARTED &&
-                 getNodeInfo(failedNodePtr.i).getType() == NodeInfo::API)) {
+                 nodeType == NodeInfo::API)) {
       jam();
 
       /* Perform node failure handling (apart from disconnect)
