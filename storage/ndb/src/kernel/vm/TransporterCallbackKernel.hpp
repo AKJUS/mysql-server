@@ -50,7 +50,7 @@ class TransporterReceiveHandleKernel : public TransporterReceiveHandle {
    */
   void assign_trps(Uint32 *recv_thread_idx_array);
 #endif
-  void *m_trpman;
+  void *m_trpman = nullptr;
 
   void assign_trpman(void *trpman) { m_trpman = trpman; }
   /* TransporterCallback interface. */
