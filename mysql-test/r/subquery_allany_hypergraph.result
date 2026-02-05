@@ -83,7 +83,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (<cache>(ot.v) = it.val)  (rows=0.3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT NOT EXISTS (SELECT * FROM it WHERE ot.v = it.val) AS b
 FROM ot;
@@ -100,7 +100,7 @@ EXPLAIN
 -> Select #2 (subquery in projection; dependent)
     -> Limit: 1 row(s)  (rows=0.3)
         -> Filter: (ot.v = it.val)  (rows=0.3)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.v' of SELECT #2 was resolved in SELECT #1
@@ -118,7 +118,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; run only once)
     -> Aggregate: max(it.val)  (rows=1)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v >=ALL (SELECT val FROM it) AS b
 FROM ot;
@@ -134,7 +134,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; run only once)
     -> Aggregate: max(it.val)  (rows=1)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v <ALL (SELECT val FROM it) AS b
 FROM ot;
@@ -150,7 +150,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; run only once)
     -> Aggregate: min(it.val)  (rows=1)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v <=ALL (SELECT val FROM it) AS b
 FROM ot;
@@ -166,7 +166,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; run only once)
     -> Aggregate: min(it.val)  (rows=1)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v =ANY (SELECT val FROM it) AS b
 FROM ot;
@@ -182,7 +182,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (<cache>(ot.v) = it.val)  (rows=0.3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT EXISTS (SELECT * FROM it WHERE ot.v = it.val) AS b
 FROM ot;
@@ -199,7 +199,7 @@ EXPLAIN
 -> Select #2 (subquery in projection; dependent)
     -> Limit: 1 row(s)  (rows=0.3)
         -> Filter: (ot.v = it.val)  (rows=0.3)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.v' of SELECT #2 was resolved in SELECT #1
@@ -217,7 +217,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; run only once)
     -> Aggregate: min(it.val)  (rows=1)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v >=ANY (SELECT val FROM it) AS b
 FROM ot;
@@ -233,7 +233,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; run only once)
     -> Aggregate: min(it.val)  (rows=1)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v <ANY (SELECT val FROM it) AS b
 FROM ot;
@@ -249,7 +249,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; run only once)
     -> Aggregate: max(it.val)  (rows=1)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v <=ANY (SELECT val FROM it) AS b
 FROM ot;
@@ -265,7 +265,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; run only once)
     -> Aggregate: max(it.val)  (rows=1)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v =ALL (SELECT v FROM t0row) AS b
 FROM ot;
@@ -414,7 +414,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: <if>(outer_field_is_not_null, (<cache>(ot.vn) = it.val), true)  (rows=3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT NOT EXISTS (SELECT * FROM it WHERE ot.vn = it.val) AS b
 FROM ot;
@@ -431,7 +431,7 @@ EXPLAIN
 -> Select #2 (subquery in projection; dependent)
     -> Limit: 1 row(s)  (rows=0.3)
         -> Filter: (ot.vn = it.val)  (rows=0.3)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.vn' of SELECT #2 was resolved in SELECT #1
@@ -449,7 +449,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: <if>(outer_field_is_not_null, (<cache>(ot.vn) <= it.val), true)  (rows=3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn >=ALL (SELECT val FROM it) AS b
 FROM ot;
@@ -465,7 +465,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: <if>(outer_field_is_not_null, (<cache>(ot.vn) < it.val), true)  (rows=3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn <ALL (SELECT val FROM it) AS b
 FROM ot;
@@ -481,7 +481,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: <if>(outer_field_is_not_null, (<cache>(ot.vn) >= it.val), true)  (rows=3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn <=ALL (SELECT val FROM it) AS b
 FROM ot;
@@ -497,7 +497,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: <if>(outer_field_is_not_null, (<cache>(ot.vn) > it.val), true)  (rows=3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn =ANY (SELECT val FROM it) AS b
 FROM ot;
@@ -513,7 +513,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: <if>(outer_field_is_not_null, (<cache>(ot.vn) = it.val), true)  (rows=3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT EXISTS (SELECT * FROM it WHERE ot.vn = it.val) AS b
 FROM ot;
@@ -530,7 +530,7 @@ EXPLAIN
 -> Select #2 (subquery in projection; dependent)
     -> Limit: 1 row(s)  (rows=0.3)
         -> Filter: (ot.vn = it.val)  (rows=0.3)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.vn' of SELECT #2 was resolved in SELECT #1
@@ -548,7 +548,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: <if>(outer_field_is_not_null, (<cache>(ot.vn) > it.val), true)  (rows=3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn >=ANY (SELECT val FROM it) AS b
 FROM ot;
@@ -564,7 +564,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: <if>(outer_field_is_not_null, (<cache>(ot.vn) >= it.val), true)  (rows=3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn <ANY (SELECT val FROM it) AS b
 FROM ot;
@@ -580,7 +580,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: <if>(outer_field_is_not_null, (<cache>(ot.vn) < it.val), true)  (rows=3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn <=ANY (SELECT val FROM it) AS b
 FROM ot;
@@ -596,7 +596,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: <if>(outer_field_is_not_null, (<cache>(ot.vn) <= it.val), true)  (rows=3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn =ALL (SELECT v FROM t0row) AS b
 FROM ot;
@@ -745,7 +745,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (((<cache>(ot.v) = it.valn) or (it.valn is null)) and <is_not_null_test>(it.valn))  (rows=0.057)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT NOT EXISTS (SELECT * FROM it WHERE ot.v = it.valn) AS b
 FROM ot;
@@ -762,7 +762,7 @@ EXPLAIN
 -> Select #2 (subquery in projection; dependent)
     -> Limit: 1 row(s)  (rows=0.3)
         -> Filter: (ot.v = it.valn)  (rows=0.3)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.v' of SELECT #2 was resolved in SELECT #1
@@ -780,7 +780,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (((<cache>(ot.v) <= it.valn) or (it.valn is null)) and <is_not_null_test>(it.valn))  (rows=0.12)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v >=ALL (SELECT valn FROM it) AS b
 FROM ot;
@@ -796,7 +796,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (((<cache>(ot.v) < it.valn) or (it.valn is null)) and <is_not_null_test>(it.valn))  (rows=0.12)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v <ALL (SELECT valn FROM it) AS b
 FROM ot;
@@ -812,7 +812,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (((<cache>(ot.v) >= it.valn) or (it.valn is null)) and <is_not_null_test>(it.valn))  (rows=0.12)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v <=ALL (SELECT valn FROM it) AS b
 FROM ot;
@@ -828,7 +828,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (((<cache>(ot.v) > it.valn) or (it.valn is null)) and <is_not_null_test>(it.valn))  (rows=0.12)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v =ANY (SELECT valn FROM it) AS b
 FROM ot;
@@ -844,7 +844,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (((<cache>(ot.v) = it.valn) or (it.valn is null)) and <is_not_null_test>(it.valn))  (rows=0.057)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT EXISTS (SELECT * FROM it WHERE ot.v = it.valn) AS b
 FROM ot;
@@ -861,7 +861,7 @@ EXPLAIN
 -> Select #2 (subquery in projection; dependent)
     -> Limit: 1 row(s)  (rows=0.3)
         -> Filter: (ot.v = it.valn)  (rows=0.3)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.v' of SELECT #2 was resolved in SELECT #1
@@ -879,7 +879,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (((<cache>(ot.v) > it.valn) or (it.valn is null)) and <is_not_null_test>(it.valn))  (rows=0.12)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v >=ANY (SELECT valn FROM it) AS b
 FROM ot;
@@ -895,7 +895,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (((<cache>(ot.v) >= it.valn) or (it.valn is null)) and <is_not_null_test>(it.valn))  (rows=0.12)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v <ANY (SELECT valn FROM it) AS b
 FROM ot;
@@ -911,7 +911,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (((<cache>(ot.v) < it.valn) or (it.valn is null)) and <is_not_null_test>(it.valn))  (rows=0.12)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v <=ANY (SELECT valn FROM it) AS b
 FROM ot;
@@ -927,7 +927,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (((<cache>(ot.v) <= it.valn) or (it.valn is null)) and <is_not_null_test>(it.valn))  (rows=0.12)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v =ALL (SELECT n FROM t1row) AS b
 FROM ot;
@@ -1076,7 +1076,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (<if>(outer_field_is_not_null, ((<cache>(ot.vn) = it.valn) or (it.valn is null)), true) and <if>(outer_field_is_not_null, <is_not_null_test>(it.valn), true))  (rows=3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT NOT EXISTS (SELECT * FROM it WHERE ot.vn = it.valn) AS b
 FROM ot;
@@ -1093,7 +1093,7 @@ EXPLAIN
 -> Select #2 (subquery in projection; dependent)
     -> Limit: 1 row(s)  (rows=0.3)
         -> Filter: (ot.vn = it.valn)  (rows=0.3)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.vn' of SELECT #2 was resolved in SELECT #1
@@ -1111,7 +1111,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (<if>(outer_field_is_not_null, ((<cache>(ot.vn) <= it.valn) or (it.valn is null)), true) and <if>(outer_field_is_not_null, <is_not_null_test>(it.valn), true))  (rows=3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn >=ALL (SELECT valn FROM it) AS b
 FROM ot;
@@ -1127,7 +1127,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (<if>(outer_field_is_not_null, ((<cache>(ot.vn) < it.valn) or (it.valn is null)), true) and <if>(outer_field_is_not_null, <is_not_null_test>(it.valn), true))  (rows=3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn <ALL (SELECT valn FROM it) AS b
 FROM ot;
@@ -1143,7 +1143,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (<if>(outer_field_is_not_null, ((<cache>(ot.vn) >= it.valn) or (it.valn is null)), true) and <if>(outer_field_is_not_null, <is_not_null_test>(it.valn), true))  (rows=3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn <=ALL (SELECT valn FROM it) AS b
 FROM ot;
@@ -1159,7 +1159,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (<if>(outer_field_is_not_null, ((<cache>(ot.vn) > it.valn) or (it.valn is null)), true) and <if>(outer_field_is_not_null, <is_not_null_test>(it.valn), true))  (rows=3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn =ANY (SELECT valn FROM it) AS b
 FROM ot;
@@ -1175,7 +1175,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (<if>(outer_field_is_not_null, ((<cache>(ot.vn) = it.valn) or (it.valn is null)), true) and <if>(outer_field_is_not_null, <is_not_null_test>(it.valn), true))  (rows=3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT EXISTS (SELECT * FROM it WHERE ot.vn = it.valn) AS b
 FROM ot;
@@ -1192,7 +1192,7 @@ EXPLAIN
 -> Select #2 (subquery in projection; dependent)
     -> Limit: 1 row(s)  (rows=0.3)
         -> Filter: (ot.vn = it.valn)  (rows=0.3)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.vn' of SELECT #2 was resolved in SELECT #1
@@ -1210,7 +1210,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (<if>(outer_field_is_not_null, ((<cache>(ot.vn) > it.valn) or (it.valn is null)), true) and <if>(outer_field_is_not_null, <is_not_null_test>(it.valn), true))  (rows=3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn >=ANY (SELECT valn FROM it) AS b
 FROM ot;
@@ -1226,7 +1226,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (<if>(outer_field_is_not_null, ((<cache>(ot.vn) >= it.valn) or (it.valn is null)), true) and <if>(outer_field_is_not_null, <is_not_null_test>(it.valn), true))  (rows=3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn <ANY (SELECT valn FROM it) AS b
 FROM ot;
@@ -1242,7 +1242,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (<if>(outer_field_is_not_null, ((<cache>(ot.vn) < it.valn) or (it.valn is null)), true) and <if>(outer_field_is_not_null, <is_not_null_test>(it.valn), true))  (rows=3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn <=ANY (SELECT valn FROM it) AS b
 FROM ot;
@@ -1258,7 +1258,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (<if>(outer_field_is_not_null, ((<cache>(ot.vn) <= it.valn) or (it.valn is null)), true) and <if>(outer_field_is_not_null, <is_not_null_test>(it.valn), true))  (rows=3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn =ALL (SELECT n FROM t1row) AS b
 FROM ot;
@@ -1406,7 +1406,7 @@ EXPLAIN
 -> Hash antijoin (ot.v = it.val)  (rows=4.13)
     -> Table scan on ot  (rows=5)
     -> Hash
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -1421,7 +1421,7 @@ EXPLAIN
 -> Hash antijoin (ot.v = it.val)  (rows=4.13)
     -> Table scan on ot  (rows=5)
     -> Hash
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.v' of SELECT #2 was resolved in SELECT #1
@@ -1438,7 +1438,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: max(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -1454,7 +1454,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: max(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -1469,7 +1469,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: min(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -1485,7 +1485,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: min(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -1501,7 +1501,7 @@ EXPLAIN
 -> Hash semijoin (FirstMatch) (ot.v = it.val)  (rows=0.866)
     -> Table scan on ot  (rows=5)
     -> Hash
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -1517,7 +1517,7 @@ EXPLAIN
 -> Hash semijoin (FirstMatch) (ot.v = it.val)  (rows=0.866)
     -> Table scan on ot  (rows=5)
     -> Hash
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.v' of SELECT #2 was resolved in SELECT #1
@@ -1536,7 +1536,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: min(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -1554,7 +1554,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: min(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -1571,7 +1571,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: max(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -1589,7 +1589,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: max(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -1744,7 +1744,7 @@ EXPLAIN
             -> Limit: 1 row(s)  (rows=1)
                 -> Index lookup on <materialized_subquery> using <auto_distinct_key> (val = ot.vn)
                     -> Materialize with deduplication  (rows=3)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -1759,7 +1759,7 @@ EXPLAIN
 -> Hash antijoin (ot.vn = it.val)  (rows=4.13)
     -> Table scan on ot  (rows=5)
     -> Hash
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.vn' of SELECT #2 was resolved in SELECT #1
@@ -1775,7 +1775,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: max(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -1790,7 +1790,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: max(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -1805,7 +1805,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: min(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -1821,7 +1821,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: min(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -1837,7 +1837,7 @@ EXPLAIN
 -> Hash semijoin (FirstMatch) (ot.vn = it.val)  (rows=0.866)
     -> Table scan on ot  (rows=5)
     -> Hash
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -1853,7 +1853,7 @@ EXPLAIN
 -> Hash semijoin (FirstMatch) (ot.vn = it.val)  (rows=0.866)
     -> Table scan on ot  (rows=5)
     -> Hash
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.vn' of SELECT #2 was resolved in SELECT #1
@@ -1871,7 +1871,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: min(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -1888,7 +1888,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: min(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -1905,7 +1905,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: max(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -1923,7 +1923,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: max(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -2074,7 +2074,7 @@ EXPLAIN
             -> Limit: 1 row(s)  (rows=1)
                 -> Index lookup on <materialized_subquery> using <auto_distinct_key> (valn = ot.v)
                     -> Materialize with deduplication  (rows=3)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -2090,7 +2090,7 @@ EXPLAIN
 -> Hash antijoin (ot.v = it.valn)  (rows=4.13)
     -> Table scan on ot  (rows=5)
     -> Hash
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.v' of SELECT #2 was resolved in SELECT #1
@@ -2105,7 +2105,7 @@ EXPLAIN
 -> Filter: <not>((ot.v <= <max>(select #2)))  (rows=3.33)
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -2118,7 +2118,7 @@ EXPLAIN
 -> Filter: <not>((ot.v < <max>(select #2)))  (rows=3.33)
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -2131,7 +2131,7 @@ EXPLAIN
 -> Filter: <not>((ot.v >= <min>(select #2)))  (rows=3.33)
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -2144,7 +2144,7 @@ EXPLAIN
 -> Filter: <not>((ot.v > <min>(select #2)))  (rows=3.33)
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -2159,7 +2159,7 @@ EXPLAIN
 -> Hash semijoin (FirstMatch) (ot.v = it.valn)  (rows=0.866)
     -> Table scan on ot  (rows=5)
     -> Hash
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -2174,7 +2174,7 @@ EXPLAIN
 -> Hash semijoin (FirstMatch) (ot.v = it.valn)  (rows=0.866)
     -> Table scan on ot  (rows=5)
     -> Hash
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.v' of SELECT #2 was resolved in SELECT #1
@@ -2193,7 +2193,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: min(it.valn)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -2211,7 +2211,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: min(it.valn)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -2227,7 +2227,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: max(it.valn)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -2244,7 +2244,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: max(it.valn)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -2391,7 +2391,7 @@ EXPLAIN
             -> Limit: 1 row(s)  (rows=1)
                 -> Index lookup on <materialized_subquery> using <auto_distinct_key> (valn = ot.vn)
                     -> Materialize with deduplication  (rows=3)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -2407,7 +2407,7 @@ EXPLAIN
 -> Hash antijoin (ot.vn = it.valn)  (rows=4.13)
     -> Table scan on ot  (rows=5)
     -> Hash
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.vn' of SELECT #2 was resolved in SELECT #1
@@ -2422,7 +2422,7 @@ EXPLAIN
 -> Filter: <not>((ot.vn <= <max>(select #2)))  (rows=3.33)
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -2435,7 +2435,7 @@ EXPLAIN
 -> Filter: <not>((ot.vn < <max>(select #2)))  (rows=3.33)
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -2448,7 +2448,7 @@ EXPLAIN
 -> Filter: <not>((ot.vn >= <min>(select #2)))  (rows=3.33)
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -2461,7 +2461,7 @@ EXPLAIN
 -> Filter: <not>((ot.vn > <min>(select #2)))  (rows=3.33)
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -2476,7 +2476,7 @@ EXPLAIN
 -> Hash semijoin (FirstMatch) (ot.vn = it.valn)  (rows=0.866)
     -> Table scan on ot  (rows=5)
     -> Hash
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -2491,7 +2491,7 @@ EXPLAIN
 -> Hash semijoin (FirstMatch) (ot.vn = it.valn)  (rows=0.866)
     -> Table scan on ot  (rows=5)
     -> Hash
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.vn' of SELECT #2 was resolved in SELECT #1
@@ -2509,7 +2509,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: min(it.valn)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -2526,7 +2526,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: min(it.valn)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -2542,7 +2542,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: max(it.valn)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -2559,7 +2559,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: max(it.valn)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -2701,7 +2701,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; run only once)
     -> Aggregate: max(it.val)  (rows=1)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 # DISTINCT in SELECT list:
 SELECT DISTINCT v >=ALL (SELECT val FROM it) AS b
@@ -2716,7 +2716,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; run only once)
     -> Aggregate: max(it.val)  (rows=1)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 # GROUP BY on quantified comparison predicate
 SELECT v >=ALL (SELECT val FROM it) AS b, COUNT(*)
@@ -2734,7 +2734,7 @@ EXPLAIN
         -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; run only once)
     -> Aggregate: max(it.val)  (rows=1)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 # GROUP BY and HAVING on quantified comparison predicate
 SELECT v >=ALL (SELECT val FROM it) AS b, COUNT(*)
@@ -2754,7 +2754,7 @@ EXPLAIN
             -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: max(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 # ORDER BY on quantified comparison predicate
 SELECT v >=ALL (SELECT val FROM it) AS b
@@ -2774,7 +2774,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; run only once)
     -> Aggregate: max(it.val)  (rows=1)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 # GROUP BY and ORDER BY on quantified comparison predicate
 SELECT v >=ALL (SELECT val FROM it) AS b, COUNT(*)
@@ -2794,7 +2794,7 @@ EXPLAIN
         -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; run only once)
     -> Aggregate: max(it.val)  (rows=1)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 # Quantified comparison predicate as WINDOW expression
 SELECT v >=ALL (SELECT val FROM it) AS b,
@@ -2814,7 +2814,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in projection; run only once)
         -> Aggregate: max(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'b' of SELECT #3 was resolved in SELECT #1
@@ -2837,7 +2837,7 @@ EXPLAIN
         -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in projection; run only once)
         -> Aggregate: max(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'b' of SELECT #4 was resolved in SELECT #1
@@ -2856,10 +2856,10 @@ EXPLAIN
 -> Rows fetched before execution  (rows=1)
 -> Select #2 (subquery in projection; run only once)
     -> Aggregate: min(it.val)  (rows=1)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 -> Select #3 (subquery in projection; run only once)
     -> Aggregate: min(it.val)  (rows=1)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT 1 WHERE 2 >ANY (SELECT val FROM it);
 1
@@ -2870,7 +2870,7 @@ EXPLAIN
     -> Rows fetched before execution  (rows=1)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: min(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 # No tables in inner query block
 SELECT 1, 1 >ANY (SELECT 0) AS q1 FROM ot;
@@ -2913,8 +2913,8 @@ EXPLAIN
 -> Select #2 (subquery in projection; run only once)
     -> Table scan on <union temporary>  (rows=6)
         -> Union materialize with deduplication  (rows=6)
-            -> Table scan on it  (rows=3)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -2930,8 +2930,8 @@ EXPLAIN
     -> Select #2 (subquery in condition; run only once)
         -> Table scan on <union temporary>  (rows=6)
             -> Union materialize with deduplication  (rows=6)
-                -> Table scan on it  (rows=3)
-                -> Table scan on it  (rows=3)
+                -> Index scan on it using PRIMARY  (rows=3)
+                -> Index scan on it using PRIMARY  (rows=3)
 
 # Implicitly grouped subquery
 SELECT v >ALL (SELECT MAX(val) FROM it) AS b
@@ -2949,7 +2949,7 @@ EXPLAIN
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (<cache>(ot.v) <= <ref_null_helper>(max(it.val)))  (rows=1)
         -> Aggregate: max(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -2964,7 +2964,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: max(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 # Explicitly grouped subquery
 SELECT v >ALL (SELECT val FROM it GROUP BY val) AS b
@@ -2981,7 +2981,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; run only once)
     -> Aggregate: max(it.val)  (rows=1)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -2996,7 +2996,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: max(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v >ALL (SELECT MAX(valn) FROM it GROUP BY val) AS b
 FROM ot;
@@ -3014,7 +3014,7 @@ EXPLAIN
     -> Filter: (<cache>(ot.v) <= <ref_null_helper>(max(it.valn)))  (rows=1.73)
         -> Group aggregate: max(it.valn)  (rows=1.73)
             -> Sort: it.val  (rows=3)
-                -> Table scan on it  (rows=3)
+                -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -3029,7 +3029,7 @@ EXPLAIN
     -> Select #2 (subquery in condition; run only once)
         -> Group aggregate: max(it.valn)  (rows=1.73)
             -> Sort: it.val  (rows=3)
-                -> Table scan on it  (rows=3)
+                -> Index scan on it using PRIMARY  (rows=3)
 
 # Subquery with WINDOW function
 SELECT v >ALL (SELECT MAX(val) OVER () FROM it) AS b
@@ -3053,7 +3053,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Window aggregate with buffering: max(it.val) OVER ()   (rows=3)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 # Subquery with LIMIT (unsupported) and ORDER BY (supported)
 SELECT v >ALL (SELECT val FROM it LIMIT 3) AS b
@@ -3077,7 +3077,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; run only once)
     -> Aggregate: max(it.val)  (rows=1)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -3092,7 +3092,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: max(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v >ALL (SELECT val FROM it ORDER BY val DESC LIMIT 3) AS b
 FROM ot;
@@ -3459,7 +3459,7 @@ EXPLAIN
 -> Hash antijoin (otr.v = itr.val), (otr.rf = itr.rf)  (rows=13.2)
     -> Table scan on otr  (rows=15)
     -> Hash
-        -> Table scan on itr  (rows=6)
+        -> Index scan on itr using PRIMARY  (rows=6)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -3774,16 +3774,16 @@ FROM t1 AS alias4
 );
 EXPLAIN
 -> Inner hash join (alias2.cv = alias1.cv_key)  (rows=0.1)
-    -> Table scan on alias1  (rows=1)
+    -> Index scan on alias1 using PRIMARY  (rows=1)
     -> Hash
         -> Filter: <nop>(<in_optimizer>(alias2.cv,<exists>(select #2)))  (rows=1)
-            -> Table scan on alias2  (rows=1)
+            -> Index scan on alias2 using PRIMARY  (rows=1)
             -> Select #2 (subquery in condition; dependent)
                 -> Filter: ((<cache>(alias2.cv) <> alias3.cv_key) and (alias3.cv_key > (select #3)))  (rows=0.3)
-                    -> Table scan on alias3  (rows=1)
+                    -> Index scan on alias3 using PRIMARY  (rows=1)
                     -> Select #3 (subquery in condition; run only once)
                         -> Aggregate: max(alias4.cv)  (rows=1)
-                            -> Table scan on alias4  (rows=1)
+                            -> Index scan on alias4 using PRIMARY  (rows=1)
 
 DROP TABLE t1;
 set optimizer_switch='semijoin=off,subquery_to_derived=on';
@@ -3814,7 +3814,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1.73)
             -> Materialize  (rows=1.73)
                 -> Sort with duplicate removal: it.val  (rows=1.73)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT NOT EXISTS (SELECT * FROM it WHERE ot.v = it.val) AS b
 FROM ot;
@@ -3833,7 +3833,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1.73)
             -> Materialize  (rows=1.73)
                 -> Sort with duplicate removal: it.val  (rows=1.73)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.v' of SELECT #2 was resolved in SELECT #1
@@ -3854,7 +3854,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v >=ALL (SELECT val FROM it) AS b
 FROM ot;
@@ -3873,7 +3873,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v <ALL (SELECT val FROM it) AS b
 FROM ot;
@@ -3892,7 +3892,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: min(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v <=ALL (SELECT val FROM it) AS b
 FROM ot;
@@ -3911,7 +3911,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: min(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v =ANY (SELECT val FROM it) AS b
 FROM ot;
@@ -3930,7 +3930,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1.73)
             -> Materialize  (rows=1.73)
                 -> Sort with duplicate removal: it.val  (rows=1.73)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT EXISTS (SELECT * FROM it WHERE ot.v = it.val) AS b
 FROM ot;
@@ -3949,7 +3949,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1.73)
             -> Materialize  (rows=1.73)
                 -> Sort with duplicate removal: it.val  (rows=1.73)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.v' of SELECT #2 was resolved in SELECT #1
@@ -3970,7 +3970,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: min(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v >=ANY (SELECT val FROM it) AS b
 FROM ot;
@@ -3989,7 +3989,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: min(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v <ANY (SELECT val FROM it) AS b
 FROM ot;
@@ -4008,7 +4008,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v <=ANY (SELECT val FROM it) AS b
 FROM ot;
@@ -4027,7 +4027,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v =ALL (SELECT v FROM t0row) AS b
 FROM ot;
@@ -4200,7 +4200,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: <if>(outer_field_is_not_null, (<cache>(ot.vn) = it.val), true)  (rows=3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT NOT EXISTS (SELECT * FROM it WHERE ot.vn = it.val) AS b
 FROM ot;
@@ -4219,7 +4219,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1.73)
             -> Materialize  (rows=1.73)
                 -> Sort with duplicate removal: it.val  (rows=1.73)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.vn' of SELECT #2 was resolved in SELECT #1
@@ -4240,7 +4240,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn >=ALL (SELECT val FROM it) AS b
 FROM ot;
@@ -4259,7 +4259,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn <ALL (SELECT val FROM it) AS b
 FROM ot;
@@ -4278,7 +4278,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: min(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn <=ALL (SELECT val FROM it) AS b
 FROM ot;
@@ -4297,7 +4297,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: min(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn =ANY (SELECT val FROM it) AS b
 FROM ot;
@@ -4313,7 +4313,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: <if>(outer_field_is_not_null, (<cache>(ot.vn) = it.val), true)  (rows=3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT EXISTS (SELECT * FROM it WHERE ot.vn = it.val) AS b
 FROM ot;
@@ -4332,7 +4332,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1.73)
             -> Materialize  (rows=1.73)
                 -> Sort with duplicate removal: it.val  (rows=1.73)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.vn' of SELECT #2 was resolved in SELECT #1
@@ -4353,7 +4353,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: min(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn >=ANY (SELECT val FROM it) AS b
 FROM ot;
@@ -4372,7 +4372,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: min(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn <ANY (SELECT val FROM it) AS b
 FROM ot;
@@ -4391,7 +4391,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn <=ANY (SELECT val FROM it) AS b
 FROM ot;
@@ -4410,7 +4410,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn =ALL (SELECT v FROM t0row) AS b
 FROM ot;
@@ -4583,7 +4583,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (((<cache>(ot.v) = it.valn) or (it.valn is null)) and <is_not_null_test>(it.valn))  (rows=0.057)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT NOT EXISTS (SELECT * FROM it WHERE ot.v = it.valn) AS b
 FROM ot;
@@ -4602,7 +4602,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1.73)
             -> Materialize  (rows=1.73)
                 -> Sort with duplicate removal: it.valn  (rows=1.73)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.v' of SELECT #2 was resolved in SELECT #1
@@ -4623,7 +4623,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(it.valn), count(0), max((it.valn is null))  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v >=ALL (SELECT valn FROM it) AS b
 FROM ot;
@@ -4642,7 +4642,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(it.valn), count(0), max((it.valn is null))  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v <ALL (SELECT valn FROM it) AS b
 FROM ot;
@@ -4661,7 +4661,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: min(it.valn), count(0), max((it.valn is null))  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v <=ALL (SELECT valn FROM it) AS b
 FROM ot;
@@ -4680,7 +4680,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: min(it.valn), count(0), max((it.valn is null))  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v =ANY (SELECT valn FROM it) AS b
 FROM ot;
@@ -4696,7 +4696,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (((<cache>(ot.v) = it.valn) or (it.valn is null)) and <is_not_null_test>(it.valn))  (rows=0.057)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT EXISTS (SELECT * FROM it WHERE ot.v = it.valn) AS b
 FROM ot;
@@ -4715,7 +4715,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1.73)
             -> Materialize  (rows=1.73)
                 -> Sort with duplicate removal: it.valn  (rows=1.73)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.v' of SELECT #2 was resolved in SELECT #1
@@ -4736,7 +4736,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: min(it.valn), count(0), max((it.valn is null))  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v >=ANY (SELECT valn FROM it) AS b
 FROM ot;
@@ -4755,7 +4755,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: min(it.valn), count(0), max((it.valn is null))  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v <ANY (SELECT valn FROM it) AS b
 FROM ot;
@@ -4774,7 +4774,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(it.valn), count(0), max((it.valn is null))  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v <=ANY (SELECT valn FROM it) AS b
 FROM ot;
@@ -4793,7 +4793,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(it.valn), count(0), max((it.valn is null))  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v =ALL (SELECT n FROM t1row) AS b
 FROM ot;
@@ -4966,7 +4966,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (<if>(outer_field_is_not_null, ((<cache>(ot.vn) = it.valn) or (it.valn is null)), true) and <if>(outer_field_is_not_null, <is_not_null_test>(it.valn), true))  (rows=3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT NOT EXISTS (SELECT * FROM it WHERE ot.vn = it.valn) AS b
 FROM ot;
@@ -4985,7 +4985,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1.73)
             -> Materialize  (rows=1.73)
                 -> Sort with duplicate removal: it.valn  (rows=1.73)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.vn' of SELECT #2 was resolved in SELECT #1
@@ -5006,7 +5006,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(it.valn), count(0), max((it.valn is null))  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn >=ALL (SELECT valn FROM it) AS b
 FROM ot;
@@ -5025,7 +5025,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(it.valn), count(0), max((it.valn is null))  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn <ALL (SELECT valn FROM it) AS b
 FROM ot;
@@ -5044,7 +5044,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: min(it.valn), count(0), max((it.valn is null))  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn <=ALL (SELECT valn FROM it) AS b
 FROM ot;
@@ -5063,7 +5063,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: min(it.valn), count(0), max((it.valn is null))  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn =ANY (SELECT valn FROM it) AS b
 FROM ot;
@@ -5079,7 +5079,7 @@ EXPLAIN
 -> Table scan on ot  (rows=5)
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (<if>(outer_field_is_not_null, ((<cache>(ot.vn) = it.valn) or (it.valn is null)), true) and <if>(outer_field_is_not_null, <is_not_null_test>(it.valn), true))  (rows=3)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT EXISTS (SELECT * FROM it WHERE ot.vn = it.valn) AS b
 FROM ot;
@@ -5098,7 +5098,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1.73)
             -> Materialize  (rows=1.73)
                 -> Sort with duplicate removal: it.valn  (rows=1.73)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.vn' of SELECT #2 was resolved in SELECT #1
@@ -5119,7 +5119,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: min(it.valn), count(0), max((it.valn is null))  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn >=ANY (SELECT valn FROM it) AS b
 FROM ot;
@@ -5138,7 +5138,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: min(it.valn), count(0), max((it.valn is null))  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn <ANY (SELECT valn FROM it) AS b
 FROM ot;
@@ -5157,7 +5157,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(it.valn), count(0), max((it.valn is null))  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn <=ANY (SELECT valn FROM it) AS b
 FROM ot;
@@ -5176,7 +5176,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(it.valn), count(0), max((it.valn is null))  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT vn =ALL (SELECT n FROM t1row) AS b
 FROM ot;
@@ -5352,7 +5352,7 @@ EXPLAIN
             -> Table scan on derived_1_2  (rows=1.73)
                 -> Materialize  (rows=1.73)
                     -> Sort with duplicate removal: it.val  (rows=1.73)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -5371,7 +5371,7 @@ EXPLAIN
             -> Table scan on derived_1_2  (rows=1.73)
                 -> Materialize  (rows=1.73)
                     -> Sort with duplicate removal: it.val  (rows=1.73)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.v' of SELECT #2 was resolved in SELECT #1
@@ -5390,7 +5390,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -5408,7 +5408,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -5425,7 +5425,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: min(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -5443,7 +5443,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: min(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -5462,7 +5462,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1.73)
             -> Materialize  (rows=1.73)
                 -> Sort with duplicate removal: it.val  (rows=1.73)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -5481,7 +5481,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1.73)
             -> Materialize  (rows=1.73)
                 -> Sort with duplicate removal: it.val  (rows=1.73)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.v' of SELECT #2 was resolved in SELECT #1
@@ -5503,7 +5503,7 @@ EXPLAIN
             -> Materialize  (rows=1)
                 -> Filter: (count(0) <> 0)  (rows=1)
                     -> Aggregate: min(it.val), count(0)  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -5524,7 +5524,7 @@ EXPLAIN
             -> Materialize  (rows=1)
                 -> Filter: (count(0) <> 0)  (rows=1)
                     -> Aggregate: min(it.val), count(0)  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -5544,7 +5544,7 @@ EXPLAIN
             -> Materialize  (rows=1)
                 -> Filter: (count(0) <> 0)  (rows=1)
                     -> Aggregate: max(it.val), count(0)  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -5565,7 +5565,7 @@ EXPLAIN
             -> Materialize  (rows=1)
                 -> Filter: (count(0) <> 0)  (rows=1)
                     -> Aggregate: max(it.val), count(0)  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -5744,7 +5744,7 @@ EXPLAIN
             -> Limit: 1 row(s)  (rows=1)
                 -> Index lookup on <materialized_subquery> using <auto_distinct_key> (val = ot.vn)
                     -> Materialize with deduplication  (rows=3)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -5763,7 +5763,7 @@ EXPLAIN
             -> Table scan on derived_1_2  (rows=1.73)
                 -> Materialize  (rows=1.73)
                     -> Sort with duplicate removal: it.val  (rows=1.73)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.vn' of SELECT #2 was resolved in SELECT #1
@@ -5781,7 +5781,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -5798,7 +5798,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -5815,7 +5815,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: min(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -5833,7 +5833,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: min(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -5852,7 +5852,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1.73)
             -> Materialize  (rows=1.73)
                 -> Sort with duplicate removal: it.val  (rows=1.73)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -5871,7 +5871,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1.73)
             -> Materialize  (rows=1.73)
                 -> Sort with duplicate removal: it.val  (rows=1.73)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.vn' of SELECT #2 was resolved in SELECT #1
@@ -5892,7 +5892,7 @@ EXPLAIN
             -> Materialize  (rows=1)
                 -> Filter: (count(0) <> 0)  (rows=1)
                     -> Aggregate: min(it.val), count(0)  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -5912,7 +5912,7 @@ EXPLAIN
             -> Materialize  (rows=1)
                 -> Filter: (count(0) <> 0)  (rows=1)
                     -> Aggregate: min(it.val), count(0)  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -5932,7 +5932,7 @@ EXPLAIN
             -> Materialize  (rows=1)
                 -> Filter: (count(0) <> 0)  (rows=1)
                     -> Aggregate: max(it.val), count(0)  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -5953,7 +5953,7 @@ EXPLAIN
             -> Materialize  (rows=1)
                 -> Filter: (count(0) <> 0)  (rows=1)
                     -> Aggregate: max(it.val), count(0)  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -6132,7 +6132,7 @@ EXPLAIN
             -> Limit: 1 row(s)  (rows=1)
                 -> Index lookup on <materialized_subquery> using <auto_distinct_key> (valn = ot.v)
                     -> Materialize with deduplication  (rows=3)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -6152,7 +6152,7 @@ EXPLAIN
             -> Table scan on derived_1_2  (rows=1.73)
                 -> Materialize  (rows=1.73)
                     -> Sort with duplicate removal: it.valn  (rows=1.73)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.v' of SELECT #2 was resolved in SELECT #1
@@ -6171,7 +6171,7 @@ EXPLAIN
             -> Table scan on derived_1_2  (rows=1)
                 -> Materialize  (rows=1)
                     -> Aggregate: max(it.valn), count(0), max((it.valn is null))  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -6188,7 +6188,7 @@ EXPLAIN
             -> Table scan on derived_1_2  (rows=1)
                 -> Materialize  (rows=1)
                     -> Aggregate: max(it.valn), count(0), max((it.valn is null))  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -6205,7 +6205,7 @@ EXPLAIN
             -> Table scan on derived_1_2  (rows=1)
                 -> Materialize  (rows=1)
                     -> Aggregate: min(it.valn), count(0), max((it.valn is null))  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -6222,7 +6222,7 @@ EXPLAIN
             -> Table scan on derived_1_2  (rows=1)
                 -> Materialize  (rows=1)
                     -> Aggregate: min(it.valn), count(0), max((it.valn is null))  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -6240,7 +6240,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1.73)
             -> Materialize  (rows=1.73)
                 -> Sort with duplicate removal: it.valn  (rows=1.73)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -6258,7 +6258,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1.73)
             -> Materialize  (rows=1.73)
                 -> Sort with duplicate removal: it.valn  (rows=1.73)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.v' of SELECT #2 was resolved in SELECT #1
@@ -6280,7 +6280,7 @@ EXPLAIN
             -> Materialize  (rows=1)
                 -> Filter: (count(0) <> 0)  (rows=1)
                     -> Aggregate: min(it.valn), count(0)  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -6301,7 +6301,7 @@ EXPLAIN
             -> Materialize  (rows=1)
                 -> Filter: (count(0) <> 0)  (rows=1)
                     -> Aggregate: min(it.valn), count(0)  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -6320,7 +6320,7 @@ EXPLAIN
             -> Materialize  (rows=1)
                 -> Filter: (count(0) <> 0)  (rows=1)
                     -> Aggregate: max(it.valn), count(0)  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -6340,7 +6340,7 @@ EXPLAIN
             -> Materialize  (rows=1)
                 -> Filter: (count(0) <> 0)  (rows=1)
                     -> Aggregate: max(it.valn), count(0)  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -6511,7 +6511,7 @@ EXPLAIN
             -> Limit: 1 row(s)  (rows=1)
                 -> Index lookup on <materialized_subquery> using <auto_distinct_key> (valn = ot.vn)
                     -> Materialize with deduplication  (rows=3)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -6531,7 +6531,7 @@ EXPLAIN
             -> Table scan on derived_1_2  (rows=1.73)
                 -> Materialize  (rows=1.73)
                     -> Sort with duplicate removal: it.valn  (rows=1.73)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.vn' of SELECT #2 was resolved in SELECT #1
@@ -6550,7 +6550,7 @@ EXPLAIN
             -> Table scan on derived_1_2  (rows=1)
                 -> Materialize  (rows=1)
                     -> Aggregate: max(it.valn), count(0), max((it.valn is null))  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -6567,7 +6567,7 @@ EXPLAIN
             -> Table scan on derived_1_2  (rows=1)
                 -> Materialize  (rows=1)
                     -> Aggregate: max(it.valn), count(0), max((it.valn is null))  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -6584,7 +6584,7 @@ EXPLAIN
             -> Table scan on derived_1_2  (rows=1)
                 -> Materialize  (rows=1)
                     -> Aggregate: min(it.valn), count(0), max((it.valn is null))  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -6601,7 +6601,7 @@ EXPLAIN
             -> Table scan on derived_1_2  (rows=1)
                 -> Materialize  (rows=1)
                     -> Aggregate: min(it.valn), count(0), max((it.valn is null))  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -6619,7 +6619,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1.73)
             -> Materialize  (rows=1.73)
                 -> Sort with duplicate removal: it.valn  (rows=1.73)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -6637,7 +6637,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1.73)
             -> Materialize  (rows=1.73)
                 -> Sort with duplicate removal: it.valn  (rows=1.73)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.ot.vn' of SELECT #2 was resolved in SELECT #1
@@ -6658,7 +6658,7 @@ EXPLAIN
             -> Materialize  (rows=1)
                 -> Filter: (count(0) <> 0)  (rows=1)
                     -> Aggregate: min(it.valn), count(0)  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -6678,7 +6678,7 @@ EXPLAIN
             -> Materialize  (rows=1)
                 -> Filter: (count(0) <> 0)  (rows=1)
                     -> Aggregate: min(it.valn), count(0)  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -6697,7 +6697,7 @@ EXPLAIN
             -> Materialize  (rows=1)
                 -> Filter: (count(0) <> 0)  (rows=1)
                     -> Aggregate: max(it.valn), count(0)  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -6717,7 +6717,7 @@ EXPLAIN
             -> Materialize  (rows=1)
                 -> Filter: (count(0) <> 0)  (rows=1)
                     -> Aggregate: max(it.valn), count(0)  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -6890,7 +6890,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 # DISTINCT in SELECT list:
 SELECT DISTINCT v >=ALL (SELECT val FROM it) AS b
@@ -6908,7 +6908,7 @@ EXPLAIN
             -> Table scan on derived_1_2  (rows=1)
                 -> Materialize  (rows=1)
                     -> Aggregate: max(it.val), count(0)  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 # GROUP BY on quantified comparison predicate
 SELECT v >=ALL (SELECT val FROM it) AS b, COUNT(*)
@@ -6929,7 +6929,7 @@ EXPLAIN
                 -> Table scan on derived_1_2  (rows=1)
                     -> Materialize  (rows=1)
                         -> Aggregate: max(it.val), count(0)  (rows=1)
-                            -> Table scan on it  (rows=3)
+                            -> Index scan on it using PRIMARY  (rows=3)
 
 # GROUP BY and HAVING on quantified comparison predicate
 SELECT v >=ALL (SELECT val FROM it) AS b, COUNT(*)
@@ -6952,7 +6952,7 @@ EXPLAIN
                     -> Table scan on derived_1_2  (rows=1)
                         -> Materialize  (rows=1)
                             -> Aggregate: max(it.val), count(0)  (rows=1)
-                                -> Table scan on it  (rows=3)
+                                -> Index scan on it using PRIMARY  (rows=3)
 
 # ORDER BY on quantified comparison predicate
 SELECT v >=ALL (SELECT val FROM it) AS b
@@ -6975,7 +6975,7 @@ EXPLAIN
             -> Table scan on derived_1_2  (rows=1)
                 -> Materialize  (rows=1)
                     -> Aggregate: max(it.val), count(0)  (rows=1)
-                        -> Table scan on it  (rows=3)
+                        -> Index scan on it using PRIMARY  (rows=3)
 
 # GROUP BY and ORDER BY on quantified comparison predicate
 SELECT v >=ALL (SELECT val FROM it) AS b, COUNT(*)
@@ -6998,7 +6998,7 @@ EXPLAIN
                 -> Table scan on derived_1_2  (rows=1)
                     -> Materialize  (rows=1)
                         -> Aggregate: max(it.val), count(0)  (rows=1)
-                            -> Table scan on it  (rows=3)
+                            -> Index scan on it using PRIMARY  (rows=3)
 
 # Quantified comparison predicate as WINDOW expression
 SELECT v >=ALL (SELECT val FROM it) AS b,
@@ -7025,10 +7025,10 @@ EXPLAIN
 -> Rows fetched before execution  (rows=1)
 -> Select #2 (subquery in projection; run only once)
     -> Aggregate: min(it.val)  (rows=1)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 -> Select #3 (subquery in projection; run only once)
     -> Aggregate: min(it.val)  (rows=1)
-        -> Table scan on it  (rows=3)
+        -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT 1 WHERE 2 >ANY (SELECT val FROM it);
 1
@@ -7039,7 +7039,7 @@ EXPLAIN
     -> Rows fetched before execution  (rows=1)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: min(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 # No tables in inner query block
 SELECT 1, 1 >ANY (SELECT 0) AS q1 FROM ot;
@@ -7082,8 +7082,8 @@ EXPLAIN
 -> Select #2 (subquery in projection; run only once)
     -> Table scan on <union temporary>  (rows=6)
         -> Union materialize with deduplication  (rows=6)
-            -> Table scan on it  (rows=3)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -7099,8 +7099,8 @@ EXPLAIN
     -> Select #2 (subquery in condition; run only once)
         -> Table scan on <union temporary>  (rows=6)
             -> Union materialize with deduplication  (rows=6)
-                -> Table scan on it  (rows=3)
-                -> Table scan on it  (rows=3)
+                -> Index scan on it using PRIMARY  (rows=3)
+                -> Index scan on it using PRIMARY  (rows=3)
 
 # Implicitly grouped subquery
 SELECT v >ALL (SELECT MAX(val) FROM it) AS b
@@ -7118,7 +7118,7 @@ EXPLAIN
 -> Select #2 (subquery in projection; dependent)
     -> Filter: (<cache>(ot.v) <= <ref_null_helper>(max(it.val)))  (rows=1)
         -> Aggregate: max(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -7133,7 +7133,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Aggregate: max(it.val)  (rows=1)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 # Explicitly grouped subquery
 SELECT v >ALL (SELECT val FROM it GROUP BY val) AS b
@@ -7153,7 +7153,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -7170,7 +7170,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v >ALL (SELECT MAX(valn) FROM it GROUP BY val) AS b
 FROM ot;
@@ -7188,7 +7188,7 @@ EXPLAIN
     -> Filter: (<cache>(ot.v) <= <ref_null_helper>(max(it.valn)))  (rows=1.73)
         -> Group aggregate: max(it.valn)  (rows=1.73)
             -> Sort: it.val  (rows=3)
-                -> Table scan on it  (rows=3)
+                -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -7203,7 +7203,7 @@ EXPLAIN
     -> Select #2 (subquery in condition; run only once)
         -> Group aggregate: max(it.valn)  (rows=1.73)
             -> Sort: it.val  (rows=3)
-                -> Table scan on it  (rows=3)
+                -> Index scan on it using PRIMARY  (rows=3)
 
 # Subquery with WINDOW function
 SELECT v >ALL (SELECT MAX(val) OVER () FROM it) AS b
@@ -7227,7 +7227,7 @@ EXPLAIN
     -> Table scan on ot  (rows=5)
     -> Select #2 (subquery in condition; run only once)
         -> Window aggregate with buffering: max(it.val) OVER ()   (rows=3)
-            -> Table scan on it  (rows=3)
+            -> Index scan on it using PRIMARY  (rows=3)
 
 # Subquery with LIMIT (unsupported) and ORDER BY (supported)
 SELECT v >ALL (SELECT val FROM it LIMIT 3) AS b
@@ -7254,7 +7254,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT *
 FROM ot
@@ -7271,7 +7271,7 @@ EXPLAIN
         -> Table scan on derived_1_2  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(it.val), count(0)  (rows=1)
-                    -> Table scan on it  (rows=3)
+                    -> Index scan on it using PRIMARY  (rows=3)
 
 SELECT v >ALL (SELECT val FROM it ORDER BY val DESC LIMIT 3) AS b
 FROM ot;
@@ -8032,18 +8032,18 @@ EXPLAIN
             -> Filter: (derived_2_3.field4 <> 0)  (rows=0.9)
                 -> Aggregate: min(alias3.cv_key), count(0), count(distinct alias3.cv_key)  (rows=1)
                     -> Inner hash join (no condition), extra conditions: (alias3.cv_key > derived_2_3.field4)  (rows=0.333)
-                        -> Table scan on alias3  (rows=1)
+                        -> Index scan on alias3 using PRIMARY  (rows=1)
                         -> Hash
                             -> Table scan on derived_2_3  (rows=1)
                                 -> Materialize  (rows=1)
                                     -> Aggregate: max(alias4.cv)  (rows=1)
-                                        -> Table scan on alias4  (rows=1)
+                                        -> Index scan on alias4 using PRIMARY  (rows=1)
     -> Hash
         -> Inner hash join (alias2.cv = alias1.cv_key)  (rows=0.09)
-            -> Table scan on alias1  (rows=1)
+            -> Index scan on alias1 using PRIMARY  (rows=1)
             -> Hash
                 -> Filter: (alias2.cv is not null)  (rows=0.9)
-                    -> Table scan on alias2  (rows=1)
+                    -> Index scan on alias2 using PRIMARY  (rows=1)
 
 DROP TABLE t1;
 

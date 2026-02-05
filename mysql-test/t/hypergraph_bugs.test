@@ -2533,12 +2533,32 @@ WITH trace_vals AS (
   SELECT REGEXP_SUBSTR(trace, 'INDEX_SCAN, cost=[0-9.]+', 1, 1) AS idx_line,
          REGEXP_SUBSTR(trace, 'TABLE_SCAN, cost=[0-9.]+', 1, 1) AS tbl_line
     FROM INFORMATION_SCHEMA.OPTIMIZER_TRACE
-) SELECT (CAST(SUBSTRING_INDEX(idx_line, 'cost=', -1) AS DECIMAL(20,10)) =
-          CAST(SUBSTRING_INDEX(tbl_line, 'cost=', -1) AS DECIMAL(20,10)))
+) SELECT (tbl_line IS NULL OR
+         (CAST(SUBSTRING_INDEX(idx_line, 'cost=', -1) AS DECIMAL(20,10)) =
+          CAST(SUBSTRING_INDEX(tbl_line, 'cost=', -1) AS DECIMAL(20,10))))
          AS costs_equal
   FROM trace_vals;
 
 set optimizer_trace="enabled=off";
+
+DROP TABLE t1;
+
+--echo #
+--echo # Bug#38389762: Hypergraph: Should not propose both table
+--echo #              scan and primary index scan
+--echo #
+
+CREATE TABLE t1 ( f1 INT PRIMARY KEY, f2 CHAR(5));
+INSERT INTO t1 VALUES (1,'aaaaa'), (2,'bbbbb'), (3,'ccccc'), (4,'ddddd');
+ANALYZE TABLE t1;
+
+--echo # Clustered primary key should avoid proposing table scan.
+SET optimizer_trace='enabled=on';
+--replace_regex $elide_costs
+EXPLAIN FORMAT=TREE SELECT * FROM t1;
+SELECT LOCATE('{TABLE_SCAN, cost=', trace) = 0 AS no_table_scan
+  FROM INFORMATION_SCHEMA.OPTIMIZER_TRACE;
+SET optimizer_trace='enabled=off';
 
 DROP TABLE t1;
 

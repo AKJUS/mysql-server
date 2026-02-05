@@ -2124,22 +2124,22 @@ EXPLAIN
                             -> Index scan on partsupp using PRIMARY  (rows=7)
                             -> Hash
                                 -> Inner hash join (supplier.s_nationkey = nation.n_nationkey)  (rows=0.1)
-                                    -> Table scan on supplier  (rows=1)
+                                    -> Index scan on supplier using PRIMARY  (rows=1)
                                     -> Hash
                                         -> Filter: (nation.n_name = 'germany')  (rows=0.3)
-                                            -> Table scan on nation  (rows=3)
+                                            -> Index scan on nation using PRIMARY  (rows=3)
                         -> Hash
                             -> Table scan on derived_1_2  (rows=1)
                                 -> Materialize  (rows=1)
                                     -> Aggregate: sum((partsupp.ps_supplycost * partsupp.ps_availqty))  (rows=1)
                                         -> Inner hash join (partsupp.ps_suppkey = supplier.s_suppkey)  (rows=0.7)
-                                            -> Table scan on partsupp  (rows=7)
+                                            -> Index scan on partsupp using PRIMARY  (rows=7)
                                             -> Hash
                                                 -> Inner hash join (supplier.s_nationkey = nation.n_nationkey)  (rows=0.1)
-                                                    -> Table scan on supplier  (rows=1)
+                                                    -> Index scan on supplier using PRIMARY  (rows=1)
                                                     -> Hash
                                                         -> Filter: (nation.n_name = 'germany')  (rows=0.3)
-                                                            -> Table scan on nation  (rows=3)
+                                                            -> Index scan on nation using PRIMARY  (rows=3)
 
 DROP TABLE partsupp, nation, supplier;
 Bugs discovered during full regression suite runs with
@@ -3469,7 +3469,7 @@ EXPLAIN
                 -> Aggregate using temporary table
                     -> Left hash join (no condition)
                         -> Inner hash join (no condition), extra conditions: (s1.avg_us <= s2.avg_us)
-                            -> Table scan on s1
+                            -> Index scan on s1 using PRIMARY
                             -> Hash
                                 -> Covering index scan on s2 using PRIMARY
                         -> Hash
@@ -3674,25 +3674,25 @@ WHERE (SELECT MIN(pk) FROM tab1);
 EXPLAIN
 -> Inner hash join (no condition)  (rows=1)
     -> Left hash join (no condition)  (rows=1)
-        -> Table scan on table1  (rows=1)
+        -> Covering index scan on table1 using PRIMARY  (rows=1)
         -> Hash
             -> Inner hash join (no condition)  (rows=0.333)
-                -> Table scan on table3  (rows=1)
+                -> Covering index scan on table3 using PRIMARY  (rows=1)
                 -> Hash
                     -> Inner hash join (no condition)  (rows=0.333)
-                        -> Table scan on table2  (rows=1)
+                        -> Covering index scan on table2 using PRIMARY  (rows=1)
                         -> Hash
                             -> Filter: (1 <= derived_1_2.`COUNT(pk)`)  (rows=0.333)
                                 -> Table scan on derived_1_2  (rows=1)
                                     -> Materialize  (rows=1)
                                         -> Aggregate: count(tab1.pk)  (rows=1)
-                                            -> Table scan on tab1  (rows=1)
+                                            -> Covering index scan on tab1 using PRIMARY  (rows=1)
     -> Hash
         -> Table scan on derived_1_3  (rows=1)
             -> Materialize  (rows=1)
                 -> Filter: (0 <> min(tab1.pk))  (rows=1)
                     -> Aggregate: min(tab1.pk)  (rows=1)
-                        -> Table scan on tab1  (rows=1)
+                        -> Covering index scan on tab1 using PRIMARY  (rows=1)
 
 DROP TABLE tab1;
 #
@@ -3832,16 +3832,16 @@ FROM t1)) ) alias2
 ON true;
 EXPLAIN
 -> Left hash join (no condition)  (rows=1)
-    -> Table scan on t1  (rows=1)
+    -> Covering index scan on t1 using PRIMARY  (rows=1)
     -> Hash
         -> Inner hash join (no condition)  (rows=0.333)
-            -> Table scan on t1  (rows=1)
+            -> Covering index scan on t1 using PRIMARY  (rows=1)
             -> Hash
                 -> Filter: (1 <= derived_2_3.`MAX(t1.pk)`)  (rows=0.333)
                     -> Table scan on derived_2_3  (rows=1)
                         -> Materialize  (rows=1)
                             -> Aggregate: max(t1.pk)  (rows=1)
-                                -> Table scan on t1  (rows=1)
+                                -> Covering index scan on t1 using PRIMARY  (rows=1)
 
 Another mode of the bug: exercises has_scalar_to_derived_transform
 which also needs to look inside join nest
@@ -3887,22 +3887,22 @@ ON TRUE
 ON TRUE;
 EXPLAIN
 -> Left hash join (no condition)  (rows=1)
-    -> Table scan on alias1  (rows=1)
+    -> Covering index scan on alias1 using PRIMARY  (rows=1)
     -> Hash
         -> Left hash join (no condition)  (rows=1)
-            -> Table scan on alias2  (rows=1)
+            -> Covering index scan on alias2 using PRIMARY  (rows=1)
             -> Hash
                 -> Inner hash join (no condition)  (rows=0.3)
-                    -> Table scan on t1  (rows=1)
+                    -> Covering index scan on t1 using PRIMARY  (rows=1)
                     -> Hash
                         -> Filter: ((1 <= derived_2_3.Name_exp_1) and (derived_2_3.Name_exp_2 <> 0))  (rows=0.3)
                             -> Table scan on derived_2_3  (rows=1)
                                 -> Materialize  (rows=1)
                                     -> Aggregate: max(c_sq1_alias1.pk), count(0)  (rows=1)
                                         -> Inner hash join (no condition)  (rows=1)
-                                            -> Table scan on c_sq1_alias2  (rows=1)
+                                            -> Covering index scan on c_sq1_alias2 using PRIMARY  (rows=1)
                                             -> Hash
-                                                -> Table scan on c_sq1_alias1  (rows=1)
+                                                -> Covering index scan on c_sq1_alias1 using PRIMARY  (rows=1)
 
 DROP TABLE t1;
 #
@@ -4589,23 +4589,23 @@ EXPLAIN
             -> Aggregate: count(table1.pk)  (rows=1)
                 -> Inner hash join (no condition)  (rows=1)
                     -> Inner hash join (no condition)  (rows=1)
-                        -> Table scan on table3  (rows=1)
+                        -> Covering index scan on table3 using PRIMARY  (rows=1)
                         -> Hash
                             -> Inner hash join (no condition)  (rows=1)
-                                -> Table scan on cc1  (rows=1)
+                                -> Covering index scan on cc1 using PRIMARY  (rows=1)
                                 -> Hash
-                                    -> Table scan on table1  (rows=1)
+                                    -> Covering index scan on table1 using PRIMARY  (rows=1)
                     -> Hash
                         -> Table scan on derived_4_5  (rows=1)
                             -> Materialize  (rows=1)
                                 -> Filter: (1 <> count(0))  (rows=1)
                                     -> Aggregate: count(0)  (rows=1)
-                                        -> Table scan on cc1  (rows=1)
+                                        -> Covering index scan on cc1 using PRIMARY  (rows=1)
     -> Hash
         -> Table scan on derived_1_6  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: min(cc1.col_varchar_key)  (rows=1)
-                    -> Table scan on cc1  (rows=1)
+                    -> Index scan on cc1 using PRIMARY  (rows=1)
 
 INSERT INTO t1 SELECT COUNT(table1.pk),
 (SELECT MIN(col_varchar_key) FROM cc1 )
@@ -4631,23 +4631,23 @@ EXPLAIN
                 -> Aggregate: count(table1.pk)  (rows=1)
                     -> Inner hash join (no condition)  (rows=1)
                         -> Inner hash join (no condition)  (rows=1)
-                            -> Table scan on table3  (rows=1)
+                            -> Covering index scan on table3 using PRIMARY  (rows=1)
                             -> Hash
                                 -> Inner hash join (no condition)  (rows=1)
-                                    -> Table scan on cc1  (rows=1)
+                                    -> Covering index scan on cc1 using PRIMARY  (rows=1)
                                     -> Hash
-                                        -> Table scan on table1  (rows=1)
+                                        -> Covering index scan on table1 using PRIMARY  (rows=1)
                         -> Hash
                             -> Table scan on derived_4_5  (rows=1)
                                 -> Materialize  (rows=1)
                                     -> Filter: (1 <> count(0))  (rows=1)
                                         -> Aggregate: count(0)  (rows=1)
-                                            -> Table scan on cc1  (rows=1)
+                                            -> Covering index scan on cc1 using PRIMARY  (rows=1)
         -> Hash
             -> Table scan on derived_1_6  (rows=1)
                 -> Materialize  (rows=1)
                     -> Aggregate: min(cc1.col_varchar_key)  (rows=1)
-                        -> Table scan on cc1  (rows=1)
+                        -> Index scan on cc1 using PRIMARY  (rows=1)
 
 SELECT * from t1;
 field1	field2
@@ -4714,13 +4714,13 @@ EXPLAIN
                     -> Table scan on bb  (rows=1)
                     -> Hash
                         -> Filter: (cc.col_varchar <> 'w')  (rows=1.8)
-                            -> Table scan on cc  (rows=2)
+                            -> Index scan on cc using PRIMARY  (rows=2)
     -> Hash
         -> Table scan on derived_1_4  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: sum(cc.col_int_key)  (rows=1)
                     -> Inner hash join (no condition)  (rows=2)
-                        -> Table scan on cc  (rows=2)
+                        -> Index scan on cc using PRIMARY  (rows=2)
                         -> Hash
                             -> Table scan on a  (rows=1)
 
@@ -4830,21 +4830,21 @@ EXPLAIN
             -> Materialize  (rows=1)
                 -> Aggregate: avg(table2.col_int)  (rows=1)
                     -> Inner hash join (no condition)  (rows=16.2)
-                        -> Table scan on table2  (rows=20)
+                        -> Index scan on table2 using PRIMARY  (rows=20)
                         -> Hash
                             -> Filter: ((table1.col_varchar_key = table1.col_varchar_key) and ((((table1.col_varchar_key = 'D') or (table1.col_varchar_key = table1.col_varchar_key)) and (table1.pk = 1)) or (table1.col_varchar_key < 'O')))  (rows=0.812)
-                                -> Table scan on table1  (rows=20)
+                                -> Index scan on table1 using PRIMARY  (rows=20)
         -> Hash
             -> Table scan on derived_1_5  (rows=1)
                 -> Materialize  (rows=1)
                     -> Aggregate: count(subquery1_t1.col_varchar_key)  (rows=1)
                         -> Inner hash join (no condition), extra conditions: (subquery1_t1.col_varchar_key <> subquery1_t2.col_varchar)  (rows=23.4)
-                            -> Covering index scan on subquery1_t1 using idx_cc_col_varchar_key  (rows=20)
+                            -> Index scan on subquery1_t1 using PRIMARY  (rows=20)
                             -> Hash
                                 -> Inner hash join (cc.col_int_key = subquery1_t2.col_int), (cc.col_varchar = subquery1_t2.col_varchar_key)  (rows=1.25)
-                                    -> Table scan on cc  (rows=20)
+                                    -> Index scan on cc using PRIMARY  (rows=20)
                                     -> Hash
-                                        -> Table scan on subquery1_t2  (rows=20)
+                                        -> Index scan on subquery1_t2 using PRIMARY  (rows=20)
 
 DROP VIEW view_cc;
 DROP TABLE cc;
@@ -5036,10 +5036,10 @@ EXPLAIN
             -> Aggregate: min(table2.col_int), sum(table2.col_int)  (rows=1)
                 -> Inner hash join (no condition), extra conditions: (table1.col_varchar_key <> table2.col_varchar_key)  (rows=58.8)
                     -> Inner hash join (no condition)  (rows=14)
-                        -> Covering index scan on table3 using idx_c_col_int_key  (rows=14)
+                        -> Covering index scan on table3 using PRIMARY  (rows=14)
                         -> Hash
                             -> Filter: ((table2.col_varchar_key = table2.col_varchar) and (table2.pk = table2.col_int))  (rows=1)
-                                -> Table scan on table2  (rows=1)
+                                -> Index scan on table2 using PRIMARY  (rows=1)
                     -> Hash
                         -> Hash semijoin (FirstMatch) (table1.pk = subquery3_t1.col_int_key)  (rows=4.67)
                             -> Inner hash join (no condition), extra conditions: (table1.col_int_key > derived_5_7.`9`)  (rows=4.67)
@@ -5047,17 +5047,17 @@ EXPLAIN
                                 -> Hash
                                     -> Table scan on derived_5_7  (rows=1)
                                         -> Materialize  (rows=1)
-                                            -> Table scan on cc  (rows=1)
+                                            -> Covering index scan on cc using PRIMARY  (rows=1)
                             -> Hash
-                                -> Table scan on subquery3_t1  (rows=14)
+                                -> Index scan on subquery3_t1 using PRIMARY  (rows=14)
     -> Hash
         -> Table scan on derived_1_8  (rows=1)
             -> Materialize  (rows=1)
                 -> Aggregate: max(subquery1_t1.pk)  (rows=1)
                     -> Inner hash join (subquery1_t2.col_varchar_key = subquery1_t1.col_varchar_key)  (rows=0.1)
-                        -> Table scan on subquery1_t2  (rows=1)
+                        -> Index scan on subquery1_t2 using PRIMARY  (rows=1)
                         -> Hash
-                            -> Table scan on subquery1_t1  (rows=1)
+                            -> Index scan on subquery1_t1 using PRIMARY  (rows=1)
 
 Warnings:
 Note	1276	Field or reference 'test.table1.pk' of SELECT #4 was resolved in SELECT #1
@@ -5216,30 +5216,30 @@ EXPLAIN
                     -> Filter: (derived_6_7.Name_exp_1 is null)  (rows=13.3)
                         -> Left hash join (no condition)  (rows=133)
                             -> Inner hash join (table2.col_varchar_key = table3.col_varchar_key), (table3.col_int = table2.col_int_key)  (rows=133)
-                                -> Table scan on table3  (rows=20)
+                                -> Index scan on table3 using PRIMARY  (rows=20)
                                 -> Hash
                                     -> Inner hash join (table1.col_varchar_key = table2.col_varchar_key)  (rows=6.67)
                                         -> Filter: (table1.col_varchar <= table1.col_varchar_key)  (rows=6.67)
-                                            -> Table scan on table1  (rows=20)
+                                            -> Index scan on table1 using PRIMARY  (rows=20)
                                         -> Hash
                                             -> Filter: (table2.col_varchar_key >= 'v')  (rows=1)
-                                                -> Table scan on table2  (rows=1)
+                                                -> Index scan on table2 using PRIMARY  (rows=1)
                             -> Hash
                                 -> Table scan on derived_6_7  (rows=1)
                                     -> Materialize  (rows=1)
                                         -> Limit: 1 row(s)  (rows=1)
-                                            -> Table scan on subquery2_t1  (rows=20)
+                                            -> Index scan on subquery2_t1 using PRIMARY  (rows=20)
         -> Hash
             -> Table scan on derived_1_8  (rows=1)
                 -> Materialize  (rows=1)
                     -> Aggregate: avg(subquery1_t1.col_int)  (rows=1)
                         -> Hash semijoin (FirstMatch) (no condition), extra conditions: ((cc.col_varchar_key > subquery1_t1.col_varchar) or (cc.col_varchar_key < cc.col_varchar))  (rows=20)
-                            -> Table scan on subquery1_t1  (rows=20)
+                            -> Index scan on subquery1_t1 using PRIMARY  (rows=20)
                             -> Hash
                                 -> Left hash join (child_subquery1_t2.pk = cc.col_int_key)  (rows=20)
-                                    -> Table scan on cc  (rows=20)
+                                    -> Index scan on cc using PRIMARY  (rows=20)
                                     -> Hash
-                                        -> Covering index scan on child_subquery1_t2 using idx_b_col_int_key  (rows=1)
+                                        -> Covering index scan on child_subquery1_t2 using PRIMARY  (rows=1)
 
 Warnings:
 Note	1276	Field or reference 'test.subquery1_t1.pk' of SELECT #3 was resolved in SELECT #2
@@ -5402,25 +5402,25 @@ EXPLAIN
 -> Nested loop inner join (FirstMatch)  (rows=0.333)
     -> Limit: 1 row(s)  (rows=1)
         -> Inner hash join (sq2_alias2.col_int = sq2_alias1.pk)  (rows=1)
-            -> Table scan on sq2_alias2  (rows=1)
+            -> Index scan on sq2_alias2 using PRIMARY  (rows=1)
             -> Hash
-                -> Table scan on sq2_alias1  (rows=1)
+                -> Index scan on sq2_alias1 using PRIMARY  (rows=1)
     -> Inner hash join (no condition)  (rows=0.333)
         -> Inner hash join (no condition)  (rows=1)
-            -> Table scan on alias1  (rows=1)
+            -> Covering index scan on alias3 using PRIMARY  (rows=1)
             -> Hash
-                -> Covering index scan on alias3 using idx_cc_col_date_key  (rows=1)
+                -> Index scan on alias1 using PRIMARY  (rows=1)
         -> Hash
             -> Inner hash join (no condition), extra conditions: (alias2.col_int >= derived_2_4.sq1_field1)  (rows=0.333)
-                -> Table scan on alias2  (rows=1)
+                -> Index scan on alias2 using PRIMARY  (rows=1)
                 -> Hash
                     -> Table scan on derived_2_4  (rows=1)
                         -> Materialize  (rows=1)
                             -> Aggregate: min(sq1_alias1.col_int)  (rows=1)
                                 -> Inner hash join (no condition)  (rows=1)
-                                    -> Table scan on sq1_alias1  (rows=1)
+                                    -> Covering index scan on sq1_alias2 using PRIMARY  (rows=1)
                                     -> Hash
-                                        -> Covering index scan on sq1_alias2 using idx_cc_col_date_key  (rows=1)
+                                        -> Index scan on sq1_alias1 using PRIMARY  (rows=1)
 
 DROP VIEW view_c;
 DROP TABLE c;
@@ -5598,21 +5598,21 @@ EXPLAIN
             -> Sort: alias1.col_decimal_10_8, derived_1_2.SQ1_field1, log(alias1.col_int)  (rows=1)
                 -> Inner hash join (LooseScan) (cast(alias2.pk as double) = cast(t1.col_char_255 as double))  (rows=1)
                     -> Sort with duplicate removal: t1.col_char_255  (rows=1)
-                        -> Table scan on t1  (rows=1)
+                        -> Index scan on t1 using PRIMARY  (rows=1)
                     -> Hash
                         -> Left hash join (no condition)  (rows=1)
                             -> Inner hash join (no condition)  (rows=1)
-                                -> Table scan on alias2  (rows=1)
+                                -> Covering index scan on alias2 using PRIMARY  (rows=1)
                                 -> Hash
-                                    -> Table scan on alias1  (rows=1)
+                                    -> Index scan on alias1 using PRIMARY  (rows=1)
                             -> Hash
                                 -> Table scan on derived_1_2  (rows=1)
                                     -> Materialize  (rows=1)
                                         -> Aggregate: sum(table1.col_smallint)  (rows=1)
                                             -> Left hash join (no condition)  (rows=1)
-                                                -> Table scan on table2  (rows=1)
+                                                -> Covering index scan on table2 using PRIMARY  (rows=1)
                                                 -> Hash
-                                                    -> Table scan on table1  (rows=1)
+                                                    -> Index scan on table1 using PRIMARY  (rows=1)
 
 set sql_mode=default;
 DROP TABLE t1;

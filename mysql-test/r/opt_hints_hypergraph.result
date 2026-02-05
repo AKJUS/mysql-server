@@ -393,7 +393,7 @@ t2.f2 BETWEEN t1.f1 AND t1.f2 AND t2.f2 + 1 >= t1.f1 + 1);
 EXPLAIN
 -> Delete from t3 (immediate)  (rows=6.22)
     -> Filter: ((t3.f1 > 30) and (t3.f1 < 33) and <in_optimizer>((t3.f1,t3.f2,t3.f3),<exists>(select #2)))  (rows=6.22)
-        -> Table scan on t3  (rows=56)
+        -> Index scan on t3 using PRIMARY  (rows=56)
         -> Select #2 (subquery in condition; dependent)
             -> Inner hash join (t1.f1 = t2.f1), extra conditions: (t2.f2 between t1.f1 and t1.f2) and ((t2.f2 + 1) >= (t1.f1 + 1))  (rows=0.00833)
                 -> Table scan on t1  (rows=3)
@@ -817,10 +817,10 @@ t2.a IN (SELECT /*+ QB_NAME(subq1) */ t3.b FROM t3 JOIN t1 t4 ON t3.b = t4.b);
 EXPLAIN
 -> Nested loop inner join  (rows=1.73)
     -> Hash semijoin (FirstMatch) (t1.b = t4.b)  (rows=1.73)
-        -> Table scan on t1  (rows=4)
+        -> Index scan on t1 using PRIMARY  (rows=4)
         -> Hash
             -> Inner hash join (t3.b = t4.b)  (rows=3)
-                -> Table scan on t4  (rows=4)
+                -> Index scan on t4 using PRIMARY  (rows=4)
                 -> Hash
                     -> Covering index scan on t3 using a  (rows=3)
     -> Covering index lookup on t2 using a (a = t1.b)  (rows=1)
@@ -830,10 +830,10 @@ t2.a IN (SELECT /*+ QB_NAME(subq1) */ t3.b FROM t3 JOIN t1 t4 ON t3.b = t4.b);
 EXPLAIN
 -> Nested loop inner join  (rows=1.73)
     -> Hash semijoin (FirstMatch) (t1.b = t4.b)  (rows=1.73)
-        -> Table scan on t1  (rows=4)
+        -> Index scan on t1 using PRIMARY  (rows=4)
         -> Hash
             -> Inner hash join (t3.b = t4.b)  (rows=3)
-                -> Table scan on t4  (rows=4)
+                -> Index scan on t4 using PRIMARY  (rows=4)
                 -> Hash
                     -> Covering index scan on t3 using a  (rows=3)
     -> Covering index lookup on t2 using a (a = t1.b)  (rows=1)
@@ -843,10 +843,10 @@ t2.a IN (SELECT /*+ QB_NAME(subq1) */ t3.b FROM t3 JOIN t1 t4 ON t3.b = t4.b);
 EXPLAIN
 -> Nested loop inner join  (rows=1.73)
     -> Hash semijoin (FirstMatch) (t1.b = t4.b)  (rows=1.73)
-        -> Table scan on t1  (rows=4)
+        -> Index scan on t1 using PRIMARY  (rows=4)
         -> Hash
             -> Inner hash join (t3.b = t4.b)  (rows=3)
-                -> Table scan on t4  (rows=4)
+                -> Index scan on t4 using PRIMARY  (rows=4)
                 -> Hash
                     -> Covering index scan on t3 using a  (rows=3)
     -> Covering index lookup on t2 using a (a = t1.b)  (rows=1)
@@ -856,10 +856,10 @@ t2.a IN (SELECT /*+ QB_NAME(subq1) */ t3.b FROM t3 JOIN t1 t4 ON t3.b = t4.b);
 EXPLAIN
 -> Nested loop inner join  (rows=1.73)
     -> Hash semijoin (FirstMatch) (t1.b = t4.b)  (rows=1.73)
-        -> Table scan on t1  (rows=4)
+        -> Index scan on t1 using PRIMARY  (rows=4)
         -> Hash
             -> Inner hash join (t3.b = t4.b)  (rows=3)
-                -> Table scan on t4  (rows=4)
+                -> Index scan on t4 using PRIMARY  (rows=4)
                 -> Hash
                     -> Covering index scan on t3 using a  (rows=3)
     -> Covering index lookup on t2 using a (a = t1.b)  (rows=1)
@@ -869,10 +869,10 @@ t2.a IN (SELECT /*+ QB_NAME(subq1) */ t3.b FROM t3 JOIN t1 t4 ON t3.b = t4.b);
 EXPLAIN
 -> Nested loop inner join  (rows=1.73)
     -> Hash semijoin (FirstMatch) (t1.b = t4.b)  (rows=1.73)
-        -> Table scan on t1  (rows=4)
+        -> Index scan on t1 using PRIMARY  (rows=4)
         -> Hash
             -> Inner hash join (t3.b = t4.b)  (rows=3)
-                -> Table scan on t4  (rows=4)
+                -> Index scan on t4 using PRIMARY  (rows=4)
                 -> Hash
                     -> Covering index scan on t3 using a  (rows=3)
     -> Covering index lookup on t2 using a (a = t1.b)  (rows=1)
@@ -882,10 +882,10 @@ t2.a IN (SELECT /*+ QB_NAME(subq1) */ t3.b FROM t3 JOIN t1 t4 ON t3.b = t4.b);
 EXPLAIN
 -> Nested loop inner join  (rows=1.73)
     -> Hash semijoin (FirstMatch) (t1.b = t4.b)  (rows=1.73)
-        -> Table scan on t1  (rows=4)
+        -> Index scan on t1 using PRIMARY  (rows=4)
         -> Hash
             -> Inner hash join (t3.b = t4.b)  (rows=3)
-                -> Table scan on t4  (rows=4)
+                -> Index scan on t4 using PRIMARY  (rows=4)
                 -> Hash
                     -> Covering index scan on t3 using a  (rows=3)
     -> Covering index lookup on t2 using a (a = t1.b)  (rows=1)
@@ -895,10 +895,10 @@ t2.a IN (SELECT /*+ QB_NAME(subq1) */ t3.b FROM t3 JOIN t1 t4 ON t3.b = t4.b);
 EXPLAIN
 -> Nested loop inner join  (rows=1.73)
     -> Hash semijoin (FirstMatch) (t1.b = t4.b)  (rows=1.73)
-        -> Table scan on t1  (rows=4)
+        -> Index scan on t1 using PRIMARY  (rows=4)
         -> Hash
             -> Inner hash join (t3.b = t4.b)  (rows=3)
-                -> Table scan on t4  (rows=4)
+                -> Index scan on t4 using PRIMARY  (rows=4)
                 -> Hash
                     -> Covering index scan on t3 using a  (rows=3)
     -> Covering index lookup on t2 using a (a = t1.b)  (rows=1)
@@ -908,10 +908,10 @@ t2.a IN (SELECT /*+ QB_NAME(subq1)  NO_BNL(t3, t4) */ t3.b FROM t3 JOIN t1 t4 ON
 EXPLAIN
 -> Nested loop inner join  (rows=1.73)
     -> Hash semijoin (FirstMatch) (t1.b = t4.b)  (rows=1.73)
-        -> Table scan on t1  (rows=4)
+        -> Index scan on t1 using PRIMARY  (rows=4)
         -> Hash
             -> Inner hash join (t3.b = t4.b)  (rows=3)
-                -> Table scan on t4  (rows=4)
+                -> Index scan on t4 using PRIMARY  (rows=4)
                 -> Hash
                     -> Covering index scan on t3 using a  (rows=3)
     -> Covering index lookup on t2 using a (a = t1.b)  (rows=1)
@@ -2720,9 +2720,10 @@ EXPLAIN
 -> Group aggregate: avg(t2.f1)  (rows=1)
     -> Sort: t1.f1  (rows=1)
         -> Inner hash join (no condition)  (rows=1)
-            -> Covering index scan on t1 using PRIMARY  (rows=1)
+            -> Filter: (t2.f2 = 'SIR')  (rows=1)
+                -> Index scan on t2 using PRIMARY  (rows=2)
             -> Hash
-                -> Covering index range scan on t2 using k1 over (f2 = 'SIR')  (rows=1)
+                -> Covering index scan on t1 using PRIMARY  (rows=1)
 
 # SELECT SQL_BUFFER_RESULT should use temporary table
 EXPLAIN FORMAT=TREE SELECT SQL_BUFFER_RESULT avg(t2.f1) FROM t1, t2 where t2.f2 = 'SIR' GROUP BY t1.f1;
@@ -2732,9 +2733,10 @@ EXPLAIN
         -> Group aggregate: avg(t2.f1)  (rows=1)
             -> Sort: t1.f1  (rows=1)
                 -> Inner hash join (no condition)  (rows=1)
-                    -> Covering index scan on t1 using PRIMARY  (rows=1)
+                    -> Filter: (t2.f2 = 'SIR')  (rows=1)
+                        -> Index scan on t2 using PRIMARY  (rows=2)
                     -> Hash
-                        -> Covering index range scan on t2 using k1 over (f2 = 'SIR')  (rows=1)
+                        -> Covering index scan on t1 using PRIMARY  (rows=1)
 
 # SELECT SQL_BIG_RESULT should not use temporary table
 EXPLAIN FORMAT=TREE SELECT SQL_BIG_RESULT avg(t2.f1) FROM t1, t2 where t2.f2 = 'SIR' GROUP BY t1.f1;
@@ -2742,9 +2744,10 @@ EXPLAIN
 -> Group aggregate: avg(t2.f1)  (rows=1)
     -> Sort: t1.f1  (rows=1)
         -> Inner hash join (no condition)  (rows=1)
-            -> Covering index scan on t1 using PRIMARY  (rows=1)
+            -> Filter: (t2.f2 = 'SIR')  (rows=1)
+                -> Index scan on t2 using PRIMARY  (rows=2)
             -> Hash
-                -> Covering index range scan on t2 using k1 over (f2 = 'SIR')  (rows=1)
+                -> Covering index scan on t1 using PRIMARY  (rows=1)
 
 DROP TABLE t1, t2;
 #
@@ -2786,7 +2789,7 @@ WHERE c1=1 and c2=9;
 EXPLAIN
 -> Append  (rows=2)
     -> Stream results  (rows=1)
-        -> Covering index scan on t1 using c1  (rows=1)
+        -> Index scan on t1 using PRIMARY  (rows=1)
     -> Stream results  (rows=1)
         -> Filter: (t3.c1 = 1)  (rows=1)
             -> Index lookup on t3 using c2 (c2 = 9)  (rows=1)
@@ -2804,7 +2807,7 @@ EXPLAIN
         -> Covering index scan on t1 using c1  (rows=1)
     -> Stream results  (rows=1)
         -> Filter: ((t3.c1 = 1) and (t3.c2 = 9))  (rows=1)
-            -> Table scan on t3  (rows=1)
+            -> Index scan on t3 using PRIMARY  (rows=1)
 
 Warnings:
 Warning	3127	Query block name `qb2` is not found for INDEX hint

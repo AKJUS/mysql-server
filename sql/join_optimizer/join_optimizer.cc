@@ -814,8 +814,8 @@ class CostingReceiver {
     /// True if one or more non-parameterized index lookups (REF access paths
     /// *not* refering other tables) were proposed.
     bool ref_without_parameters{false};
-    /// True if some covering index scan or some non-parameterized covering
-    /// index lookup was proposed.
+    /// True if some covering or clustered index scan or some non-parameterized
+    /// covering index lookup was proposed.
     bool covering{false};
   };
 
@@ -1666,18 +1666,16 @@ std::optional<CostingReceiver::ProposeRefsResult> CostingReceiver::ProposeRefs(
       case ProposeResult::kNoPathFound:
         // An index scan is more interesting than a table scan if it follows an
         // interesting order that can be used to avoid a sort later, or if it is
-        // covering so that it can reduce the volume of data to read. A scan of
-        // a clustered primary index reads as much data as a table scan, so it
-        // is not considered unless it follows an interesting order.
-        if (order != 0 ||
-            (covering && !IsClusteredPrimaryKey(table, key_idx))) {
+        // covering so that it can reduce the volume of data to read.
+        bool clustered_primary_key = IsClusteredPrimaryKey(table, key_idx);
+        if (order != 0 || covering || clustered_primary_key) {
           switch (ProposeIndexScan(table, node_idx, row_estimate, key_idx,
                                    reverse, order)) {
             case ProposeResult::kNoPathFound:
               break;
             case ProposeResult::kPathsFound:
               result.index_scan = true;
-              result.covering |= covering;
+              result.covering = covering || clustered_primary_key;
               break;
             case ProposeResult::kError:
               return {};
@@ -1843,7 +1841,7 @@ bool CostingReceiver::FoundSingleNode(int node_idx) {
   // for the others, we don't even need to create the access path and go
   // through the tournament. However, if a force index is specified, then
   // we propose index scans.
-  bool found_covering_index_scan = false;
+  bool propose_table_scans = true;
   for (const ActiveIndexInfo &order_info : *m_active_indexes) {
     if (order_info.table == table) {
       const std::optional<ProposeRefsResult> propose_result{
@@ -1856,7 +1854,11 @@ bool CostingReceiver::FoundSingleNode(int node_idx) {
       if (propose_result.value().index_scan ||
           propose_result.value().ref_without_parameters) {
         found_index_scan = true;
-        found_covering_index_scan |= propose_result->covering;
+        // We do not propose table scan if we have proposed a covering
+        // index scan or a clustered index scan.
+        if (propose_result->covering) {
+          propose_table_scans = false;
+        }
       }
     }
   }
@@ -1891,7 +1893,7 @@ bool CostingReceiver::FoundSingleNode(int node_idx) {
   //
   // If we have hints for forcing the use of an index, we propose a table scan
   // only if no index scan was found.
-  if ((!found_covering_index_scan ||
+  if ((propose_table_scans ||
        DBUG_EVALUATE_IF("subplan_tokens", true, false)) &&
       (!(table->force_index || table->force_index_order ||
          table->force_index_group) ||
