@@ -649,6 +649,8 @@ static struct view {
      "SELECT * "
      "FROM `ndbinfo`.`ndb$threads`"},
     {"ndbinfo", "threadstat", "SELECT * FROM `ndbinfo`.`ndb$threadstat`"},
+    {"ndbinfo", "transporter_activity",
+     "SELECT * FROM `ndbinfo`.`ndb$transporter_activity`"},
     {"ndbinfo", "transporter_details",
      "SELECT node_id, block_instance, trp_id, remote_node_id, "
      " CASE connection_status"

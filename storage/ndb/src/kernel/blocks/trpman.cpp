@@ -693,7 +693,65 @@ void Trpman::execDBINFO_SCANREQ(Signal *signal) {
       }
       break;
     }
+    case Ndbinfo::TRANSPORTER_ACTIVITY_TABLEID: {
+      jam();
+      Uint32 restore = cursor->data[0];
+      TrpId trpId = restore & 0xFFFF;
+      Uint32 bin_index = restore >> 16;
 
+      while (trpId <= globalTransporterRegistry.get_transporter_count()) {
+        if (bin_index >= TRP_ACTIVITY_HIST_BIN_COUNT ||
+            globalTransporterRegistry.get_transporter(trpId) == nullptr ||
+            globalTransporterRegistry.is_inactive_trp(trpId) ||
+            !handles_this_trp(trpId)) {
+          trpId++;
+          bin_index = 0;
+          continue;
+        }
+        const NodeId nodeId =
+            globalTransporterRegistry.get_transporter_node_id(trpId);
+        Ndbinfo::Row row(signal, req);
+        row.write_uint32(getOwnNodeId());  // node_id
+        row.write_uint32(instance());      // block_instance
+        row.write_uint32(trpId);           // trp_id
+        row.write_uint32(nodeId);          // remote_node_id
+        row.write_uint32(globalTransporterRegistry.get_connect_count(
+            trpId));  // connect_count
+
+        const NodeInfo::NodeType type = getNodeInfo(nodeId).getType();
+        bool is_db = (type == NodeInfo::DB);
+
+        if (!is_db || trpId == m_dbHbSenderTrp) {
+          Uint32 heartbeat_interval = is_db ? m_hbDbDb : m_hbDbApi;
+          row.write_uint32(heartbeat_interval);
+        } else {
+          row.write_null();  // heartbeat_interval
+        }
+
+        Uint64 upper_bound = is_db ? m_hbDbDb_bin_bounds[bin_index]
+                                   : m_hbDbApi_bin_bounds[bin_index];
+        if (upper_bound < UINT32_MAX)
+          row.write_uint64(upper_bound);
+        else
+          row.write_null();  // upper_bound
+        Uint64 activity = m_trp_activity[trpId].hist_bins[bin_index];
+        row.write_uint64(activity);
+
+        ndbinfo_send_row(signal, req, row, rl);
+        bin_index++;
+        if (bin_index == (is_db ? m_hbDbDb_bin_count : m_hbDbApi_bin_count)) {
+          trpId++;
+          bin_index = 0;
+        }
+        if (rl.need_break(req)) {
+          jam();
+          Uint32 save = (bin_index << 16) | trpId;
+          ndbinfo_send_scan_break(signal, req, rl, save);
+          return;
+        }
+      }
+      break;
+    }
     default:
       break;
   }
