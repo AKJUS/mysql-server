@@ -402,7 +402,9 @@ import com.mysql.jtie.Wrapper;
             NDB_LE_EventBufferStatus = 58,
             NDB_LE_StartReport = 60,
             NDB_LE_SubscriptionStatus = 69,
-            NDB_LE_RedoStatus = 73;
+            NDB_LE_RedoStatus = 73,
+            // TODO: fill in missing
+            NDB_LE_LateHeartbeat = 88;
     }
     public interface /*_enum_*/ ndb_mgm_event_severity
     {
@@ -508,6 +510,8 @@ import com.mysql.jtie.Wrapper;
         StartReport _StartReport;
         SubscriptionStatus _SubscriptionStatus;
         RedoStatus _RedoStatus;
+        // TODO: fill in missing
+        LateHeartbeat _LateHeartbeat;
         // MMM }
         static public class /*_struct_*/ Connected {
             int/*_unsigned int_*/ node;
@@ -719,6 +723,10 @@ import com.mysql.jtie.Wrapper;
         static public class /*_struct_*/ MissedHeartbeat {
             int/*_unsigned int_*/ node;
             int/*_unsigned int_*/ count;
+        };
+        static public class /*_struct_*/ LateHeartbeat {
+            int/*_unsigned int_*/ node;
+            int/*_unsigned int_*/ ms;
         };
         static public class /*_struct_*/ DeadDueToHeartbeat {
             int/*_unsigned int_*/ node;
