@@ -293,6 +293,9 @@ struct Ndb_logevent_body_row ndb_logevent_body[] = {
     ROW(MissedHeartbeat, "node", 1, node),
     ROW(MissedHeartbeat, "count", 2, count),
 
+    ROW(LateHeartbeat, "node", 1, node),
+    ROW(LateHeartbeat, "ms", 2, ms),
+
     ROW(DeadDueToHeartbeat, "node", 1, node),
 
     /* TODO */
