@@ -24,7 +24,9 @@
 */
 
 #include "trpman.hpp"
+#include "EventLogger.hpp"
 #include "TransporterRegistry.hpp"
+#include "mt.hpp"
 #include "portlib/NdbTCP.h"
 #include "portlib/NdbTick.h"
 #include "signaldata/CloseComReqConf.hpp"
@@ -120,6 +122,12 @@ void Trpman::set_db_hb_sender(NodeId dbHbSender) {
     if (m_dbHbSenderTrp != dbHbSenderTrp) {
       jam();
       m_dbHbSenderTrp = dbHbSenderTrp;
+      /*
+       * Skip late heartbeat detection for next receive.
+       * As an acceptable side effect activity histogram will skip count next
+       * receive.
+       */
+      NdbTick_Invalidate(&m_trp_activity[m_dbHbSenderTrp].last_recv);
     }
   }
 }
@@ -1494,6 +1502,21 @@ void Trpman::execTIME_SIGNAL(Signal *signal) {
              hist_bin_bounds[hist_bin_index] < elapsed_ms)
         hist_bin_index++;
       m_trp_activity[trp_id].hist_bins[hist_bin_index]++;
+
+      // Log late heartbeat
+      if (!is_db || trp_id == m_dbHbSenderTrp) {
+        Uint32 heartbeat_interval = is_db ? m_hbDbDb : m_hbDbApi;
+        /*
+         * Since elapsed_ms may be an overestimate and not to report
+         * late heartbeat when it was in time add TRP_TIME_SIGNAL_DELAY.
+         */
+        if (elapsed_ms > heartbeat_interval + TRP_TIME_SIGNAL_DELAY) {
+          signal->theData[0] = NDB_LE_LateHeartbeat;
+          signal->theData[1] = node_id;
+          signal->theData[2] = elapsed_ms;
+          sendSignal(CMVMI_REF, GSN_EVENT_REP, signal, 3, JBB);
+        }
+      }
     }
     m_trp_activity[trp_id].last_recv = trp_last_recv;
   }
