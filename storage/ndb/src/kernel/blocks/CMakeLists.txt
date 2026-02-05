@@ -145,3 +145,8 @@ MYSQL_ADD_EXECUTABLE(ndb_print_file
   ENABLE_EXPORTS
   LINK_LIBRARIES ndbclient_static ext::zlib
   )
+
+NDB_ADD_TEST(ndb_trpman-t trpman-t.cpp
+  LIBS ndbblocks ndberror ndbgeneral ndbsched ndbtest ndbtransport ndbkernel
+)
+
