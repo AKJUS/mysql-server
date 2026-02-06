@@ -3462,6 +3462,21 @@ TrpId TransporterRegistry::get_the_only_base_trp(NodeId nodeId) const {
   return trp_ids[0];
 }
 
+TrpId TransporterRegistry::get_recv_trp(BlockReference recvRef,
+                                        BlockReference sendRef) const {
+  Transporter *t;
+  NodeId sendNode = refToNode(sendRef);
+  Multi_Transporter *multi_trp = get_node_multi_transporter(sendNode);
+  if (multi_trp != nullptr) {
+    t = multi_trp->get_recv_transporter(refToBlock(recvRef),
+                                        refToBlock(sendRef));
+  } else {
+    t = get_node_transporter(sendNode);
+  }
+  if (t == nullptr) return 0;
+  return t->getTransporterIndex();
+}
+
 void TransporterRegistry::switch_active_trp(Multi_Transporter *t) {
   t->switch_active_trp();
 }

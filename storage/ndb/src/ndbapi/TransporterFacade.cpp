@@ -1780,8 +1780,8 @@ int TransporterFacade::close_clnt(trp_client *clnt) {
   NdbApiSignal signal(numberToRef(clnt->m_blockNo, theOwnId));
   signal.theVerId_signalNumber = GSN_CLOSE_COMREQ;
   signal.theTrace = 0;
-  signal.theLength = 1;
-  CloseComReqConf *req = CAST_PTR(CloseComReqConf, signal.getDataPtrSend());
+  signal.theLength = CloseComReqConf::SignalLengthAPI;
+  auto *req = CAST_PTR(CloseComReqConf, signal.getDataPtrSend());
   req->xxxBlockRef = numberToRef(clnt->m_blockNo, theOwnId);
 
   if (clnt) {
