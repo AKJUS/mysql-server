@@ -725,6 +725,16 @@ void Trpman::execREAD_CONFIG_REQ(Signal *signal) {
   m_dbHbSender = 0;
   m_dbHbSenderTrp = 0;
 
+  const ndb_mgm_configuration_iterator *p =
+      m_ctx.m_config.getOwnConfigIterator();
+  ndbrequire(p != 0);
+
+  m_hbDbDb = 5000;  // ms
+  ndb_mgm_get_int_parameter(p, CFG_DB_HEARTBEAT_INTERVAL, &m_hbDbDb);
+
+  m_hbDbApi = 1500;  // ms
+  ndb_mgm_get_int_parameter(p, CFG_DB_API_HEARTBEAT_INTERVAL, &m_hbDbApi);
+
   ReadConfigConf *conf = (ReadConfigConf *)signal->getDataPtrSend();
   conf->senderRef = reference();
   conf->senderData = senderData;
