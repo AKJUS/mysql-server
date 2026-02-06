@@ -11174,11 +11174,16 @@ int ha_innobase::bulk_load_copy_existing_data(
 }
 
 std::string ha_innobase::bulk_load_generate_temporary_table_name() const {
-  mem_heap_t *heap = mem_heap_create(FN_REFLEN, UT_LOCATION_HERE);
-  std::string retval = dict_mem_create_temporary_tablename(
-      heap, m_prebuilt->table->name.m_name, m_prebuilt->table->id);
-  mem_heap_free(heap);
-  return retval;
+  std::string table_name = dict_mem_create_temporary_tablename(
+      m_prebuilt->heap, m_prebuilt->table->name.m_name, m_prebuilt->table->id);
+  /* dict_mem_create_temporary_tablename returns a fully-qualified
+  name in the form "db/#sql-ib<id>-<inc>". Strip the schema prefix
+  and only return the base table name as we supply the schema name
+  separately (duplicating the schema name can lead to exceeding table name
+  length constraints and cause ER_UPDATING_DD_TABLE). */
+  auto slash_pos = table_name.find('/');
+  return slash_pos == std::string::npos ? table_name
+                                        : table_name.substr(slash_pos + 1);
 }
 
 bool ha_innobase::bulk_load_set_source_table_data(
