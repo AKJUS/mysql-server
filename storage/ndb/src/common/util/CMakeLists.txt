@@ -48,6 +48,7 @@ ADD_CONVENIENCE_LIBRARY(ndbgeneral
   NdbSqlUtil.cpp
   NodeCertificate.cpp
   ndb_az31.cpp
+  ndb_barrier.cpp
   ndb_ndbxfrm1.cpp
   ndb_openssl3_compat.cpp
   ndb_openssl_evp.cpp
@@ -107,6 +108,7 @@ SET_PROPERTY(SOURCE ndb_opts.cpp
 FOREACH(tests
     NdbPack
     mysql_utils_test
+    ndb_barrier
     ndb_openssl_evp
     ndbxfrm_file
     NdbSqlUtil
