@@ -80,6 +80,8 @@ class Trpman : public SimulatedBlock {
 
   NodeId m_dbHbSender;
   TrpId m_dbHbSenderTrp;
+  Uint32 m_hbDbDb;
+  Uint32 m_hbDbApi;
 };
 
 class TrpmanProxy : public LocalProxy {
