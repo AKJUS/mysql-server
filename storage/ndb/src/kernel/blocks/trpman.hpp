@@ -76,6 +76,10 @@ class Trpman : public SimulatedBlock {
   bool handles_this_trp(TrpId trpId);
   void close_com_failed_node(Signal *, NodeId);
   void enable_com_node(Signal *, NodeId);
+  void set_db_hb_sender(NodeId dbHbSender);
+
+  NodeId m_dbHbSender;
+  TrpId m_dbHbSenderTrp;
 };
 
 class TrpmanProxy : public LocalProxy {

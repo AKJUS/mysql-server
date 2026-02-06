@@ -100,6 +100,28 @@ TrpId Trpman::get_the_only_base_trp(NodeId nodeId) const {
   return globalTransporterRegistry.get_the_only_base_trp(nodeId);
 }
 
+void Trpman::set_db_hb_sender(NodeId dbHbSender) {
+  jam();
+  if (dbHbSender == ZNIL || dbHbSender == 0) {
+    jam();
+    m_dbHbSender = 0;
+    m_dbHbSenderTrp = 0;
+  } else {
+    jam();
+    // On which transporter will we receive heartbeat from other data node
+    BlockReference recvRef = numberToRef(QMGR, getOwnNodeId());
+    BlockReference sendRef = numberToRef(QMGR, dbHbSender);
+    TrpId dbHbSenderTrp =
+        globalTransporterRegistry.get_recv_trp(recvRef, sendRef);
+    m_dbHbSender = dbHbSender;
+    ndbrequire(dbHbSenderTrp != 0);
+    if (m_dbHbSenderTrp != dbHbSenderTrp) {
+      jam();
+      m_dbHbSenderTrp = dbHbSenderTrp;
+    }
+  }
+}
+
 void Trpman::execOPEN_COMORD(Signal *signal) {
   /**
    * Connect to the specified NDB node, only QMGR allowed communication
@@ -237,6 +259,7 @@ void Trpman::execCLOSE_COMREQ(Signal *signal) {
   // Close communication with the node and halt input/output from
   // other blocks than QMGR
   jamEntry();
+  ndbrequire(signal->getLength() >= CloseComReqConf::SignalLengthDB);
 
   CloseComReqConf *const closeCom = (CloseComReqConf *)&signal->theData[0];
 
@@ -244,6 +267,7 @@ void Trpman::execCLOSE_COMREQ(Signal *signal) {
   Uint32 requestType = closeCom->requestType;
   Uint32 failNo = closeCom->failNo;
   Uint32 noOfNodes = closeCom->noOfNodes;
+  Uint32 dbHbSender = closeCom->m_dbHbSender;
   Uint32 found_nodes = 0;
 
   if (closeCom->failedNodeId == 0) {
@@ -279,6 +303,8 @@ void Trpman::execCLOSE_COMREQ(Signal *signal) {
   }
   ndbrequire(noOfNodes == found_nodes);
 
+  set_db_hb_sender(dbHbSender);
+
   if (requestType != CloseComReqConf::RT_NO_REPLY) {
     ndbassert(
         (requestType == CloseComReqConf::RT_API_FAILURE) ||
@@ -288,13 +314,14 @@ void Trpman::execCLOSE_COMREQ(Signal *signal) {
     closeComConf->xxxBlockRef = userRef;
     closeComConf->requestType = requestType;
     closeComConf->failNo = failNo;
+    closeComConf->m_dbHbSender = 0;  // ignored
 
     /* Note assumption that noOfNodes and theNodes
      * bitmap is not trampled above
      * signals received from the remote node.
      */
     sendSignal(TRPMAN_REF, GSN_CLOSE_COMCONF, signal,
-               CloseComReqConf::SignalLength, JBA);
+               CloseComReqConf::SignalLengthDB, JBA);
   }
 }
 
@@ -305,8 +332,9 @@ void Trpman::execCLOSE_COMREQ(Signal *signal) {
 */
 void Trpman::execCLOSE_COMCONF(Signal *signal) {
   jamEntry();
-  sendSignal(QMGR_REF, GSN_CLOSE_COMCONF, signal, CloseComReqConf::SignalLength,
-             JBA);
+  ndbrequire(signal->getLength() >= CloseComReqConf::SignalLengthDB);
+  sendSignal(QMGR_REF, GSN_CLOSE_COMCONF, signal,
+             CloseComReqConf::SignalLengthDB, JBA);
 }
 
 void Trpman::enable_com_node(Signal *signal, NodeId nodeId) {
@@ -344,6 +372,7 @@ void Trpman::execENABLE_COMREQ(Signal *signal) {
   BlockReference senderRef = enableComReq->m_senderRef;
   Uint32 senderData = enableComReq->m_senderData;
   Uint32 enableNodeId = enableComReq->m_enableNodeId;
+  Uint32 dbHbSender = enableComReq->m_dbHbSender;
 
   /* Enable communication with all our NDB blocks to these nodes. */
   if (enableNodeId == 0) {
@@ -367,10 +396,13 @@ void Trpman::execENABLE_COMREQ(Signal *signal) {
     enable_com_node(signal, enableNodeId);
   }
 
+  set_db_hb_sender(dbHbSender);
+
   EnableComConf *enableComConf = (EnableComConf *)signal->getDataPtrSend();
   enableComConf->m_senderRef = reference();
   enableComConf->m_senderData = senderData;
   enableComConf->m_enableNodeId = enableNodeId;
+  enableComConf->m_dbHbSender = 0;  // ignored
   sendSignal(senderRef, GSN_ENABLE_COMCONF, signal, EnableComConf::SignalLength,
              JBA);
 }
@@ -661,6 +693,9 @@ void Trpman::execREAD_CONFIG_REQ(Signal *signal) {
   const ReadConfigReq *req = (ReadConfigReq *)signal->getDataPtr();
   Uint32 ref = req->senderRef;
   Uint32 senderData = req->senderData;
+
+  m_dbHbSender = 0;
+  m_dbHbSenderTrp = 0;
 
   ReadConfigConf *conf = (ReadConfigConf *)signal->getDataPtrSend();
   conf->senderRef = reference();
@@ -1044,6 +1079,15 @@ void Trpman::execACTIVATE_TRP_REQ(Signal *signal) {
   Uint32 node_id = req->nodeId;
   Uint32 trp_id = req->trpId;
   BlockReference ret_ref = req->senderRef;
+
+  /* Switch from node transporter to multi transporter for heartbeat. Work will
+   * redundantly be done for signal for each new multi transporter while only
+   * needed to be done once for node. */
+  if (m_dbHbSender == node_id) {
+    ndbrequire(m_dbHbSenderTrp != 0);
+    set_db_hb_sender(m_dbHbSender);  // recalculates transporter for dbHbSender
+  }
+
   /**
    * Note similarity with ::enable_com_node(), which enable the
    * *node* communication. Now we enable an addition transporter
@@ -1140,6 +1184,7 @@ void TrpmanProxy::execOPEN_COMORD(Signal *signal) {
 
 void TrpmanProxy::execCLOSE_COMREQ(Signal *signal) {
   jamEntry();
+  ndbrequire(signal->getLength() >= CloseComReqConf::SignalLengthDB);
   Ss_CLOSE_COMREQ &ss = ssSeize<Ss_CLOSE_COMREQ>();
   const CloseComReqConf *req = (const CloseComReqConf *)signal->getDataPtr();
   ss.m_req = *req;
@@ -1163,11 +1208,12 @@ void TrpmanProxy::sendCLOSE_COMREQ(Signal *signal, Uint32 ssId,
   req->xxxBlockRef = reference();
   req->failNo = ssId;
   sendSignalNoRelease(workerRef(ss.m_worker), GSN_CLOSE_COMREQ, signal,
-                      CloseComReqConf::SignalLength, JBB, handle);
+                      CloseComReqConf::SignalLengthDB, JBB, handle);
 }
 
 void TrpmanProxy::execCLOSE_COMCONF(Signal *signal) {
   const CloseComReqConf *conf = (const CloseComReqConf *)signal->getDataPtr();
+  ndbrequire(signal->getLength() >= CloseComReqConf::SignalLengthDB);
   Uint32 ssId = conf->failNo;
   jamEntry();
   Ss_CLOSE_COMREQ &ss = ssFind<Ss_CLOSE_COMREQ>(ssId);
@@ -1185,8 +1231,8 @@ void TrpmanProxy::sendCLOSE_COMCONF(Signal *signal, Uint32 ssId) {
 
   CloseComReqConf *conf = (CloseComReqConf *)signal->getDataPtrSend();
   *conf = ss.m_req;
-  sendSignal(QMGR_REF, GSN_CLOSE_COMCONF, signal, CloseComReqConf::SignalLength,
-             JBB);
+  sendSignal(QMGR_REF, GSN_CLOSE_COMCONF, signal,
+             CloseComReqConf::SignalLengthDB, JBB);
   ssRelease<Ss_CLOSE_COMREQ>(ssId);
 }
 

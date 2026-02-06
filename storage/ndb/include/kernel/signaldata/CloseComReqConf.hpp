@@ -55,7 +55,8 @@ struct CloseComReqConf {
   friend bool printCLOSECOMREQCONF(FILE *output, const Uint32 *theData,
                                    Uint32 len, Uint16 receiverBlockNo);
 
-  static constexpr Uint32 SignalLength = 5;
+  static constexpr Uint32 SignalLengthAPI = 1;  // For API and MGM nodes
+  static constexpr Uint32 SignalLengthDB = 6;   // For data nodes
 
   enum RequestType { RT_API_FAILURE = 0, RT_NODE_FAILURE = 1, RT_NO_REPLY = 2 };
 
@@ -65,6 +66,7 @@ struct CloseComReqConf {
 
   Uint32 noOfNodes;
   Uint32 failedNodeId;
+  Uint32 m_dbHbSender;  // Only for data node, Qmgr::cneighbourl
 };
 
 #undef JAM_FILE_ID

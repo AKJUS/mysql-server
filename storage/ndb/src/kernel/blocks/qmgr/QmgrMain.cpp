@@ -2725,6 +2725,7 @@ void Qmgr::execCM_ADD(Signal *signal) {
       enableComReq->m_senderRef = reference();
       enableComReq->m_senderData = ENABLE_COM_CM_ADD_COMMIT;
       enableComReq->m_enableNodeId = addNodePtr.i;
+      enableComReq->m_dbHbSender = cneighbourl;
       sendSignal(TRPMAN_REF, GSN_ENABLE_COMREQ, signal,
                  EnableComReq::SignalLength, JBB);
       break;
@@ -2807,6 +2808,7 @@ void Qmgr::joinedCluster(Signal *signal, NodeRecPtr nodePtr) {
   enableComReq->m_senderRef = reference();
   enableComReq->m_senderData = ENABLE_COM_CM_COMMIT_NEW;
   enableComReq->m_enableNodeId = 0;
+  enableComReq->m_dbHbSender = cneighbourl;
   enableComReq->m_nodeIds.clear();
   jam();
   for (nodePtr.i = 1; nodePtr.i < MAX_NDB_NODES; nodePtr.i++) {
@@ -4093,8 +4095,9 @@ void Qmgr::node_failed(Signal *signal, Uint16 aFailedNode) {
       closeCom->failNo = 0;
       closeCom->noOfNodes = 1;
       closeCom->failedNodeId = failedNodePtr.i;
+      closeCom->m_dbHbSender = cneighbourl;
       sendSignal(TRPMAN_REF, GSN_CLOSE_COMREQ, signal,
-                 CloseComReqConf::SignalLength, JBB);
+                 CloseComReqConf::SignalLengthDB, JBB);
       return;
     }
     case ZAPI_ACTIVE:  // Unexpected states handled in ::api_failed()
@@ -4228,12 +4231,13 @@ void Qmgr::api_failed(Signal *signal, Uint32 nodeId, ApiFailureCause afc,
   closeCom->failNo = 0;
   closeCom->noOfNodes = 1;
   closeCom->failedNodeId = nodeId;
+  closeCom->m_dbHbSender = cneighbourl;
   ProcessInfo *processInfo = getProcessInfo(nodeId);
   if (processInfo) {
     processInfo->invalidate();
   }
   sendSignal(TRPMAN_REF, GSN_CLOSE_COMREQ, signal,
-             CloseComReqConf::SignalLength, JBB);
+             CloseComReqConf::SignalLengthDB, JBB);
 }  // api_failed
 
 /**--------------------------------------------------------------------------
@@ -4343,6 +4347,7 @@ void Qmgr::execAPI_REGREQ(Signal *signal) {
       enableComReq->m_senderRef = reference();
       enableComReq->m_senderData = ENABLE_COM_API_REGREQ;
       enableComReq->m_enableNodeId = apiNodePtr.i;
+      enableComReq->m_dbHbSender = cneighbourl;
       sendSignal(TRPMAN_REF, GSN_ENABLE_COMREQ, signal,
                  EnableComReq::SignalLength, JBB);
       return;
@@ -4989,6 +4994,7 @@ void Qmgr::handleApiCloseComConf(Signal *signal) {
 /*******************************/
 void Qmgr::execCLOSE_COMCONF(Signal *signal) {
   jamEntry();
+  ndbrequire(signal->getLength() >= CloseComReqConf::SignalLengthDB);
 
   CloseComReqConf *const closeCom = (CloseComReqConf *)&signal->theData[0];
 
@@ -5803,13 +5809,14 @@ void Qmgr::sendCloseComReq(Signal *signal, BlockReference TBRef,
   closeCom->requestType = CloseComReqConf::RT_NODE_FAILURE;
   closeCom->failNo = aFailNo;
   closeCom->noOfNodes = cprepFailedNodes.count();
+  closeCom->m_dbHbSender = cneighbourl;
   {
     closeCom->failedNodeId = 0; /* Indicates we're sending bitmask */
     LinearSectionPtr lsptr[3];
     lsptr[0].p = cprepFailedNodes.rep.data;
     lsptr[0].sz = cprepFailedNodes.getPackedLengthInWords();
     sendSignal(TRPMAN_REF, GSN_CLOSE_COMREQ, signal,
-               CloseComReqConf::SignalLength, JBB, lsptr, 1);
+               CloseComReqConf::SignalLengthDB, JBB, lsptr, 1);
   }
 
 }  // Qmgr::sendCloseComReq()
@@ -7175,8 +7182,9 @@ void Qmgr::execDUMP_STATE_ORD(Signal *signal) {
     closeCom->failNo = 0;
     closeCom->noOfNodes = 1;
     closeCom->failedNodeId = nodeId;
+    closeCom->m_dbHbSender = cneighbourl;
     sendSignal(TRPMAN_REF, GSN_CLOSE_COMREQ, signal,
-               CloseComReqConf::SignalLength, JBB);
+               CloseComReqConf::SignalLengthDB, JBB);
   }
   if (signal->theData[0] == 909) {
     jam();
