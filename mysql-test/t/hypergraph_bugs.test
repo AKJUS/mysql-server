@@ -2204,4 +2204,49 @@ DISTINCT char_0_col FROM t1 ORDER BY char_0_col;
 
 DROP TABLE t1;
 
+--echo #
+--echo # Bug#38292966: Hypergraph: Optimizer trace should not state
+--echo #               "This is a bug" for known inconsistent row counts
+--echo #
+
+CREATE TABLE num (n INT);
+INSERT INTO num VALUES (0),(1),(2),(3),(4),(5),(6),(7),(8),(9);
+CREATE TABLE t1 (a INT, b INT);
+INSERT INTO t1 SELECT n,n FROM num UNION SELECT n+10,n+10 FROM num;
+CREATE TABLE t2 (a INT, b INT);
+ANALYZE TABLE t1, t2;
+
+SET optimizer_trace='enabled=on';
+EXPLAIN FORMAT=TREE SELECT SQL_BIG_RESULT x1.a+0 k, COUNT(x1.b) FROM t1 x1
+  LEFT JOIN t2 x2 ON x1.b=x2.a
+  LEFT JOIN t1 x3 ON x2.b=x3.a GROUP BY k;
+
+# The optimizer trace should contain a WARNING about inconsistent row counts
+# but must NOT contain the alarming "This is a bug" language.
+--let $trace = `SELECT TRACE FROM INFORMATION_SCHEMA.OPTIMIZER_TRACE`
+
+SET optimizer_trace='enabled=off';
+
+--let $has_warning = `SELECT LOCATE('has inconsistent row counts with', '$trace') > 0`
+--let $has_bug_msg = `SELECT LOCATE('This is a bug', '$trace') > 0`
+
+if ($has_warning)
+{
+  --echo Optimizer trace correctly contains WARNING about inconsistent row counts.
+}
+if (!$has_warning)
+{
+  --echo Optimizer trace does NOT contain expected WARNING about inconsistent row counts.
+}
+if ($has_bug_msg)
+{
+  --echo FAIL: Optimizer trace still contains "This is a bug" message.
+}
+if (!$has_bug_msg)
+{
+  --echo Optimizer trace correctly omits "This is a bug" message.
+}
+
+DROP TABLE num, t1, t2;
+
 --source include/disable_hypergraph.inc

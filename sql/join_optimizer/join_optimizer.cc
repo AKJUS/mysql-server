@@ -6640,12 +6640,7 @@ AccessPath *CostingReceiver::ProposeAccessPath(
                        << PrintAccessPath(m_thd, *path, *m_graph, "")
                        << " has inconsistent row counts with "
                        << PrintAccessPath(m_thd, *other_path, *m_graph, "")
-                       << ".";
-          if (has_known_row_count_inconsistency_bugs) {
-            Trace(m_thd) << "\n   This is a bug, but probably a known one.\n";
-          } else {
-            Trace(m_thd) << " This is a bug.\n";
-          }
+                       << ".\n";
         }
 #ifndef NDEBUG
         if (!has_known_row_count_inconsistency_bugs &&
