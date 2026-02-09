@@ -38,6 +38,9 @@
 %global with_router 1
 %endif
 
+# PGO option
+%{?with_pgo:   %global pgo 1}
+
 # Regression tests may take a long time, override the default to skip them
 %{!?runselftest:%global runselftest 1}
 
@@ -606,6 +609,7 @@ mkdir release
 (
   cd release
   cmake ../%{src_dir} \
+           %{?pgo:-DFPROFILE_GENERATE=1} \
            -DBUILD_CONFIG=mysql_release \
            -DINSTALL_LAYOUT=RPM \
            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -634,6 +638,51 @@ mkdir release
   echo BEGIN_NORMAL_CONFIG ; grep -E '^#define' include/my_config.h ; echo END_NORMAL_CONFIG
   make %{?_smp_mflags} VERBOSE=1
 )
+
+%if 0%{?pgo}
+(
+  # Run some MTR load to generate profile data
+  pushd release
+  make run-profile-suite
+  rm -r $(readlink mysql-test/var)
+  popd
+
+  # Build again with profile data present
+  rm -rf release
+  mkdir release && pushd release
+  cmake ../%{src_dir} \
+           -DFPROFILE_USE=1 \
+           -DBUILD_CONFIG=mysql_release \
+           -DINSTALL_LAYOUT=RPM \
+           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+           -DCMAKE_C_FLAGS="%{optflags}" \
+           -DCMAKE_CXX_FLAGS="%{optflags}" \
+           -DTMPDIR=/var/tmp \
+           -DWITH_CURL=system \
+           -DWITH_FIDO=system \
+           -DWITH_MECAB=system \
+           -DWITH_ZLIB=system \
+           -DWITH_KEYRING_HASHICORP=0 \
+           -DWITH_KEYRING_OCI=0 \
+           -DWITH_SYSTEMD=1 \
+           -DWITH_MEB=%{with_meb} \
+           -DWITH_ROUTER=%{with_router} \
+%if 0%{?cluster}
+           -DWITH_NDB=1 \
+%endif
+           -DMYSQL_UNIX_ADDR="%{mysqldatadir}/mysql.sock" \
+           -DMYSQLX_UNIX_ADDR="/run/mysqld/mysqlx.sock" \
+           -DWITH_NUMA=ON \
+           %{?mecab_option} \
+%if 0%{?mrs_jit_executor_lib:1}
+    -DMRS_JIT_EXECUTOR_LIB="%{mrs_jit_executor_lib}" \
+%endif
+           -DCOMPILATION_COMMENT="%{compilation_comment_release}" \
+           -DCOMPILATION_COMMENT_SERVER="%{compilation_comment_server_release}" \
+           -DMYSQL_SERVER_SUFFIX="%{?server_suffix}"
+  make %{?_smp_mflags} VERBOSE=1
+)
+%endif # pgo
 
 %install
 
