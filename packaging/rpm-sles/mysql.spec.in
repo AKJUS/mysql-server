@@ -39,6 +39,11 @@
 %global with_router 1
 %endif
 
+# PGO option
+%{?with_pgo:   %global pgo 1}
+# dwz coredumps if doing PGO
+%{?with_pgo:   %global _find_debuginfo_dwz_opts %{nil}}
+
 # Pass path to mecab lib
 %{?with_mecab: %global mecab_option -DWITH_MECAB=%{with_mecab}}
 %{?with_mecab: %global mecab 1}
@@ -638,6 +643,7 @@ mkdir release
 (
   cd release
   cmake ../%{src_dir} \
+           %{?pgo:-DFPROFILE_GENERATE=1} \
            -DBUILD_CONFIG=mysql_release \
            -DINSTALL_LAYOUT=RPM \
            -DPIDFILE_RPM="/var/run/mysql/mysqld.pid" \
@@ -673,6 +679,55 @@ mkdir release
   echo BEGIN_NORMAL_CONFIG ; egrep '^#define' include/my_config.h ; echo END_NORMAL_CONFIG
   make %{?_smp_mflags} VERBOSE=1
 )
+
+%if 0%{?pgo}
+(
+  # Run some MTR load to generate profile data
+  pushd release
+  make run-profile-suite
+  rm -r $(readlink mysql-test/var)
+  popd
+
+  # Build again with profile data present
+  rm -rf release
+  mkdir release && pushd release
+  cmake ../%{src_dir} \
+           -DFPROFILE_USE=1 \
+           -DBUILD_CONFIG=mysql_release \
+           -DINSTALL_LAYOUT=RPM \
+           -DPIDFILE_RPM="/var/run/mysql/mysqld.pid" \
+           -DLOGFILE_RPM="/var/log/mysql/mysqld.log" \
+           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+           -DCMAKE_C_FLAGS="%{optflags}" \
+           -DCMAKE_CXX_FLAGS="%{optflags}" \
+           -DWITH_SYSTEMD=1 \
+           -DSYSTEMD_SERVICE_NAME="mysql" \
+           -DSYSTEMD_PID_DIR="/run/mysql" \
+           -DWITH_MEB=%{with_meb} \
+           -DWITH_ROUTER=%{with_router} \
+%if 0%{?cluster}
+           -DWITH_NDB=1 \
+%endif
+%if 0%{?ndb_nodejs_path:1}
+           -DNDB_NODEJS_PATH=%{ndb_nodejs_path} \
+%endif
+%if 0%{?ndb_nodejs_extras_path:1}
+           -DNDB_NODEJS_EXTRAS_PATH=%{ndb_nodejs_extras_path} \
+%endif
+%if 0%{?commercial}
+           -DWITH_CURL=system \
+           %{?aws_sdk_option} \
+%endif
+           -DMYSQL_UNIX_ADDR="%{mysqldatadir}/mysql.sock" \
+           -DMYSQLX_UNIX_ADDR="/var/run/mysql/mysqlx.sock" \
+           -DWITH_NUMA=ON \
+           %{?mecab_option} \
+           -DCOMPILATION_COMMENT="%{compilation_comment_release}" \
+           -DCOMPILATION_COMMENT_SERVER="%{compilation_comment_server_release}" \
+           -DMYSQL_SERVER_SUFFIX="%{?server_suffix}"
+  make %{?_smp_mflags} VERBOSE=1
+)
+%endif # pgo
 
 %install
 MBD=$RPM_BUILD_DIR/%{src_dir}
