@@ -320,7 +320,7 @@ public class I18NHelper {
         for (int i=0; i<msgArgs.length; i++) {
             if (msgArgs[i] == null) msgArgs[i] = ""; // NOI18N
         }
-        MessageFormat formatter = new MessageFormat(messages.getString(messageKey));
+        MessageFormat formatter = new MessageFormat(messages.getString(messageKey), messages.getLocale());
         return formatter.format(msgArgs);
     }
     
