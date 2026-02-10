@@ -2488,4 +2488,18 @@ FROM   t1 AS ref_0
 
 DROP TABLE t1, t2;
 
+--echo #
+--echo # Bug#38867038	Assertion `nullptr != dynamic_cast<Target>(arg)' failed.
+--echo #
+
+CREATE TABLE A(col_int INT);
+INSERT INTO A VALUES (1), (2), (3), (4), (5);
+
+--sorted_result
+SELECT  /*+ SET_VAR(optimizer_switch='hypergraph_optimizer=on') */
+PERCENT_RANK() OVER ( ORDER BY SEC_TO_TIME(3600) RANGE INTERVAL 7 QUARTER PRECEDING )
+FROM A;
+
+DROP TABLE A;
+
 --source include/disable_hypergraph.inc

@@ -1546,8 +1546,13 @@ void Window::apply_temp_table(THD *thd, const Func_ptr_array &items_to_copy,
   // ordering and partitioning items. We need to see through them, so we unwrap
   // them here. Since they get removed on the first call to apply_temp_table(),
   // only unwrap on the first call.
+  // Items might not always be of type Item_ref. set_cmp_func() creates cached
+  // items based on the type of comparison for these types. Therefore,
+  // unwrapping should occur only when the item is an Item_ref.
   const auto unwrap = [first](Item *item) {
-    return first ? down_cast<Item_ref *>(item)->ref_item() : item;
+    return (first && item->type() == Item::REF_ITEM)
+               ? down_cast<Item_ref *>(item)->ref_item()
+               : item;
   };
 
   for (Mem_root_array<Cached_item *> *cached_items :

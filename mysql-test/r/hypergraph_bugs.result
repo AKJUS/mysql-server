@@ -2908,3 +2908,18 @@ AND ( ref_0.id_col IS NOT NULL ) );
 COUNT(ref_1.int_col)
 1
 DROP TABLE t1, t2;
+#
+# Bug#38867038	Assertion `nullptr != dynamic_cast<Target>(arg)' failed.
+#
+CREATE TABLE A(col_int INT);
+INSERT INTO A VALUES (1), (2), (3), (4), (5);
+SELECT  /*+ SET_VAR(optimizer_switch='hypergraph_optimizer=on') */
+PERCENT_RANK() OVER ( ORDER BY SEC_TO_TIME(3600) RANGE INTERVAL 7 QUARTER PRECEDING )
+FROM A;
+PERCENT_RANK() OVER ( ORDER BY SEC_TO_TIME(3600) RANGE INTERVAL 7 QUARTER PRECEDING )
+0
+0
+0
+0
+0
+DROP TABLE A;
