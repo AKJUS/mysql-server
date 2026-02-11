@@ -2439,4 +2439,53 @@ WHERE t1.i <> t2.i AND t2.i = t3.i + UUID_SHORT() AND t1.i <> t3.i;
 
 DROP TABLE t, t1;
 
+--echo #
+--echo # Bug#38097990: Const folding caused inequivalent join_cond_optim
+--echo #               in hypergraph
+--echo #
+
+CREATE TABLE t1 (
+    id_col       INT PRIMARY KEY,
+    smallint_col SMALLINT,
+    int_col      INT
+);
+
+CREATE TABLE t2 (
+    id_col       INT PRIMARY KEY,
+    smallint_col SMALLINT,
+    int_col      INT
+);
+
+# The ON condition contains (ref_0.id_col IS NOT NULL) which folds to TRUE
+# because id_col is PRIMARY KEY (NOT NULL). This caused remove_eq_conds()
+# to mutate the Item_cond_or argument list in-place, making
+# tl->join_cond_optim() logically inequivalent to the original condition.
+# The fix rebuilds join_cond_optim from the post-folding conditions.
+SELECT COUNT(ref_1.int_col)
+FROM   t1 AS ref_0
+       LEFT JOIN t2 AS ref_1
+              ON ( ( ref_0.smallint_col IS NULL )
+                    OR ( ref_0.id_col IS NOT NULL ) );
+
+# Verify with data: insert rows and confirm the LEFT JOIN ON TRUE
+# produces correct results.
+INSERT INTO t1 VALUES (1, 10, 100), (2, NULL, 200);
+INSERT INTO t2 VALUES (1, 10, 100);
+ANALYZE TABLE t1, t2;
+
+SELECT COUNT(ref_1.int_col)
+FROM   t1 AS ref_0
+       LEFT JOIN t2 AS ref_1
+              ON ( ( ref_0.smallint_col IS NULL )
+                    OR ( ref_0.id_col IS NOT NULL ) );
+
+# Also test AND with constant-foldable condition.
+SELECT COUNT(ref_1.int_col)
+FROM   t1 AS ref_0
+       LEFT JOIN t2 AS ref_1
+              ON ( ( ref_0.smallint_col IS NULL )
+                    AND ( ref_0.id_col IS NOT NULL ) );
+
+DROP TABLE t1, t2;
+
 --source include/disable_hypergraph.inc

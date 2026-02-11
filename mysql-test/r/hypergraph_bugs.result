@@ -2866,3 +2866,45 @@ WHERE t1.i = t2.i AND t2.i = t3.i + RAND() AND t1.i <> t3.i;
 SELECT 1 FROM t AS t1, t AS t2, t AS t3
 WHERE t1.i <> t2.i AND t2.i = t3.i + UUID_SHORT() AND t1.i <> t3.i;
 DROP TABLE t, t1;
+#
+# Bug#38097990: Const folding caused inequivalent join_cond_optim
+#               in hypergraph
+#
+CREATE TABLE t1 (
+id_col       INT PRIMARY KEY,
+smallint_col SMALLINT,
+int_col      INT
+);
+CREATE TABLE t2 (
+id_col       INT PRIMARY KEY,
+smallint_col SMALLINT,
+int_col      INT
+);
+SELECT COUNT(ref_1.int_col)
+FROM   t1 AS ref_0
+LEFT JOIN t2 AS ref_1
+ON ( ( ref_0.smallint_col IS NULL )
+OR ( ref_0.id_col IS NOT NULL ) );
+COUNT(ref_1.int_col)
+0
+INSERT INTO t1 VALUES (1, 10, 100), (2, NULL, 200);
+INSERT INTO t2 VALUES (1, 10, 100);
+ANALYZE TABLE t1, t2;
+Table	Op	Msg_type	Msg_text
+test.t1	analyze	status	OK
+test.t2	analyze	status	OK
+SELECT COUNT(ref_1.int_col)
+FROM   t1 AS ref_0
+LEFT JOIN t2 AS ref_1
+ON ( ( ref_0.smallint_col IS NULL )
+OR ( ref_0.id_col IS NOT NULL ) );
+COUNT(ref_1.int_col)
+2
+SELECT COUNT(ref_1.int_col)
+FROM   t1 AS ref_0
+LEFT JOIN t2 AS ref_1
+ON ( ( ref_0.smallint_col IS NULL )
+AND ( ref_0.id_col IS NOT NULL ) );
+COUNT(ref_1.int_col)
+1
+DROP TABLE t1, t2;

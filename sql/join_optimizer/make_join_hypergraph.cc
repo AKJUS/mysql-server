@@ -369,7 +369,7 @@ RelationalExpression *MakeRelationalExpressionFromJoinList(
   RelationalExpression *ret = nullptr;
   for (auto it = join_list->rbegin(); it != join_list->rend();
        ++it) {  // The list goes backwards.
-    const Table_ref *tl = *it;
+    Table_ref *tl = *it;
     if (ret == nullptr) {
       // The first table in the list.
       ret = MakeRelationalExpression(thd, query_block, tl);
@@ -425,6 +425,14 @@ RelationalExpression *MakeRelationalExpressionFromJoinList(
       EarlyNormalizeConditions(thd, join, &join->join_conditions,
                                &always_false);
       ReorderConditions(&join->join_conditions);
+      // Rebuild join_cond_optim to reflect the post-folding conditions,
+      // since EarlyNormalizeConditions may have mutated the original
+      // Item tree in-place via remove_eq_conds().
+      List<Item> conditions;
+      for (Item *cond : join->join_conditions) {
+        conditions.push_back(cond);
+      }
+      tl->set_join_cond_optim(CreateConjunction(&conditions));
     }
     ret = join;
   }

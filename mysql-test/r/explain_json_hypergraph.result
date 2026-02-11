@@ -433,7 +433,7 @@ WHERE alias2.col_varchar_key >= t1.col_varchar)
 GROUP BY field1;
 EXPLAIN
 {
-  "query": "/* select#1 */ select sql_big_result `test`.`t1`.`col_varchar_key` AS `field1` from `test`.`t1` join `test`.`t1` `alias1` anti join (`test`.`t1` `alias2`) on(((`alias2`.`col_varchar_key` >= `test`.`t1`.`col_varchar`))) where true group by `field1`",
+  "query": "/* select#1 */ select sql_big_result `test`.`t1`.`col_varchar_key` AS `field1` from `test`.`t1` join `test`.`t1` `alias1` anti join (`test`.`t1` `alias2`) on((`alias2`.`col_varchar_key` >= `test`.`t1`.`col_varchar`)) where true group by `field1`",
   "query_plan": {
     "inputs": [
       {
@@ -751,7 +751,7 @@ EXPLAIN
 EXPLAIN FORMAT=JSON SELECT t1.a, GROUP_CONCAT(t2.b) AS b FROM t1 LEFT JOIN t2 ON t1.a=t2.a GROUP BY t1.a ORDER BY t1.b;
 EXPLAIN
 {
-  "query": "/* select#1 */ select `test`.`t1`.`a` AS `a`,group_concat(`test`.`t2`.`b` separator ',') AS `b` from `test`.`t1` left join `test`.`t2` on(multiple equal(`test`.`t1`.`a`, `test`.`t2`.`a`)) group by `test`.`t1`.`a` order by `test`.`t1`.`b`",
+  "query": "/* select#1 */ select `test`.`t1`.`a` AS `a`,group_concat(`test`.`t2`.`b` separator ',') AS `b` from `test`.`t1` left join `test`.`t2` on((`test`.`t1`.`a` = `test`.`t2`.`a`)) group by `test`.`t1`.`a` order by `test`.`t1`.`b`",
   "query_plan": {
     "inputs": [
       {
@@ -876,7 +876,7 @@ EXPLAIN FORMAT=JSON SELECT * FROM t1 AS a LEFT JOIN t1 AS b ON FALSE
 LEFT JOIN t1 AS c ON b.a=c.a;
 EXPLAIN
 {
-  "query": "/* select#1 */ select `a`.`a` AS `a`,`b`.`a` AS `a`,`c`.`a` AS `a` from `test`.`t1` `a` left join `test`.`t1` `b` on(false) left join `test`.`t1` `c` on(multiple equal(`b`.`a`, `c`.`a`))",
+  "query": "/* select#1 */ select `a`.`a` AS `a`,`b`.`a` AS `a`,`c`.`a` AS `a` from `test`.`t1` `a` left join `test`.`t1` `b` on(false) left join `test`.`t1` `c` on((`b`.`a` = `c`.`a`))",
   "query_plan": {
     "inputs": [
       {
