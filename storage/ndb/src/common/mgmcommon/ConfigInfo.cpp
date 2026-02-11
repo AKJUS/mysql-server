@@ -836,9 +836,8 @@ const ConfigInfo::ParamInfo ConfigInfo::m_ParamInfo[] = {
      "Transporter, heartbeat errors printed on stdout", ConfigInfo::CI_USED,
      false, ConfigInfo::CI_INT, "8", "0", "15"},
 
-    {CFG_LOGLEVEL_INFO, "LogLevelInfo", DB_TOKEN,
-     "Heartbeat and log info printed on stdout", ConfigInfo::CI_USED, false,
-     ConfigInfo::CI_INT, "0", "0", "15"},
+    {CFG_LOGLEVEL_INFO, "LogLevelInfo", DB_TOKEN, "Log info printed on stdout",
+     ConfigInfo::CI_USED, false, ConfigInfo::CI_INT, "0", "0", "15"},
 
     {CFG_LOGLEVEL_BACKUP, "LogLevelBackup", DB_TOKEN,
      "Backup info printed on stdout", ConfigInfo::CI_USED, false,
