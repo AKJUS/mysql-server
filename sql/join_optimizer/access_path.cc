@@ -1675,13 +1675,13 @@ void FindTablesToGetRowidFor(AccessPath *path) {
 // in addition to the simple cycle edges that we currently add.
 static void MoveFilterPredicatesIntoHashJoinCondition(
     THD *thd, AccessPath *path, const Mem_root_array<Predicate> &predicates,
-    int num_where_predicates) {
+    int num_filter_predicates) {
   Mem_root_array<Item_eq_base *> equijoin_conditions(thd->mem_root);
   Mem_root_array<Item *> join_conditions(thd->mem_root);
   MutableOverflowBitset moved_predicates(thd->mem_root, predicates.size());
 
   for (int filter_idx : BitsSetIn(path->filter_predicates)) {
-    if (filter_idx >= num_where_predicates) break;
+    if (filter_idx >= num_filter_predicates) break;
     const Predicate &predicate = predicates[filter_idx];
     if (!predicate.was_join_condition) continue;
 
@@ -1731,10 +1731,10 @@ static void MoveFilterPredicatesIntoHashJoinCondition(
 
 Item *ConditionFromFilterPredicates(const Mem_root_array<Predicate> &predicates,
                                     OverflowBitset mask,
-                                    int num_where_predicates) {
+                                    int num_filter_predicates) {
   List<Item> items;
   for (int pred_idx : BitsSetIn(mask)) {
-    if (pred_idx >= num_where_predicates) break;
+    if (pred_idx >= num_filter_predicates) break;
     items.push_back(predicates[pred_idx].condition);
   }
   return CreateConjunction(&items);
@@ -1743,7 +1743,7 @@ Item *ConditionFromFilterPredicates(const Mem_root_array<Predicate> &predicates,
 void ExpandSingleFilterAccessPath(THD *thd, const JoinHypergraph &graph,
                                   AccessPath *path, const JOIN *join) {
   const Mem_root_array<Predicate> &predicates = graph.predicates;
-  unsigned num_where_predicates = graph.num_where_predicates;
+  unsigned num_filter_predicates = graph.num_filter_predicates;
   // Expand join filters for nested loop joins.
   if (path->type == AccessPath::NESTED_LOOP_JOIN &&
       !path->nested_loop_join().already_expanded_predicates &&
@@ -1823,12 +1823,12 @@ void ExpandSingleFilterAccessPath(THD *thd, const JoinHypergraph &graph,
       path->hash_join().join_predicate->expr->join_predicate_first !=
           path->hash_join().join_predicate->expr->join_predicate_last) {
     MoveFilterPredicatesIntoHashJoinCondition(thd, path, predicates,
-                                              num_where_predicates);
+                                              num_filter_predicates);
   }
 
   // Expand filters _after_ the access path (these are much more common).
   Item *condition = ConditionFromFilterPredicates(
-      predicates, path->filter_predicates, num_where_predicates);
+      predicates, path->filter_predicates, num_filter_predicates);
   if (condition == nullptr) {
     return;
   }
@@ -1868,7 +1868,7 @@ void ExpandSingleFilterAccessPath(THD *thd, const JoinHypergraph &graph,
   // Clear filter_predicates, but keep applied_sargable_join_predicates.
   path->applied_sargable_join_predicates() =
       ClearFilterPredicates(path->applied_sargable_join_predicates(),
-                            num_where_predicates, thd->mem_root);
+                            num_filter_predicates, thd->mem_root);
   // do not clear the filter sig, so we can match table scans
   // later which have the bitset corresponding to this filter.
   secondary_engine_nrows_params.to_force_resign = false;
@@ -1886,11 +1886,11 @@ void ExpandFilterAccessPaths(THD *thd, const JoinHypergraph &graph,
 }
 
 MutableOverflowBitset ClearFilterPredicates(OverflowBitset predicates,
-                                            int num_where_predicates,
+                                            int num_filter_predicates,
                                             MEM_ROOT *mem_root) {
   MutableOverflowBitset applied_sargable_join_predicates =
       predicates.Clone(mem_root);
-  applied_sargable_join_predicates.ClearBits(0, num_where_predicates);
+  applied_sargable_join_predicates.ClearBits(0, num_filter_predicates);
   return applied_sargable_join_predicates;
 }
 
@@ -1994,7 +1994,7 @@ bool AccessPath::HasConsistentCostsAndRows(const JoinHypergraph &graph) const {
   */
   if (auto filters = BitsSetIn(filter_predicates);
       filters.begin() != filters.end() &&
-      *filters.begin() < graph.num_where_predicates) {
+      *filters.begin() < graph.num_filter_predicates) {
     if (num_output_rows() > num_output_rows_before_filter ||
         cost_before_filter() > cost()) {
       return false;

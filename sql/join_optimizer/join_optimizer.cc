@@ -700,25 +700,25 @@ class CostingReceiver {
   void ProposeIndexMerge(TABLE *table, int node_idx, const SEL_IMERGE &imerge,
                          int pred_idx, bool inexact,
                          bool allow_clustered_primary_key_scan,
-                         int num_where_predicates,
+                         int num_filter_predicates,
                          double num_output_rows_after_filter,
                          RANGE_OPT_PARAM *param,
                          bool *has_clustered_primary_key_scan,
                          bool *found_imerge);
   void ProposeRowIdOrderedUnion(TABLE *table, int node_idx,
                                 const SEL_IMERGE &imerge, int pred_idx,
-                                bool inexact, int num_where_predicates,
+                                bool inexact, int num_filter_predicates,
                                 double num_output_rows_after_filter,
                                 const RANGE_OPT_PARAM *param,
                                 const Mem_root_array<AccessPath *> &paths,
                                 bool *found_imerge);
   void ProposeAllRowIdOrderedIntersectPlans(
-      TABLE *table, int node_idx, SEL_TREE *tree, int num_where_predicates,
+      TABLE *table, int node_idx, SEL_TREE *tree, int num_filter_predicates,
       const Mem_root_array<PossibleRORScan> &possible_ror_scans,
       double num_output_rows_after_filter, const RANGE_OPT_PARAM *param,
       bool *found_imerge);
   void ProposeRowIdOrderedIntersect(
-      TABLE *table, int node_idx, int num_where_predicates,
+      TABLE *table, int node_idx, int num_filter_predicates,
       const Mem_root_array<PossibleRORScan> &possible_ror_scans,
       const Mem_root_array<ROR_SCAN_INFO *> &ror_scans, ROR_SCAN_INFO *cpk_scan,
       double num_output_rows_after_filter, const RANGE_OPT_PARAM *param,
@@ -1296,7 +1296,7 @@ RefAccessBuilder::AnalyzePredicates(
       continue;
     }
 
-    if (i < graph()->num_where_predicates &&
+    if (i < graph()->num_filter_predicates &&
         !has_single_bit(pred.total_eligibility_set)) {
       // This is a WHERE condition that is either nondeterministic,
       // or after an outer join, so it is not sargable. (Having these
@@ -2507,7 +2507,7 @@ bool CostingReceiver::SetUpRangeScans(
                                                  m_graph->predicates.size()};
 
   const NodeMap my_map = TableBitmap(node_idx);
-  for (size_t i = 0; i < m_graph->num_where_predicates; ++i) {
+  for (size_t i = 0; i < m_graph->num_filter_predicates; ++i) {
     if (m_graph->predicates[i].total_eligibility_set != my_map) {
       // Only base predicates are eligible for being pushed into range scans.
       continue;
@@ -2793,7 +2793,7 @@ void CostingReceiver::ProposeAllIndexMergeScans(
   // Now Propose Row-ID ordered index merge intersect plans if possible.
   if (index_merge_intersect_allowed) {
     ProposeAllRowIdOrderedIntersectPlans(
-        table, node_idx, tree, m_graph->num_where_predicates,
+        table, node_idx, tree, m_graph->num_filter_predicates,
         possible_ror_scans, num_output_rows_after_filter, param, found_imerge);
   }
 
@@ -2809,7 +2809,7 @@ void CostingReceiver::ProposeAllIndexMergeScans(
         bool has_clustered_primary_key_scan = false;
         ProposeIndexMerge(table, node_idx, *imerge.imerge, imerge.pred_idx,
                           imerge.inexact, allow_clustered_primary_key_scan,
-                          m_graph->num_where_predicates,
+                          m_graph->num_filter_predicates,
                           num_output_rows_after_filter, param,
                           &has_clustered_primary_key_scan, found_imerge);
         if (!has_clustered_primary_key_scan) {
@@ -2968,7 +2968,7 @@ AbsorbedPredicates UpdateAbsorbedPredicates(
 // of other index merge scans (provides only primary key ordering).
 
 void CostingReceiver::ProposeAllRowIdOrderedIntersectPlans(
-    TABLE *table, int node_idx, SEL_TREE *tree, int num_where_predicates,
+    TABLE *table, int node_idx, SEL_TREE *tree, int num_filter_predicates,
     const Mem_root_array<PossibleRORScan> &possible_ror_scans,
     double num_output_rows_after_filter, const RANGE_OPT_PARAM *param,
     bool *found_imerge) {
@@ -2998,7 +2998,7 @@ void CostingReceiver::ProposeAllRowIdOrderedIntersectPlans(
   // We have only 2 scans available, one a non-cpk scan and
   // another a cpk scan. Propose the plan and return.
   if (ror_scans.size() == 1 && cpk_scan != nullptr) {
-    ProposeRowIdOrderedIntersect(table, node_idx, num_where_predicates,
+    ProposeRowIdOrderedIntersect(table, node_idx, num_filter_predicates,
                                  possible_ror_scans, ror_scans, cpk_scan,
                                  num_output_rows_after_filter, param,
                                  needed_fields, found_imerge);
@@ -3026,7 +3026,7 @@ void CostingReceiver::ProposeAllRowIdOrderedIntersectPlans(
       // Find an optimal order of the scans available to start planning.
       find_intersect_order(&ror_scans_to_use, needed_fields,
                            param->temp_mem_root);
-      ProposeRowIdOrderedIntersect(table, node_idx, num_where_predicates,
+      ProposeRowIdOrderedIntersect(table, node_idx, num_filter_predicates,
                                    possible_ror_scans, ror_scans_to_use,
                                    cpk_scan, num_output_rows_after_filter,
                                    param, needed_fields, found_imerge);
@@ -3053,14 +3053,14 @@ int GetRowIdOrdering(const TABLE *table, const LogicalOrderings *orderings,
 // Helper to ProposeAllRowIdOrderedIntersectPlans. Proposes an ROR-intersect
 // plan if all the scans are utilized in the available ror scans.
 void CostingReceiver::ProposeRowIdOrderedIntersect(
-    TABLE *table, int node_idx, int num_where_predicates,
+    TABLE *table, int node_idx, int num_filter_predicates,
     const Mem_root_array<PossibleRORScan> &possible_ror_scans,
     const Mem_root_array<ROR_SCAN_INFO *> &ror_scans, ROR_SCAN_INFO *cpk_scan,
     double num_output_rows_after_filter, const RANGE_OPT_PARAM *param,
     OverflowBitset needed_fields, bool *found_imerge) {
   ROR_intersect_plan plan(param, needed_fields.capacity());
   AbsorbedPredicates absorbed_predicates =
-      NoAppliedPredicates(param->return_mem_root, num_where_predicates);
+      NoAppliedPredicates(param->return_mem_root, num_filter_predicates);
   uint index = 0;
   bool cpk_scan_used = false;
   for (index = 0; index < ror_scans.size() && !plan.m_is_covering; ++index) {
@@ -3199,8 +3199,8 @@ void CostingReceiver::ProposeRowIdOrderedIntersect(
 // it proposes ROR Union of ROR intersect plan.
 void CostingReceiver::ProposeRowIdOrderedUnion(
     TABLE *table, int node_idx, const SEL_IMERGE &imerge, int pred_idx,
-    bool inexact, int num_where_predicates, double num_output_rows_after_filter,
-    const RANGE_OPT_PARAM *param,
+    bool inexact, int num_filter_predicates,
+    double num_output_rows_after_filter, const RANGE_OPT_PARAM *param,
     const Mem_root_array<AccessPath *> &range_paths, bool *found_imerge) {
   double cost = 0.0;
   double num_output_rows = 0.0;
@@ -3298,7 +3298,7 @@ void CostingReceiver::ProposeRowIdOrderedUnion(
   // PossibleIndexMerge), and subsumes that predicate if and only if it is a
   // faithful representation of everything in it.
   AbsorbedPredicates absorbed_predicates = SingleAppliedPredicate(
-      param->temp_mem_root, pred_idx, !inexact, num_where_predicates);
+      param->temp_mem_root, pred_idx, !inexact, num_filter_predicates);
   const bool contains_subqueries = Overlaps(ror_union_path.filter_predicates,
                                             m_graph->materializable_predicates);
   // Add some trace info.
@@ -3347,7 +3347,7 @@ void CostingReceiver::ProposeRowIdOrderedUnion(
 void CostingReceiver::ProposeIndexMerge(
     TABLE *table, int node_idx, const SEL_IMERGE &imerge, int pred_idx,
     bool inexact, bool allow_clustered_primary_key_scan,
-    int num_where_predicates, double num_output_rows_after_filter,
+    int num_filter_predicates, double num_output_rows_after_filter,
     RANGE_OPT_PARAM *param, bool *has_clustered_primary_key_scan,
     bool *found_imerge) {
   double cost = 0.0;
@@ -3433,9 +3433,9 @@ void CostingReceiver::ProposeIndexMerge(
   }
   // Propose row-id ordered union plan if possible.
   if (all_scans_ror_able && index_merge_union_allowed) {
-    ProposeRowIdOrderedUnion(table, node_idx, imerge, pred_idx, inexact,
-                             num_where_predicates, num_output_rows_after_filter,
-                             param, ror_paths, found_imerge);
+    ProposeRowIdOrderedUnion(
+        table, node_idx, imerge, pred_idx, inexact, num_filter_predicates,
+        num_output_rows_after_filter, param, ror_paths, found_imerge);
     // If all chosen scans (best range scans) are ROR compatible, there
     // is no need to propose an Index Merge plan as ROR-Union plan will
     // always be better (Avoids sorting by row IDs).
@@ -3517,7 +3517,7 @@ void CostingReceiver::ProposeIndexMerge(
   // PossibleIndexMerge), and subsumes that predicate if and only if it is a
   // faithful representation of everything in it.
   AbsorbedPredicates absorbed_predicates = SingleAppliedPredicate(
-      param->temp_mem_root, pred_idx, !inexact, num_where_predicates);
+      param->temp_mem_root, pred_idx, !inexact, num_filter_predicates);
   const bool contains_subqueries = Overlaps(imerge_path.filter_predicates,
                                             m_graph->materializable_predicates);
   // Add some trace info.
@@ -3705,10 +3705,10 @@ void CostingReceiver::ProposeAccessPathForIndex(
     const char *description_for_trace, AccessPath *path) {
   OverflowBitset applied_sargable_join_predicates =
       ClearFilterPredicates(absorbed_predicates.applied(),
-                            m_graph->num_where_predicates, m_thd->mem_root);
+                            m_graph->num_filter_predicates, m_thd->mem_root);
   OverflowBitset subsumed_sargable_join_predicates =
       ClearFilterPredicates(absorbed_predicates.subsumed(),
-                            m_graph->num_where_predicates, m_thd->mem_root);
+                            m_graph->num_filter_predicates, m_thd->mem_root);
   for (bool materialize_subqueries : {false, true}) {
     FunctionalDependencySet new_fd_set;
     ApplyPredicatesForBaseTable(
@@ -4377,7 +4377,7 @@ void CostingReceiver::ApplyPredicatesForBaseTable(
   MutableOverflowBitset delayed_predicates{m_thd->mem_root,
                                            m_graph->predicates.size()};
   new_fd_set->reset();
-  for (size_t i = 0; i < m_graph->num_where_predicates; ++i) {
+  for (size_t i = 0; i < m_graph->num_filter_predicates; ++i) {
     const Predicate &predicate = m_graph->predicates[i];
     const NodeMap total_eligibility_set = predicate.total_eligibility_set;
     if (IsBitSet(i, absorbed_predicates.subsumed())) {
@@ -4721,15 +4721,15 @@ bool CostingReceiver::evaluate_secondary_engine_optimizer_state_request() {
 
   @param thd Thread context; used for memory allocations.
   @param path The access path that is being pruned away.
-  @param num_where_predicates Number of WHERE predicates in the hypergraph; used
-         to clear the subsumed sargable-join predicate range in
+  @param num_filter_predicates Number of filter predicates in the hypergraph;
+         used to clear the subsumed sargable-join predicate range in
          delayed_predicates.
   @param cause Human-readable reason for pruning; stored on the ZERO_ROWS path
          for tracing and diagnostics.
   @return The constructed ZERO_ROWS access path.
 */
 AccessPath *NewZeroRowsFromPrunedPath(THD *thd, AccessPath *path,
-                                      size_t num_where_predicates,
+                                      size_t num_filter_predicates,
                                       const char *cause) {
   AccessPath *zero_path = NewZeroRowsAccessPath(thd, path, cause);
 
@@ -4743,7 +4743,7 @@ AccessPath *NewZeroRowsFromPrunedPath(THD *thd, AccessPath *path,
   MutableOverflowBitset delayed_predicates =
       path->delayed_predicates.Clone(thd->mem_root);
   // Clear the "subsumed_sargable_join_predicates" part of "delayed_predicates".
-  delayed_predicates.ClearBits(num_where_predicates,
+  delayed_predicates.ClearBits(num_filter_predicates,
                                path->delayed_predicates.capacity());
   zero_path->delayed_predicates = std::move(delayed_predicates);
 
@@ -4985,7 +4985,7 @@ bool CostingReceiver::FoundSubgraphPair(NodeMap left, NodeMap right,
       // don't need to care much about the ordering, since we don't propagate
       // the right-hand ordering properties through joins.
       right_path = NewZeroRowsFromPrunedPath(m_thd, right_path,
-                                             m_graph->num_where_predicates,
+                                             m_graph->num_filter_predicates,
                                              "Join condition rejects all rows");
     }
 
@@ -5074,7 +5074,7 @@ bool CostingReceiver::FoundSubgraphPair(NodeMap left, NodeMap right,
     if (it != m_access_paths.end() && !it->second.paths.empty() &&
         !it->second.always_empty) {
       AccessPath *zero_path = NewZeroRowsFromPrunedPath(
-          m_thd, it->second.paths.front(), m_graph->num_where_predicates,
+          m_thd, it->second.paths.front(), m_graph->num_filter_predicates,
           "impossible WHERE");
       ProposeAccessPathWithOrderings(
           left | right, it->second.active_functional_dependencies,
@@ -5544,7 +5544,7 @@ void CostingReceiver::ApplyDelayedPredicatesAfterJoin(
       OverflowBitset::Or(&m_overflow_bitset_mem_root,
                          left_path->applied_sargable_join_predicates(),
                          right_path->applied_sargable_join_predicates());
-  filter_predicates.ClearBits(0, m_graph->num_where_predicates);
+  filter_predicates.ClearBits(0, m_graph->num_filter_predicates);
 
   // Predicates we are still delaying.
   MutableOverflowBitset delayed_predicates = OverflowBitset::Xor(
@@ -5560,7 +5560,7 @@ void CostingReceiver::ApplyDelayedPredicatesAfterJoin(
   const NodeMap ready_tables = left | right;
   for (int pred_idx : BitsSetInBoth(left_path->delayed_predicates,
                                     right_path->delayed_predicates)) {
-    assert(std::cmp_less(pred_idx, m_graph->num_where_predicates));
+    assert(std::cmp_less(pred_idx, m_graph->num_filter_predicates));
     if (pred_idx >= join_predicate_first && pred_idx < join_predicate_last) {
       continue;
     }
@@ -6900,7 +6900,7 @@ void CostingReceiver::ProposeAccessPathWithOrderings(
 
     sort_path.applied_sargable_join_predicates() =
         ClearFilterPredicates(path->applied_sargable_join_predicates(),
-                              m_graph->num_where_predicates, m_thd->mem_root);
+                              m_graph->num_filter_predicates, m_thd->mem_root);
     sort_path.delayed_predicates = path->delayed_predicates;
     SecondaryEngineNrowsParameters secondary_engine_nrows_params{
         m_thd, &sort_path, m_graph};
@@ -6946,12 +6946,12 @@ bool CheckSupportedQuery(THD *thd) {
 // Check if an access path has any remaining delayed predicates.
 [[maybe_unused]] bool HasDelayedPredicates(const AccessPath &path,
                                            const JoinHypergraph &graph) {
-  // Only the num_where_predicates first bits of delayed_predicates represent
+  // Only the num_filter_predicates first bits of delayed_predicates represent
   // delayed predicates. The higher bits represent subsumed sargable predicates.
   // So there is a delayed predicate only if the lowest set bit in
-  // delayed_predicates is less than num_where_predicates.
+  // delayed_predicates is less than num_filter_predicates.
   for (size_t node_idx : BitsSetIn(path.delayed_predicates)) {
-    return node_idx < graph.num_where_predicates;
+    return node_idx < graph.num_filter_predicates;
   }
   return false;
 }
@@ -7340,7 +7340,7 @@ bool IsSargableFullTextIndexPredicate(Item *condition) {
 // sargable.
 uint64_t FindSargableFullTextPredicates(const JoinHypergraph &graph) {
   uint64_t fulltext_predicates = 0;
-  for (size_t i = 0; i < graph.num_where_predicates; ++i) {
+  for (size_t i = 0; i < graph.num_filter_predicates; ++i) {
     const Predicate &predicate = graph.predicates[i];
     if (IsSargableFullTextIndexPredicate(predicate.condition)) {
       fulltext_predicates |= uint64_t{1} << i;
@@ -7411,7 +7411,7 @@ NodeMap GetNodesUnderLimit(const JoinHypergraph &graph,
 bool InjectCastNodes(JoinHypergraph *graph) {
   // Inject cast nodes into the WHERE clause.
   for (Predicate &predicate :
-       make_array(graph->predicates.data(), graph->num_where_predicates)) {
+       make_array(graph->predicates.data(), graph->num_filter_predicates)) {
     if (predicate.condition->walk(&Item::cast_incompatible_args,
                                   enum_walk::POSTFIX, nullptr)) {
       return true;
@@ -7584,7 +7584,7 @@ void ApplyFinalPredicatesAndExpandFilters(THD *thd,
 
       // Apply any predicates that don't belong to any
       // specific table, or which are nondeterministic.
-      for (size_t i = 0; i < graph.num_where_predicates; ++i) {
+      for (size_t i = 0; i < graph.num_filter_predicates; ++i) {
         const Predicate &predicate = graph.predicates[i];
         if (IsFinalPredicate(predicate)) {
           filter_predicates.SetBit(i);
@@ -8891,7 +8891,7 @@ void FindSargablePredicates(THD *thd, JoinHypergraph *graph) {
     Trace(thd) << "\n";
   }
 
-  for (unsigned i = 0; i < graph->num_where_predicates; ++i) {
+  for (unsigned i = 0; i < graph->num_filter_predicates; ++i) {
     if (has_single_bit(graph->predicates[i].total_eligibility_set)) {
       PossiblyAddSargableCondition(thd, graph->predicates[i].condition,
                                    /*force_table=*/nullptr, i,
@@ -8948,7 +8948,7 @@ static void CacheCostInfoForJoinConditions(THD *thd,
       // would be redundant against, for RedundantThroughSargable().
       // But don't deduplicate against ourselves (in case we're sargable).
       MutableOverflowBitset redundant(thd->mem_root, graph->predicates.size());
-      for (unsigned sargable_pred_idx = graph->num_where_predicates;
+      for (unsigned sargable_pred_idx = graph->num_filter_predicates;
            sargable_pred_idx < graph->predicates.size(); ++sargable_pred_idx) {
         Item *sargable_condition =
             graph->predicates[sargable_pred_idx].condition;

@@ -467,7 +467,7 @@ struct AccessPath {
   /// being applied _before_ nested-loop joins, but is otherwise the same idea.
   ///
   /// Note that the higher bits of this bitset, those starting at the position
-  /// given by JoinHypergraph::num_where_predicates, do not represent filter
+  /// given by JoinHypergraph::num_filter_predicates, do not represent filter
   /// predicates, but rather applied sargable join predicates. @see
   /// #applied_sargable_join_predicates() for more details.
   OverflowBitset filter_predicates{0};
@@ -483,7 +483,7 @@ struct AccessPath {
   /// never overlap with filter_predicates, and so we can reuse the same
   /// memory using an alias (a union would not be allowed, since OverflowBitset
   /// is a class with non-trivial default constructor), even though the meaning
-  /// is entirely separate. If N = num_where_predicates in the hypergraph, then
+  /// is entirely separate. If N = num_filter_predicates in the hypergraph, then
   /// bits 0..(N-1) belong to filter_predicates, and the rest to
   /// applied_sargable_join_predicates.
   OverflowBitset &applied_sargable_join_predicates() {
@@ -500,7 +500,7 @@ struct AccessPath {
   /// (see filter_predicates).
   ///
   /// Note that the higher bits of this bitset, those starting at the position
-  /// given by JoinHypergraph::num_where_predicates, do not represent delayed
+  /// given by JoinHypergraph::num_filter_predicates, do not represent delayed
   /// predicates, but rather subsumed sargable join predicates. @see
   /// #subsumed_sargable_join_predicates() for more details.
   OverflowBitset delayed_predicates{0};
@@ -2000,7 +2000,7 @@ void ExpandFilterAccessPaths(THD *thd, const JoinHypergraph &graph,
  */
 Item *ConditionFromFilterPredicates(const Mem_root_array<Predicate> &predicates,
                                     OverflowBitset mask,
-                                    int num_where_predicates);
+                                    int num_filter_predicates);
 
 /// Like ExpandFilterAccessPaths(), but expands only the single access path
 /// at “path”.
@@ -2018,14 +2018,14 @@ void ExpandSingleFilterAccessPath(THD *thd, const JoinHypergraph &graph,
 
   @param predicates A bitset representing both filter predicates and applied
   sargable join predicates.
-  @param num_where_predicates The number of filter predicates.
+  @param num_filter_predicates The number of filter predicates.
   @param mem_root The root on which to allocate memory, if needed.
 
   @return A copy of "predicates" with only the bits for applied sargable join
   predicates set.
  */
 MutableOverflowBitset ClearFilterPredicates(OverflowBitset predicates,
-                                            int num_where_predicates,
+                                            int num_filter_predicates,
                                             MEM_ROOT *mem_root);
 
 /// Returns the tables that are part of a hash join.

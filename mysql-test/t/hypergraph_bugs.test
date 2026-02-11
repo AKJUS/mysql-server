@@ -2081,7 +2081,7 @@ DROP TABLE t;
 
 --echo #
 --echo # Bug#38704535: Assertion `std::cmp_less(pred_idx,
---echo #               m_graph->num_where_predicates)' failed.
+--echo #               m_graph->num_filter_predicates)' failed.
 --echo #
 
 CREATE TABLE t(a INT, KEY(a));

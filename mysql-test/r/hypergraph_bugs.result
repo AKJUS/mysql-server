@@ -2494,7 +2494,7 @@ LAG (i) OVER ()
 DROP TABLE t;
 #
 # Bug#38704535: Assertion `std::cmp_less(pred_idx,
-#               m_graph->num_where_predicates)' failed.
+#               m_graph->num_filter_predicates)' failed.
 #
 CREATE TABLE t(a INT, KEY(a));
 INSERT INTO t VALUES (1), (2), (3);

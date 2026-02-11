@@ -216,12 +216,11 @@ struct JoinHypergraph {
   // for more information), so edges[i] corresponds to graph.edges[i*2].
   Mem_root_array<JoinPredicate> edges;
 
-  // The first <num_where_predicates> are filter predicates. These are the
+  // The first <num_filter_predicates> are filter predicates. These are the
   // predicates that may be added as filters on nodes in the join tree by
   // setting the corresponding bit in AccessPath::filter_predicates, which at
   // the end of join optimization gets expanded to proper FILTER access paths by
-  // ExpandFilterAccessPaths(). Despite the name "num_where_predicates", they
-  // are not necessarily WHERE predicates. They include:
+  // ExpandFilterAccessPaths(). They include:
   //
   // - Actual WHERE predicates that could not be pushed down into one of the
   //   join conditions.
@@ -233,7 +232,7 @@ struct JoinHypergraph {
   //   ON t1.a=t2.a AND t2.b=1". The t2.b=1 predicate can be pushed down as a
   //   table filter, but it cannot be used as a WHERE predicate, as it would
   //   incorrectly filter out the NULL-complemented rows. Still, such table
-  //   filters are also counted in "num_where_predicates".
+  //   filters are also counted in "num_filter_predicates".
   //
   // - Predicates that are join conditions in some inner join that is involved
   //   in a cycle in the join hypergraph. These are applied as filters in the
@@ -241,12 +240,23 @@ struct JoinHypergraph {
   //   predicates are also not necessarily possible to pull up to the WHERE
   //   clause. If they for example came from an inner join on the inner side of
   //   some outer join, they cannot be applied as WHERE predicates. Even so,
-  //   they are still counted in "num_where_predicates".
+  //   they are still counted in "num_filter_predicates".
   //
   // The rest are sargable join predicates. The latter are in the array
-  // solely so they can be part of the regular “applied_filters” bitmap
+  // solely so they can be part of the regular "applied_filters" bitmap
   // if they are pushed down into an index, so that we know that we
   // don't need to apply them as join conditions later.
+  //
+  // Layout of predicates[]:
+  //
+  //   [ Cycle join preds | WHERE preds | Table filter preds | Sargable join
+  //   preds ]
+  //   <--------------- num_filter_predicates ---------------->
+  //
+  //   [0, num_filter_predicates):  "filter predicates"
+  //       (see description above)
+  //   [num_filter_predicates, predicates.size()):
+  //       Sargable join predicates (tracked for index pushdown only).
   //
   // If a sargable join predicate comes from a join that is part of a cycle in
   // the hypergraph, it could be present in both partitions of the array.
@@ -254,18 +264,18 @@ struct JoinHypergraph {
 
   // How many of the predicates in "predicates" are filter predicates. The rest
   // of them are sargable join predicates.
-  unsigned num_where_predicates = 0;
+  unsigned num_filter_predicates = 0;
 
   /// Returns an immutable view of the filter predicates portion of the
   /// predicates array.
   std::span<const Predicate> filter_predicates() const {
-    return {predicates.data(), num_where_predicates};
+    return {predicates.data(), num_filter_predicates};
   }
 
   /// Returns a mutable view of the filter predicates portion of the predicates
   /// array.
   std::span<Predicate> filter_predicates() {
-    return {predicates.data(), num_where_predicates};
+    return {predicates.data(), num_filter_predicates};
   }
 
   // A bitmap over predicates that are, or contain, at least one

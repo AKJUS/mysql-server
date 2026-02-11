@@ -3725,7 +3725,7 @@ bool MakeSingleTableHypergraph(THD *thd, const Query_block *query_block,
       AddPredicate(thd, item, /*was_join_condition_for=*/nullptr,
                    /*source_multiple_equality_idx=*/-1, root, graph);
     }
-    graph->num_where_predicates = graph->predicates.size();
+    graph->num_filter_predicates = graph->predicates.size();
 
     SortPredicates(graph->predicates.begin(), graph->predicates.end());
   }
@@ -4060,7 +4060,7 @@ bool MakeJoinHypergraph(THD *thd, JoinHypergraph *graph,
     graph->predicates.push_back(std::move(pred));
   }
 
-  graph->num_where_predicates = graph->predicates.size();
+  graph->num_filter_predicates = graph->predicates.size();
 
   SecondaryEngineCardinalityHook(thd, graph);
 
