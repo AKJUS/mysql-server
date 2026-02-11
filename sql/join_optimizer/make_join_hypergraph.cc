@@ -1936,6 +1936,17 @@ Mem_root_array<Item *> PushDownAsMuchAsPossible(
       // Condition refers to tables outside this subtree, so it can not be
       // pushed (this can only happen with semijoins).
       remaining_parts.push_back(item);
+    } else if (!is_join_condition_for_expr && item->is_non_deterministic()) {
+      // Non-deterministic WHERE predicates that reference multiple tables
+      // must not be pushed down into join conditions, as that would turn
+      // them into hypergraph join edges. Since RAND predicates are excluded
+      // from delayed_predicates (Bug#36032958), using one as a join edge
+      // creates an asymmetry: paths where it is the edge include its
+      // selectivity, while paths where it is not defer it as a final
+      // predicate, leading to inconsistent row count estimates. Keep these
+      // predicates in the WHERE clause so they are uniformly applied as
+      // final predicates after all tables have been joined.
+      remaining_parts.push_back(item);
     } else {
       PushDownCondition(thd, item, expr, is_join_condition_for_expr,
                         companion_collection, table_filters,
