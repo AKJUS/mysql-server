@@ -512,6 +512,8 @@ void NdbImpl::trp_deliver_signal(const NdbApiSignal *aSignal,
 #ifdef NDB_NO_DROPPED_SIGNAL
           abort();
 #endif
+          g_eventLogger->warning(
+              "Received TRANSID_AI with wrong magic number: %u", magicNumber);
           return;
         }
         tCon = tRec->getTransaction(type);
