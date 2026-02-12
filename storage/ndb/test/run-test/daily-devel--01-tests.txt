@@ -60,7 +60,7 @@ args: -n ScanRead488_Mixed -l 10 T6 D1 D2
 max-time: 720
 
 cmd: testNodeRestart
-args: -n Bug41295 T1
+args: -n Bug41295 --skip-ndb-optimized-node-selection T1
 max-time: 1080
 
 cmd: testNodeRestart

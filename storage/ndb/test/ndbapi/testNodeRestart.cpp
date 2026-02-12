@@ -3948,6 +3948,10 @@ int runMixedLoad(NDBT_Context *ctx, NDBT_Step *step) {
       if (res == 4009) return NDBT_FAILED;
       continue;
     }
+    // Check actual node id of transaction
+    NdbConnection *pCon = hugoOps.getTransaction();
+    NodeId nodeid = pCon->getConnectedNodeId();
+    ndbout_c("thread %u started transaction on node %u", id, nodeid);
 
     for (int i = 0; i < 10; i++) {
       int r = rand() % records;
@@ -3959,9 +3963,11 @@ int runMixedLoad(NDBT_Context *ctx, NDBT_Step *step) {
     }
 
     if ((rand() % 100) < 90) {
+      ndbout_c("thread %u commit transaction on node %u", id, nodeid);
       res = hugoOps.execute_Commit(pNdb);
     } else {
     err:
+      ndbout_c("thread %u rollback transaction on node %u", id, nodeid);
       res = hugoOps.execute_Rollback(pNdb);
     }
 
@@ -3988,6 +3994,7 @@ int runBug41295(NDBT_Context *ctx, NDBT_Step *step) {
   int loops = ctx->getNumLoops();
   if (loops <= cases) loops = cases + 1;
 
+  int hit_error_injection = 0;
   for (int i = 0; i < loops; i++) {
     int master = res.getMasterNodeId();
     int next = res.getNextMasterNodeId(master);
@@ -3998,7 +4005,9 @@ int runBug41295(NDBT_Context *ctx, NDBT_Step *step) {
     ndbout_c("stopping %u, err 8073", next);
     res.insertErrorInNode(next, 8073);
     ndbout_c("waiting for %u", next);
-    res.waitNodesNoStart(&next, 1);
+    if (res.waitNodesNoStart(&next, 1, 30 /* seconds */)) {
+      ndbout_c("Failed to waitNodesNoStart node %u", next);
+    }
 
     ndbout_c("pausing all threads");
     ctx->setProperty("Pause", 1);
@@ -4007,7 +4016,25 @@ int runBug41295(NDBT_Context *ctx, NDBT_Step *step) {
     NdbSleep_MilliSleep(5000);
     res.dumpStateAllNodes(&leak, 1);
     NdbSleep_MilliSleep(1000);
+    if (res.waitNodesNoStart(&next, 1)) {
+      /*
+       * With more hosts it is more likely that no thread committed a
+       * transaction on the next node.
+       *
+       * It could also be that optmized-node-selection is ON, and all
+       * transactions go to data node on same node as test program, and that
+       * happens to not be the 'next' node.
+       */
+      ndbout_c(
+          "Failed to waitNodesNoStart node %u - assume no transaction "
+          "committed on node, clearing error",
+          next);
+      res.insertErrorInNode(next, 0);
+    } else {
+      hit_error_injection++;
+    }
     if (res.checkClusterAlive(&next, 1)) {
+      ndbout_c("Failed to checkClusterAlive node %u", next);
       return NDBT_FAILED;
     }
     ndbout_c("restarting threads");
@@ -4017,6 +4044,7 @@ int runBug41295(NDBT_Context *ctx, NDBT_Step *step) {
     res.startNodes(&next, 1);
     ndbout_c("waiting for cluster started");
     if (res.waitClusterStarted()) {
+      ndbout_c("Failed to waitClusterStarted");
       return NDBT_FAILED;
     }
 
@@ -4029,6 +4057,12 @@ int runBug41295(NDBT_Context *ctx, NDBT_Step *step) {
     NdbSleep_MilliSleep(1000);
     ndbout_c("restarting threads");
     ctx->setProperty("Pause", (Uint32)0);
+  }
+  if (hit_error_injection == 0) {
+    ndbout_c(
+        "Test completed without once hit the error injection. If "
+        "optmized-node-selection is on turn it off.");
+    return NDBT_FAILED;
   }
 
   ctx->stopTest();
