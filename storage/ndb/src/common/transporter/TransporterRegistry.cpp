@@ -2068,6 +2068,7 @@ void TransporterRegistry::start_connecting(TrpId trp_id) {
   DBUG_PRINT("info", ("performStates[trp:%u]=CONNECTING", trp_id));
 
   Transporter *t = allTransporters[trp_id];
+  require(t != nullptr);
   t->resetBuffers();
   m_error_states[trp_id].m_code = TE_NO_ERROR;
   m_error_states[trp_id].m_info = (const char *)~(UintPtr)0;
