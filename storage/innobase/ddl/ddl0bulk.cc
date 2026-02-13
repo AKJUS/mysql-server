@@ -973,7 +973,7 @@ dberr_t fill_tuple_up_to_n_cols(dtuple_t *tuple, const row_prebuilt_t *prebuilt,
     // Note: For the generated rowid there is no associated field.
     auto *field = share->field[index];
 
-    if (field->is_virtual_gcol()) {
+    if (field != nullptr && field->is_virtual_gcol()) {
       continue;
     }
 
