@@ -3281,7 +3281,8 @@ static bool check_optimizer_switch(sys_var *, THD *thd [[maybe_unused]],
 
   if (!current_hypergraph_optimizer && want_hypergraph_optimizer) {
     my_error(ER_HYPERGRAPH_NOT_SUPPORTED_YET, MYF(0),
-             "use in non-debug builds");
+             "this build configuration; to enable it, build with CMake option "
+             "WITH_HYPERGRAPH_OPTIMIZER=ON");
     return true;
   }
 #endif
