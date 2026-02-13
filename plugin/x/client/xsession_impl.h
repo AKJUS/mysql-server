@@ -49,7 +49,7 @@ class Protocol_factory;
 
 class Session_impl : public XSession {
  public:
-  explicit Session_impl(std::unique_ptr<Protocol_factory> factory = {});
+  explicit Session_impl(std::unique_ptr<Protocol_factory> factory);
   ~Session_impl() override;
 
   XProtocol::Client_id client_id() const override {

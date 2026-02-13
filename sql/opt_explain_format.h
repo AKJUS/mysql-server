@@ -643,7 +643,7 @@ class Explain_format {
   */
   virtual std::string ExplainJsonToString(Json_object *json [[maybe_unused]]) {
     assert(false);
-    return nullptr;
+    return {};
   }
 };
 

@@ -1204,7 +1204,7 @@ std::unique_ptr<XSession> create_session(const char *host, const uint16_t port,
 }
 
 std::unique_ptr<XSession> create_session() {
-  std::unique_ptr<XSession> result{new Session_impl()};
+  std::unique_ptr<XSession> result{new Session_impl({})};
 
   return result;
 }
