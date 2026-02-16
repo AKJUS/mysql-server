@@ -1313,6 +1313,7 @@ fi
 %attr(755, root, root) %{_libdir}/mysql/plugin/validate_password.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_keyring_file.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_replication_applier_metrics.so
+%attr(755, root, root) %{_libdir}/mysql/plugin/component_group_replication_flow_control_stats.so
 
 %if 0%{?mecab}
 %{_libdir}/mysql/mecab
@@ -1354,7 +1355,6 @@ fi
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_mle.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_scheduler.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_option_tracker.so
-%attr(755, root, root) %{_libdir}/mysql/plugin/component_group_replication_flow_control_stats.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_group_replication_elect_prefers_most_updated.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_group_replication_resource_manager.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_firewall.so
@@ -1424,6 +1424,7 @@ fi
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/validate_password.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_keyring_file.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_replication_applier_metrics.so
+%attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_group_replication_flow_control_stats.so
 
 %if 0%{?mecab}
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/libpluginmecab.so
@@ -1461,7 +1462,6 @@ fi
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_mle.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_scheduler.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_option_tracker.so
-%attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_group_replication_flow_control_stats.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_group_replication_elect_prefers_most_updated.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_group_replication_resource_manager.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_firewall.so

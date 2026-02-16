@@ -955,6 +955,7 @@ fi
 %attr(755, root, root) %{_libdir}/mysql/plugin/validate_password.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_keyring_file.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/component_replication_applier_metrics.so
+%attr(755, root, root) %{_libdir}/mysql/plugin/component_group_replication_flow_control_stats.so
 
 %attr(644, root, root) %{_datadir}/mysql-*/mysql-log-rotate
 %attr(644, root, root) %{_datadir}/mysql-*/dictionary.txt
@@ -1005,6 +1006,7 @@ fi
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/validate_password.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_keyring_file.so
 %attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_replication_applier_metrics.so
+%attr(755, root, root) %{_libdir}/mysql/plugin/debug/component_group_replication_flow_control_stats.so
 
 %files common
 %doc %{?license_files_server}

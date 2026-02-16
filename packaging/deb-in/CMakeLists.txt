@@ -135,7 +135,6 @@ usr/lib/mysql/plugin/component_masking_functions.so
 usr/lib/mysql/plugin/component_mle.so
 usr/lib/mysql/plugin/component_scheduler.so
 usr/lib/mysql/plugin/component_option_tracker.so
-usr/lib/mysql/plugin/component_group_replication_flow_control_stats.so
 usr/lib/mysql/plugin/component_group_replication_elect_prefers_most_updated.so
 usr/lib/mysql/plugin/component_group_replication_resource_manager.so
 usr/lib/mysql/plugin/component_firewall.so
