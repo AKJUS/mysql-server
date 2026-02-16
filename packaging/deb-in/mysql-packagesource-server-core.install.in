@@ -182,6 +182,7 @@ usr/lib/mysql/plugin/group_replication.so
 usr/lib/mysql/plugin/connection_control.so
 usr/lib/mysql/plugin/component_connection_control.so
 usr/lib/mysql/plugin/component_keyring_file.so
+usr/lib/mysql/plugin/component_replication_applier_metrics.so
 # support files
 usr/share/mysql-@MYSQL_BASE_VERSION@/dictionary.txt
 usr/share/mysql-@MYSQL_BASE_VERSION@/mysql-log-rotate

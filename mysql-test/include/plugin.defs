@@ -214,3 +214,6 @@ component_test_mysql_file_service     plugin_output_directory  no  COMPONENT_TES
 
 # Server telemetry component
 component_telemetry plugin_output_directory no COMPONENT_TELEMETRY component_telemetry
+
+# replication applier metrics component
+component_replication_applier_metrics plugin_output_directory no REPLICATION_APPLIER_METRICS component_replication_applier_metrics
