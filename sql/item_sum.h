@@ -1731,7 +1731,8 @@ class Item_sum_hybrid : public Item_sum {
   */
   void min_max_update_str_field();
   void min_max_update_time_field();
-  void min_max_update_temporal_field();
+  void min_max_update_date_field();
+  void min_max_update_datetime_field();
   void min_max_update_json_field();
   void min_max_update_real_field();
   void min_max_update_int_field();

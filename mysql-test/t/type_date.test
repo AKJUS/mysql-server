@@ -628,3 +628,40 @@ DROP TABLE t;
 --echo #
 
 SELECT IFNULL(LAST_DAY('201:34:36.298754'), FROM_DAYS(0)) AS c;
+
+--echo #
+--echo # Bug#38475846: Sig11 at Date_val::to_string|mysys/my_temporal.cc
+--echo #
+
+CREATE TABLE t1(d DATE, vc VARCHAR(10));
+
+INSERT INTO t1 VALUES(DATE'2025-09-25', '2025-09-24');
+
+SELECT d
+FROM t1 AS ot
+WHERE EXISTS (SELECT it.d
+              FROM t1 AS it
+              WHERE LEAST(it.d, it.vc) <= ot.vc
+             );
+
+DROP TABLE t1;
+
+--echo #
+--echo # Bug#38460273: Assertion (*left)->data_type() == MYSQL_TYPE_DATE ||
+--echo #                         (*left)->data_type() == MYSQL_TYPE_NULL
+--echo #
+
+CREATE TABLE dates (d DATE);
+CREATE TABLE times (t TIME);
+
+SELECT * FROM dates WHERE d >= d AND d = '1994-02-15';
+
+SELECT * FROM times WHERE t >= t AND t = '11:12:13';
+
+DROP TABLE dates, times;
+
+--echo #
+--echo #Bug#38882825: Assertion 'month() != 0 && day() != 0'
+--echo #
+
+SELECT TO_DAYS(FROM_DAYS(6) + INTERVAL 1933116476 SECOND_MICROSECOND);

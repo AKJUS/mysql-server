@@ -328,6 +328,9 @@ template <>
 bool Histogram_comparator::operator()(const Time_val &, const Time_val &) const;
 
 template <>
+bool Histogram_comparator::operator()(const Date_val &, const Date_val &) const;
+
+template <>
 bool Histogram_comparator::operator()(const Datetime_val &,
                                       const Datetime_val &) const;
 

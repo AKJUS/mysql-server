@@ -336,7 +336,7 @@ SELECT 1 FROM (SELECT LAST_DAY('0')) a;
 1
 1
 Warnings:
-Warning	1292	Incorrect datetime value: '0'
+Warning	1292	Truncated incorrect date value: '0'
 SELECT 1 FROM (SELECT MAKEDATE(2011,0)) a;
 1
 1
@@ -419,7 +419,7 @@ NULL	NULL
 101010.9999	2010-10-10
 -101010.9999	NULL
 Warnings:
-Warning	1292	Incorrect datetime value: '-101010.9999'
+Warning	1292	Truncated incorrect date value: '-101010.9999'
 DROP TABLE t1;
 #
 # Testing CASE with DATE type without a found item
@@ -513,13 +513,13 @@ SELECT * FROM t1 WHERE LAST_DAY('0000-00-00 00:00:00') IS NULL;
 a
 1
 Warnings:
-Warning	1292	Incorrect datetime value: '0000-00-00 00:00:00'
+Warning	1292	Truncated incorrect date value: '0000-00-00 00:00:00'
 SELECT * FROM t1 WHERE
 LAST_DAY((SELECT b FROM t2 WHERE b = '0000-00-00 00:00:00')) IS NULL;
 a
 1
 Warnings:
-Warning	1292	Incorrect datetime value: '0000-00-00 00:00:00'
+Warning	1292	Truncated incorrect date value: '0000-00-00 00:00:00'
 DROP TABLE t1,t2;
 #
 # Test for bug#11747847 - 34280: create table fails if NO_ZERO_DATE
@@ -747,6 +747,38 @@ DROP TABLE t;
 #
 SELECT IFNULL(LAST_DAY('201:34:36.298754'), FROM_DAYS(0)) AS c;
 c
-0000-00-00
+NULL
 Warnings:
-Warning	1292	Incorrect datetime value: '201:34:36.298754'
+Warning	1292	Truncated incorrect date value: '201:34:36.298754'
+Warning	6527	DATE value is out of range in 'from_days(0)'
+#
+# Bug#38475846: Sig11 at Date_val::to_string|mysys/my_temporal.cc
+#
+CREATE TABLE t1(d DATE, vc VARCHAR(10));
+INSERT INTO t1 VALUES(DATE'2025-09-25', '2025-09-24');
+SELECT d
+FROM t1 AS ot
+WHERE EXISTS (SELECT it.d
+FROM t1 AS it
+WHERE LEAST(it.d, it.vc) <= ot.vc
+);
+d
+2025-09-25
+DROP TABLE t1;
+#
+# Bug#38460273: Assertion (*left)->data_type() == MYSQL_TYPE_DATE ||
+#                         (*left)->data_type() == MYSQL_TYPE_NULL
+#
+CREATE TABLE dates (d DATE);
+CREATE TABLE times (t TIME);
+SELECT * FROM dates WHERE d >= d AND d = '1994-02-15';
+d
+SELECT * FROM times WHERE t >= t AND t = '11:12:13';
+t
+DROP TABLE dates, times;
+#
+#Bug#38882825: Assertion 'month() != 0 && day() != 0'
+#
+SELECT TO_DAYS(FROM_DAYS(6) + INTERVAL 1933116476 SECOND_MICROSECOND);
+TO_DAYS(FROM_DAYS(6) + INTERVAL 1933116476 SECOND_MICROSECOND)
+6

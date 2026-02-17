@@ -927,7 +927,8 @@ static bool analyze_timestamp_field_constant(THD *thd, const Item_field *f,
             ltime.second_part = 0;
             *place = RP_INSIDE_TRUNCATED;
           }
-          i = new (thd->mem_root) Item_date_literal(&ltime);
+          Date_val date = Date_val(ltime);
+          i = new (thd->mem_root) Item_date_literal(date);
         } else if (!check_time_zone_convertibility(ltime)) {
           Datetime_val dt;
           *implicit_cast<MYSQL_TIME *>(&dt) = ltime;
@@ -972,8 +973,7 @@ static bool analyze_time_field_constant(THD *thd, Item **const_val) {
   */
   Time_val time;
   if ((*const_val)->val_time(&time)) return true;
-  Item *i =
-      new (thd->mem_root) Item_time_literal(&time, time.actual_decimals());
+  Item *i = new (thd->mem_root) Item_time_literal(time, time.actual_decimals());
   if (i == nullptr) return true;
   thd->change_item_tree(const_val, i);
   return false;

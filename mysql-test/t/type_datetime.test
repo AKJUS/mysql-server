@@ -893,3 +893,60 @@ INTO @v;
 SELECT CASE WHEN 1 THEN SYSDATE() ELSE dt.n END AS ct
 FROM (SELECT NULL) AS dt(n)
 INTO @v;
+
+--echo #
+--echo # Bug#38585820: Result mismatch with GROUP BY on DATE column
+--echo #
+
+CREATE TABLE t1 (
+    d DATE DEFAULT NULL,
+    t TIME DEFAULT NULL,
+    dt DATETIME DEFAULT NULL,
+    pk INT NOT NULL PRIMARY KEY,
+    ci INT DEFAULT NULL
+);
+
+INSERT INTO t1 VALUES
+  ('1982-07-14','11:12:13','1982-07-14 11:12:13',1,-2086898178),
+  (NULL,NULL,NULL,2,-549278089),
+  ('2035-09-13','12:13:14','2035-09-13 12:13:14',3,1616004595),
+  ('2011-03-24','13:14:15','2011-03-24 13:14:15',4,-1457068597),
+  ('1976-05-25','14:15:16','1976-05-25 14:15:16',5,-726291594),
+  ('1986-12-09','15:16:17','1986-12-09 15:16:17',6,1775995858),
+  ('2017-05-17','16:17:18','2017-05-17 16:17:18',7,-1267712153),
+  ('2034-09-09','17:18:19','2034-09-09 17:18:19',8,514287676),
+  ('2033-06-22','18:19:20','2033-06-22 18:19:20',9,1526531818),
+  (NULL,NULL,NULL,10,-1026887600);
+
+let $date_query=
+SELECT alias2.d AS field1,
+       MIN(alias1.pk) AS field2
+FROM t1 AS alias1 LEFT JOIN
+       t1 AS alias2 RIGHT JOIN t1 AS alias3
+       ON alias3.ci = alias2.pk
+     ON alias3.ci = alias2.ci
+GROUP BY field1;
+
+let $time_query=
+SELECT alias2.t AS field1,
+       MIN(alias1.pk) AS field2
+FROM t1 AS alias1 LEFT JOIN
+       t1 AS alias2 RIGHT JOIN t1 AS alias3
+       ON alias3.ci = alias2.pk
+     ON alias3.ci = alias2.ci
+GROUP BY field1;
+
+let $datetime_query=
+SELECT alias2.dt AS field1,
+       MIN(alias1.pk) AS field2
+FROM t1 AS alias1 LEFT JOIN
+       t1 AS alias2 RIGHT JOIN t1 AS alias3
+       ON alias3.ci = alias2.pk
+     ON alias3.ci = alias2.ci
+GROUP BY field1;
+
+eval $date_query;
+eval $time_query;
+eval $datetime_query;
+
+DROP TABLE t1;

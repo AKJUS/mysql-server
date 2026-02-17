@@ -5150,9 +5150,9 @@ static TABLE *create_schema_table(THD *thd, Table_ref *table_list) {
         item->unsigned_flag = (fields_info->field_flags & MY_I_S_UNSIGNED);
         break;
       case MYSQL_TYPE_TIME:
+      case MYSQL_TYPE_DATE:
         assert(false);
         return nullptr;
-      case MYSQL_TYPE_DATE:
       case MYSQL_TYPE_TIMESTAMP:
       case MYSQL_TYPE_DATETIME: {
         const Name_string field_name(fields_info->field_name,

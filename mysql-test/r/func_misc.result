@@ -1172,3 +1172,16 @@ DO LEAST(0x00, NAME_CONST('a', _tis620 '1'));
 #
 DO BENCHMARK(2, (JSON_ARRAY(UTC_TIME(3)) >= PERIOD_DIFF(32105, 2924299961)));
 ERROR HY000: Incorrect arguments to period_diff
+#
+# Bug#38547818: Assertion '!thd->is_error()' failed
+#
+CREATE TABLE t1(ci BIGINT);
+INSERT INTO t1 VALUES
+(0), (NULL), (-2491715280669015460), (88), (21012), (-7981727315169723565);
+CREATE TABLE t2 LIKE t1;
+INSERT INTO t2
+SELECT *
+FROM t1
+WHERE ci IN ('G', 'yBm', 'West Virginia', 'X');
+ERROR 22007: Truncated incorrect DOUBLE value: 'G'
+DROP TABLE t1, t2;

@@ -71,6 +71,11 @@ void add_values(histograms::Value_map<Time_val> &value_map) {
   value_map.add_values(time, 10);
 }
 
+void add_values(histograms::Value_map<Date_val> &value_map) {
+  Date_val date{2000, 1, 1};
+  value_map.add_values(date, 10);
+}
+
 void add_values(histograms::Value_map<Datetime_val> &value_map) {
   Datetime_val my_time;
   my_time.year = 2017;
@@ -372,7 +377,7 @@ TEST(ColumnStatisticsTest, StoreAndRestoreAttributesEquiHeight) {
   equi_height_test<ulonglong>(histograms::Value_map_type::UINT);
   equi_height_test<String>(histograms::Value_map_type::STRING);
   equi_height_test<my_decimal>(histograms::Value_map_type::DECIMAL);
-  equi_height_test<Datetime_val>(histograms::Value_map_type::DATE);
+  equi_height_test<Date_val>(histograms::Value_map_type::DATE);
   equi_height_test<Time_val>(histograms::Value_map_type::TIME);
   equi_height_test<Datetime_val>(histograms::Value_map_type::DATETIME);
   equi_height_test<double>(histograms::Value_map_type::DOUBLE);
@@ -388,7 +393,7 @@ TEST(ColumnStatisticsTest, StoreAndRestoreAttributesSingleton) {
   singleton_test<ulonglong>(histograms::Value_map_type::UINT);
   singleton_test<String>(histograms::Value_map_type::STRING);
   singleton_test<my_decimal>(histograms::Value_map_type::DECIMAL);
-  singleton_test<Datetime_val>(histograms::Value_map_type::DATE);
+  singleton_test<Date_val>(histograms::Value_map_type::DATE);
   singleton_test<Time_val>(histograms::Value_map_type::TIME);
   singleton_test<Datetime_val>(histograms::Value_map_type::DATETIME);
   singleton_test<double>(histograms::Value_map_type::DOUBLE);

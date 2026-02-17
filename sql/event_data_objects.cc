@@ -536,7 +536,6 @@ static bool get_next_time(const Time_zone *time_zone, my_time_t *next,
   }
 
   Interval interval;
-  memset(&interval, 0, sizeof(interval));
   my_time_t next_time = 0;
 
   if (seconds) {

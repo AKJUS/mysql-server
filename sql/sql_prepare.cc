@@ -486,57 +486,56 @@ static bool set_parameter_value(
       break;
     }
     case MYSQL_TYPE_TIME: {
-      MYSQL_TIME tm;
+      Time_val time;
+      bool truncated = false;
       if (pack_type == Prepared_statement::enum_param_pack_type::UNPACKED) {
         assert(len == sizeof(MYSQL_TIME));
-        tm = *(*(const MYSQL_TIME **)pos);
+        MYSQL_TIME mt = *(*(const MYSQL_TIME **)pos);
+        assert(mt.time_type == MYSQL_TIMESTAMP_TIME);
+        truncated = Time_val::make_time(mt.neg, mt.hour, mt.minute, mt.second,
+                                        mt.second_part, &time);
+      } else if (len >= 8) {
+        const uchar *to = *pos;
+        bool negative = static_cast<bool>(to[0]);
+        const uint32_t day = sint4korr(to + 1);
+        const uint32_t hour = static_cast<uint32_t>(to[5]) + day * 24;
+        const uint32_t minute = static_cast<uint32_t>(to[6]);
+        const uint32_t second = static_cast<uint32_t>(to[7]);
+        const uint32_t micro = (len > 8) ? sint4korr(to + 8) : 0;
+        truncated =
+            Time_val::make_time(negative, hour, minute, second, micro, &time);
       } else {
-        if (len >= 8) {
-          const uchar *to = *pos;
-          tm.neg = (bool)to[0];
-          const uint day = (uint)sint4korr(to + 1);
-          tm.hour = (uint)to[5] + day * 24;
-          tm.minute = (uint)to[6];
-          tm.second = (uint)to[7];
-          tm.second_part = (len > 8) ? (ulong)sint4korr(to + 8) : 0;
-          tm.time_type = MYSQL_TIMESTAMP_TIME;
-          tm.day = tm.year = tm.month = 0;
-        } else {
-          set_zero_time(&tm, MYSQL_TIMESTAMP_TIME);
-        }
+        time.set_zero();
       }
-      if (check_datetime_range(tm)) {
+      if (truncated) {
         my_error(ER_DATA_OUT_OF_RANGE, MYF(0), "TIME", "set_parameter_value");
         return true;
       }
-      param->set_time(&tm, MYSQL_TIMESTAMP_TIME);
+      param->set_time(time);
       break;
     }
     case MYSQL_TYPE_DATE: {
-      MYSQL_TIME tm;
+      Date_val date;
+      bool truncated = false;
       if (pack_type == Prepared_statement::enum_param_pack_type::UNPACKED) {
         assert(len == sizeof(MYSQL_TIME));
-        tm = *(*(const MYSQL_TIME **)pos);
+        MYSQL_TIME mt = *(*(const MYSQL_TIME **)pos);
+        assert(mt.time_type == MYSQL_TIMESTAMP_DATE);
+        truncated = Date_val::make_date(mt.year, mt.month, mt.day, 0, &date);
+      } else if (len >= 4) {
+        const uchar *to = *pos;
+        const uint32_t year = static_cast<uint32_t>(sint2korr(to));
+        const uint32_t month = static_cast<uint32_t>(to[2]);
+        const uint32_t day = static_cast<uint32_t>(to[3]);
+        truncated = Date_val::make_date(year, month, day, 0, &date);
       } else {
-        if (len >= 4) {
-          const uchar *to = *pos;
-          tm.year = (uint)sint2korr(to);
-          tm.month = (uint)to[2];
-          tm.day = (uint)to[3];
-
-          tm.hour = tm.minute = tm.second = 0;
-          tm.second_part = 0;
-          tm.neg = false;
-          tm.time_type = MYSQL_TIMESTAMP_DATE;
-        } else {
-          set_zero_time(&tm, MYSQL_TIMESTAMP_DATE);
-        }
+        date.set_zero();
       }
-      if (check_datetime_range(tm)) {
+      if (truncated) {
         my_error(ER_DATA_OUT_OF_RANGE, MYF(0), "DATE", "set_parameter_value");
         return true;
       }
-      param->set_time(&tm, MYSQL_TIMESTAMP_DATE);
+      param->set_date(date);
       break;
     }
     case MYSQL_TYPE_DATETIME:
@@ -580,7 +579,7 @@ static bool set_parameter_value(
                  "set_parameter_value");
         return true;
       }
-      param->set_time(&tm, type);
+      param->set_time((Datetime_val *)(&tm), type);
       break;
     }
     case MYSQL_TYPE_TINY_BLOB:

@@ -1915,9 +1915,15 @@ class Item : public Parse_tree_node {
       Time_val time;
       if (val_time(&time)) return 0;
       return time.for_comparison();
+    } else if (data_type() == MYSQL_TYPE_DATE) {
+      Date_val date;
+      if (val_date(&date, 0)) return 0;
+      return date.for_comparison();
+    } else if (is_temporal_with_date()) {
+      return val_date_temporal_at_utc();
+    } else {
+      return val_int();
     }
-    if (is_temporal_with_date()) return val_date_temporal_at_utc();
-    return val_int();
   }
 
   /**
@@ -2158,6 +2164,7 @@ class Item : public Parse_tree_node {
   my_decimal *val_decimal_from_int(my_decimal *decimal_value);
   my_decimal *val_decimal_from_string(my_decimal *decimal_value);
   my_decimal *val_decimal_from_date(my_decimal *decimal_value);
+  my_decimal *val_decimal_from_datetime(my_decimal *decimal_value);
   my_decimal *val_decimal_from_time(my_decimal *decimal_value);
   longlong val_int_from_decimal();
   longlong val_int_from_date();
@@ -2318,6 +2325,10 @@ class Item : public Parse_tree_node {
     Convert val_time() to datetime
   */
   bool get_datetime_from_time(Datetime_val *dt);
+  /**
+    Convert val_date() to datetime
+  */
+  bool get_datetime_from_date(Datetime_val *dt, my_time_flags_t flags);
 
   /**
     Convert a numeric type to datetime
@@ -2359,6 +2370,7 @@ class Item : public Parse_tree_node {
  public:
   type_conversion_status save_time_in_field(Field *field);
   type_conversion_status save_date_in_field(Field *field);
+  type_conversion_status save_datetime_in_field(Field *field);
   type_conversion_status save_str_value_in_field(Field *field, String *result);
 
   /**
@@ -2549,30 +2561,28 @@ class Item : public Parse_tree_node {
   /**
     Evaluate the item and return result as a date value
 
-    @param date  Address of date value to return
-    @param flags Modifier flags for how to interpret date values
+    @param[out] date Returned date value
+    @param flags     Limit the value returned according to TIME_NO_ZERO_IN_DATE,
+                     TIME_NO_ZERO_DATE, TIME_NO_INVALID_DATES.
 
     @returns false if successful and non-NULL, true otherwise
-
-    @note: Check NULL vs. error as follows...
   */
   virtual bool val_date(Date_val *date, my_time_flags_t flags) = 0;
   /**
     Evaluate the item and return result as a time value.
 
-    @param time   Address of time value object to return
+    @param[out] time Returned time value.
 
     @returns false if successful and non-NULL, true otherwise
-
-    @note: Check NULL vs. error as follows...
   */
   virtual bool val_time(Time_val *time) = 0;
 
   /**
     Evaluate the item and return result as a datetime value
 
-    @param dt     Address of datetime value to return
-    @param flags  Modifier flags for how to interpret date values
+    @param[out] dt  Returned datetime value
+    @param flags    Limit the value returned according to TIME_NO_ZERO_IN_DATE,
+                    TIME_NO_ZERO_DATE, TIME_NO_INVALID_DATES.
 
     @returns false if successful and non-NULL, true otherwise
              true return means that the result is either a NULL value,
@@ -4894,7 +4904,9 @@ class Item_param final : public Item, private Settable_routine_parameter {
     INT_VALUE,
     REAL_VALUE,
     STRING_VALUE,
-    TIME_VALUE,  ///< holds TIME, DATE, DATETIME
+    TIME_VALUE,
+    DATE_VALUE,
+    DATETIME_VALUE,
     LONG_DATA_VALUE,
     DECIMAL_VALUE
   };
@@ -4919,10 +4931,12 @@ class Item_param final : public Item, private Settable_routine_parameter {
   */
   String str_value_ptr;
   my_decimal decimal_value;
+  Date_val m_date;
+  Time_val m_time;
+  Datetime_val m_datetime;
   union {
     longlong integer;
     double real;
-    MYSQL_TIME time;
   } value;
 
  private:
@@ -5049,9 +5063,6 @@ class Item_param final : public Item, private Settable_routine_parameter {
 
   Item_param(const POS &pos, MEM_ROOT *root, uint pos_in_query_arg);
 
-  Item_param(const POS &pos, long long val);
-  Item_param(const POS &pos, double val);
-
   bool do_itemize(Parse_context *pc, Item **item) override;
 
   Item_result result_type() const override { return m_result_type; }
@@ -5129,7 +5140,10 @@ class Item_param final : public Item, private Settable_routine_parameter {
   void set_decimal(const my_decimal *dv);
   bool set_str(const char *str, size_t length);
   bool set_longdata(const char *str, ulong length);
-  void set_time(MYSQL_TIME *tm, enum_mysql_timestamp_type type);
+  void set_time(Datetime_val *dt, enum_mysql_timestamp_type type);
+  void set_time(Time_val time);
+  void set_date(Date_val date);
+  void set_datetime(Datetime_val dt);
   bool set_from_user_var(THD *thd, const user_var_entry *entry);
   void copy_param_actual_type(Item_param *from);
   void reset();
@@ -5339,7 +5353,7 @@ class Item_int_0 final : public Item_int {
 
 /*
   Item_temporal is used to store numeric representation
-  of date/datetime values for queries like:
+  of datetime values for queries like:
 
      WHERE datetime_column NOT IN
      ('2006-04-25 10:00:00','2006-04-25 10:02:00', ...);
@@ -5357,14 +5371,16 @@ class Item_temporal final : public Item_int {
  public:
   Item_temporal(enum_field_types field_type_arg, longlong i) : Item_int(i) {
     assert(is_temporal_type(field_type_arg));
-    assert(field_type_arg != MYSQL_TYPE_TIME);
+    assert(field_type_arg != MYSQL_TYPE_TIME &&
+           field_type_arg != MYSQL_TYPE_DATE);
     set_data_type(field_type_arg);
   }
   Item_temporal(enum_field_types field_type_arg, const Name_string &name_arg,
                 longlong i, uint length)
       : Item_int(i) {
     assert(is_temporal_type(field_type_arg));
-    assert(field_type_arg != MYSQL_TYPE_TIME);
+    assert(field_type_arg != MYSQL_TYPE_TIME &&
+           field_type_arg != MYSQL_TYPE_DATE);
     set_data_type(field_type_arg);
     max_length = length;
     item_name = name_arg;
@@ -6637,6 +6653,15 @@ class Cached_item_time : public Cached_item {
   Time_val m_time;
 };
 
+class Cached_item_date : public Cached_item {
+ public:
+  explicit Cached_item_date(Item *item_par) : Cached_item(item_par) {}
+  bool cmp() override;
+
+ private:
+  Date_val m_date;
+};
+
 class Cached_item_temporal : public Cached_item {
   longlong value{0};
 
@@ -7253,11 +7278,40 @@ class Item_cache_time : public Item_cache {
   Time_val time_value;
 };
 
+class Item_cache_date : public Item_cache {
+ public:
+  Item_cache_date() : Item_cache(MYSQL_TYPE_DATE) {
+    cmp_context = STRING_RESULT;
+  }
+
+  void store(Item *item) override;
+  double val_real() override;
+  longlong val_int() override;
+  longlong val_date_temporal() override;
+  String *val_str(String *str) override;
+  my_decimal *val_decimal(my_decimal *) override;
+  bool val_date(Date_val *date, my_time_flags_t flags) override;
+  bool val_time(Time_val *time) override;
+  bool val_datetime(Datetime_val *dt, my_time_flags_t flags) override;
+  Item_result result_type() const override { return STRING_RESULT; }
+  bool cache_value() override;
+  /**
+    Cache a single non-NULL date value. Requires that "example" is not set.
+
+    @param date   Date value to cache
+  */
+  void store_value(Date_val date);
+
+ private:
+  Date_val m_date;
+};
+
 class Item_cache_datetime : public Item_cache {
  public:
   Item_cache_datetime(enum_field_types field_type_arg)
       : Item_cache(field_type_arg), int_value(0), str_value_cached(false) {
-    assert(field_type_arg != MYSQL_TYPE_TIME);
+    assert(field_type_arg != MYSQL_TYPE_TIME &&
+           field_type_arg != MYSQL_TYPE_DATE);
     cmp_context = STRING_RESULT;
   }
 
@@ -7287,7 +7341,7 @@ class Item_cache_datetime : public Item_cache {
   }
 
  private:
-  /// Used for DATE and DATETIME values
+  /// Used for DATETIME values
   longlong int_value{0};
   /// Used when required in a string context
   String cached_string;

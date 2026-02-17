@@ -3998,7 +3998,7 @@ Item *PT_border::build_addop(Item_cache *order_expr, bool prec, bool asc,
   const bool substract = prec ? asc : !asc;
   if (m_date_time) {
     addop =
-        new Item_date_add_interval(order_expr, m_value, m_int_type, substract);
+        new Item_func_add_interval(order_expr, m_value, m_int_type, substract);
   } else {
     if (substract)
       addop = new Item_func_minus(order_expr, m_value);

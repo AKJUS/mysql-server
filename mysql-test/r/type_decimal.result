@@ -802,6 +802,7 @@ select from_days(s) as date,t
 from (select 1 as s,'t' as t union select null, null ) as sub1;
 select group_concat(t) from t1 group by week(date)/10;
 group_concat(t)
+NULL
 t
 drop table t1;
 CREATE TABLE t1 (

@@ -822,10 +822,10 @@ NULL
 NULL
 NULL
 Warnings:
-Warning	1292	Incorrect datetime value: '1'
-Warning	1292	Incorrect datetime value: '1'
-Warning	1292	Incorrect datetime value: '1'
-Warning	1292	Incorrect datetime value: '1'
+Warning	1292	Truncated incorrect date value: '1'
+Warning	1292	Truncated incorrect date value: '1'
+Warning	1292	Truncated incorrect date value: '1'
+Warning	1292	Truncated incorrect date value: '1'
 DROP TABLE t;
 #
 # Bug#27453155 W->FRAME_BUFFER()->S->DB_TYPE()->DB_TYPE ==

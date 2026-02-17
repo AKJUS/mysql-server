@@ -710,9 +710,12 @@ int format_date_column(THD *thd, const Column_text &text_col,
     return ER_LOAD_BULK_DATA_WRONG_VALUE_FOR_FIELD;
   }
 
+  datetime_to_date(time);
+  Date_val date = Date_val(*time);
+
   /* Convert to storage format. */
   auto field_begin = (unsigned char *)sql_col.get_data();
-  my_date_to_binary(time, field_begin);
+  date.store_date(field_begin);
 
   return 0;
 }

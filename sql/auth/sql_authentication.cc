@@ -3812,7 +3812,6 @@ static bool check_password_lifetime(THD *thd, const ACL_USER *acl_user) {
     thd->variables.time_zone->gmt_sec_to_TIME(
         &cur_time, static_cast<my_time_t>(thd->query_start_in_secs()));
     password_change_by = acl_user->password_last_changed;
-    memset(&interval, 0, sizeof(interval));
 
     if (!acl_user->use_default_password_lifetime)
       interval.day = acl_user->password_lifetime;

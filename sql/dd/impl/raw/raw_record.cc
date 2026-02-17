@@ -259,11 +259,11 @@ Object_id Raw_record::read_ref_id(int field_no) const {
 ///////////////////////////////////////////////////////////////////////////
 
 my_time_t Raw_record::read_time(int field_no) const {
-  Date_val date;
+  Datetime_val dt;
   bool not_used;
 
-  field(field_no)->val_date(&date, TIME_DATETIME_ONLY);
-  return my_tz_OFFSET0->TIME_to_gmt_sec(&date, &not_used);
+  field(field_no)->val_datetime(&dt, TIME_DATETIME_ONLY);
+  return my_tz_OFFSET0->TIME_to_gmt_sec(&dt, &not_used);
 }
 
 ///////////////////////////////////////////////////////////////////////////

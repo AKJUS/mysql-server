@@ -1542,7 +1542,7 @@ static const std::pair<const char *, Create_func *> func_array[] = {
      SQL_FN_V(Item_wait_for_executed_gtid_set, 1, 2)},
     {"SQRT", SQL_FN(Item_func_sqrt, 1)},
     {"STRCMP", SQL_FN(Item_func_strcmp, 2)},
-    {"STR_TO_DATE", SQL_FN(Item_func_str_to_date, 2)},
+    {"STR_TO_DATE", SQL_FN(Item_func_str_to_temporal, 2)},
     {"ST_AREA", SQL_FN(Item_func_st_area, 1)},
     {"ST_ASBINARY", SQL_FN_V(Item_func_as_wkb, 1, 2)},
     {"ST_ASGEOJSON", SQL_FN_V_THD(Item_func_as_geojson, 1, 3)},
@@ -2178,12 +2178,8 @@ Item *create_temporal_literal(THD *thd, const char *str, size_t length,
   MYSQL_TIME_STATUS status;
   Datetime_val dt;
   Item *item = nullptr;
-  my_time_flags_t flags = TIME_FUZZY_DATE;
-  if (thd->variables.sql_mode & MODE_NO_ZERO_IN_DATE)
-    flags |= TIME_NO_ZERO_IN_DATE;
-  if (thd->variables.sql_mode & MODE_NO_ZERO_DATE) flags |= TIME_NO_ZERO_DATE;
-
-  if (thd->variables.sql_mode & MODE_INVALID_DATES) flags |= TIME_INVALID_DATES;
+  const my_time_flags_t flags =
+      Field_temporal::temporal_flags(thd->variables.sql_mode);
 
   switch (type) {
     case MYSQL_TYPE_DATE:
@@ -2193,7 +2189,8 @@ Item *create_temporal_literal(THD *thd, const char *str, size_t length,
               str_to_datetime(cs, str, length, &dt, flags, &status)) &&
           dt.time_type == MYSQL_TIMESTAMP_DATE && status.warnings == 0) {
         check_deprecated_datetime_format(thd, cs, status);
-        item = new (thd->mem_root) Item_date_literal(&dt);
+        Date_val date = Date_val(dt);
+        item = new (thd->mem_root) Item_date_literal(date);
       }
       break;
     case MYSQL_TYPE_DATETIME:
@@ -2216,7 +2213,7 @@ Item *create_temporal_literal(THD *thd, const char *str, size_t length,
         check_deprecated_datetime_format(thd, cs, status);
         Time_val time = Time_val(dt);
         item = new (thd->mem_root)
-            Item_time_literal(&time, status.fractional_digits);
+            Item_time_literal(time, status.fractional_digits);
       }
       break;
     default:

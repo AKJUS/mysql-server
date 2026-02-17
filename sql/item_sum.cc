@@ -3408,7 +3408,18 @@ void Item_sum_hybrid::reset_field() {
           result_field->store_time(time, decimals);
           break;
         }
-        case MYSQL_TYPE_DATE:
+        case MYSQL_TYPE_DATE: {
+          Date_val date;
+          (void)args[0]->val_date(&date, 0);
+          if (args[0]->null_value) {
+            result_field->set_null();
+            date.set_zero();
+          } else {
+            result_field->set_notnull();
+          }
+          result_field->store_date(date);
+          break;
+        }
         case MYSQL_TYPE_DATETIME:
         case MYSQL_TYPE_TIMESTAMP: {
           longlong nr = args[0]->val_date_temporal();
@@ -3667,9 +3678,11 @@ void Item_sum_hybrid::update_field() {
           min_max_update_time_field();
           break;
         case MYSQL_TYPE_DATE:
+          min_max_update_date_field();
+          break;
         case MYSQL_TYPE_DATETIME:
         case MYSQL_TYPE_TIMESTAMP:
-          min_max_update_temporal_field();
+          min_max_update_datetime_field();
           break;
         case MYSQL_TYPE_JSON:
           min_max_update_json_field();
@@ -3709,8 +3722,27 @@ void Item_sum_hybrid::min_max_update_time_field() {
   result_field->store_time(time, decimals);
 }
 
-void Item_sum_hybrid::min_max_update_temporal_field() {
-  assert(data_type() != MYSQL_TYPE_TIME);
+void Item_sum_hybrid::min_max_update_date_field() {
+  Date_val date;
+  if (args[0]->val_date(&date, 0)) {
+    return;
+  }
+  if (result_field->is_null()) {
+    result_field->set_notnull();
+  } else {
+    Date_val old_date;
+    (void)result_field->val_date(&old_date, 0);
+    if (!min_max_best_so_far(
+            compare_numbers(date.for_comparison(), old_date.for_comparison()),
+            m_is_min))
+      return;
+  }
+  result_field->store_date(date);
+}
+
+void Item_sum_hybrid::min_max_update_datetime_field() {
+  assert(data_type() == MYSQL_TYPE_DATETIME ||
+         data_type() == MYSQL_TYPE_TIMESTAMP);
   const longlong nr = args[0]->val_date_temporal();
   if (args[0]->null_value) return;
 
@@ -3936,7 +3968,7 @@ String *Item_aggr_bit_field::val_str(String *str) {
 
 bool Item_aggr_bit_field::val_date(Date_val *date, my_time_flags_t flags) {
   if (m_result_type == INT_RESULT)
-    return get_date_from_decimal(date, flags);
+    return get_date_from_int(date, flags);
   else
     return get_date_from_string(date, flags);
 }
@@ -3944,7 +3976,7 @@ bool Item_aggr_bit_field::val_date(Date_val *date, my_time_flags_t flags) {
 bool Item_aggr_bit_field::val_datetime(Datetime_val *dt,
                                        my_time_flags_t flags) {
   if (m_result_type == INT_RESULT)
-    return get_datetime_from_decimal(dt, flags);
+    return get_datetime_from_int(dt, flags);
   else
     return get_datetime_from_string(dt, flags);
 }
@@ -6138,8 +6170,12 @@ my_decimal *Item_sum_json::val_decimal(my_decimal *decimal_value) {
                                    decimal_value);
 }
 
-bool Item_sum_json::val_date(Date_val *date, my_time_flags_t flags) {
-  return val_datetime(date, flags);
+bool Item_sum_json::val_date(Date_val *date, my_time_flags_t) {
+  if (null_value || m_wrapper->empty()) return true;
+
+  return m_wrapper->coerce_date(JsonCoercionWarnHandler{func_name()},
+                                JsonCoercionDeprecatedDefaultHandler{}, date,
+                                DatetimeConversionFlags(current_thd));
 }
 
 bool Item_sum_json::val_datetime(Datetime_val *dt, my_time_flags_t) {

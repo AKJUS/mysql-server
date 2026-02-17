@@ -343,16 +343,8 @@ void set_field_date_by_daynr(Field *f, ulong daynr) {
   assert(f->real_type() == MYSQL_TYPE_NEWDATE);
   auto *f2 = down_cast<Field_date *>(f);
 
-  MYSQL_TIME date;
-  get_date_from_daynr(daynr, &date.year, &date.month, &date.day);
-  date.hour = 0;
-  date.minute = 0;
-  date.second = 0;
-  date.second_part = 0;
-  date.neg = false;
-  date.time_type = MYSQL_TIMESTAMP_DATE;
-  date.time_zone_displacement = 0;
-  f2->store_time(&date, 0);
+  Date_val date{static_cast<uint32_t>(daynr)};
+  f2->store_date(date);
 }
 
 char *get_field_date(Field *f, char *val, uint *len) {

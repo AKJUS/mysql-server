@@ -9076,8 +9076,7 @@ static void innobase_store_multi_value_low(json_binary::Value *bv,
           ut_d(ut_error); /* purecov: inspected */
         } else if (elt.field_type() == MYSQL_TYPE_DATE) {
           /* Temporal data has at most 8 bytes length */
-          Json_datetime::from_packed_to_key(elt.get_data(), elt.field_type(),
-                                            data, fld->decimals());
+          Json_date::from_packed_to_key(elt.get_data(), data);
           mysql_data = data;
         } else {
           mysql_data = reinterpret_cast<const byte *>(elt.get_data());
@@ -9138,7 +9137,13 @@ static void innobase_store_multi_value_low(json_binary::Value *bv,
             dfield_set_data(dfield, buf, dfield->type.len);
             break;
           }
-          case MYSQL_TYPE_DATE:
+          case MYSQL_TYPE_DATE: {
+            /* Temporal data has at most 8 bytes length */
+            Json_date::from_packed_to_key(elt.get_data(), buf);
+
+            dfield_set_data(dfield, buf, dfield->type.len);
+            break;
+          }
           case MYSQL_TYPE_DATETIME:
           case MYSQL_TYPE_TIMESTAMP: {
             /* Temporal data has at most 8 bytes length */

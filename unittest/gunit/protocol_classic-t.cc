@@ -57,7 +57,7 @@ static void BM_Protocol_binary_store_date(size_t num_iterations) {
   SetupProtocolForBenchmark(protocol);
   String *const packet = protocol->get_output_packet();
 
-  const MysqlTime date(2020, 2, 29);
+  const Date_val date(2020, 2, 29);
 
   StartBenchmarkTiming();
 
@@ -199,7 +199,7 @@ static void BM_Protocol_text_store_date(size_t num_iterations) {
   SetupProtocolForBenchmark(protocol);
   String *const packet = protocol->get_output_packet();
 
-  const MysqlTime date(2020, 2, 29);
+  const Date_val date(2020, 2, 29);
 
   StartBenchmarkTiming();
 

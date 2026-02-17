@@ -4745,11 +4745,10 @@ static Item *eliminate_item_equal(THD *thd, Item *cond,
       head_field->set_item_equal_all_join_nests(item_equal);
     }
     eq_item = new Item_func_eq(item_field, head);
+    if (eq_item == nullptr) return nullptr;
 
-    if (!eq_item || down_cast<Item_func_eq *>(eq_item)->set_cmp_func())
-      return nullptr;
+    if (eq_item->fix_fields(thd, &eq_item)) return nullptr;
 
-    eq_item->quick_fix_field();
     if (item_const != nullptr) {
       eq_item->apply_is_true();
       Item::cond_result res;

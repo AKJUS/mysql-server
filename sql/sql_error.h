@@ -256,7 +256,8 @@ class ErrConvString {
   ErrConvString(double nr);
   ErrConvString(const my_decimal *nr);
   ErrConvString(const MYSQL_TIME *ltime, uint dec);
-  ErrConvString(Time_val time, uint dec);
+  ErrConvString(const Time_val time, uint dec);
+  ErrConvString(const Date_val date);
 
   const char *ptr() const { return err_buffer; }
   size_t length() const { return buf_length; }

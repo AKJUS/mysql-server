@@ -10547,11 +10547,11 @@ bit_expr:
           }
         | bit_expr '+' INTERVAL_SYM expr interval %prec '+'
           {
-            $$= NEW_PTN Item_date_add_interval(@$, $1, $4, $5, 0);
+            $$= NEW_PTN Item_func_add_interval(@$, $1, $4, $5, 0);
           }
         | bit_expr '-' INTERVAL_SYM expr interval %prec '-'
           {
-            $$= NEW_PTN Item_date_add_interval(@$, $1, $4, $5, 1);
+            $$= NEW_PTN Item_func_add_interval(@$, $1, $4, $5, 1);
           }
         | bit_expr '*' bit_expr %prec '*'
           {
@@ -10744,7 +10744,7 @@ simple_expr:
         | INTERVAL_SYM expr interval '+' expr %prec INTERVAL_SYM
           /* we cannot put interval before - */
           {
-            $$= NEW_PTN Item_date_add_interval(@$, $5, $2, $3, 0);
+            $$= NEW_PTN Item_func_add_interval(@$, $5, $2, $3, 0);
           }
         | simple_ident JSON_SEPARATOR_SYM TEXT_STRING_literal
           {
@@ -10999,11 +10999,11 @@ jdv_name_value:
 function_call_nonkeyword:
           ADDDATE_SYM '(' expr ',' expr ')'
           {
-            $$= NEW_PTN Item_date_add_interval(@$, $3, $5, INTERVAL_DAY, 0);
+            $$= NEW_PTN Item_func_add_interval(@$, $3, $5, INTERVAL_DAY, 0);
           }
         | ADDDATE_SYM '(' expr ',' INTERVAL_SYM expr interval ')'
           {
-            $$= NEW_PTN Item_date_add_interval(@$, $3, $6, $7, 0);
+            $$= NEW_PTN Item_func_add_interval(@$, $3, $6, $7, 0);
           }
         | CURDATE optional_braces
           {
@@ -11016,12 +11016,12 @@ function_call_nonkeyword:
         | DATE_ADD_INTERVAL '(' expr ',' INTERVAL_SYM expr interval ')'
           %prec INTERVAL_SYM
           {
-            $$= NEW_PTN Item_date_add_interval(@$, $3, $6, $7, 0);
+            $$= NEW_PTN Item_func_add_interval(@$, $3, $6, $7, 0);
           }
         | DATE_SUB_INTERVAL '(' expr ',' INTERVAL_SYM expr interval ')'
           %prec INTERVAL_SYM
           {
-            $$= NEW_PTN Item_date_add_interval(@$, $3, $6, $7, 1);
+            $$= NEW_PTN Item_func_add_interval(@$, $3, $6, $7, 1);
           }
         | EXTRACT_SYM '(' interval FROM expr ')'
           {
@@ -11050,11 +11050,11 @@ function_call_nonkeyword:
           }
         | SUBDATE_SYM '(' expr ',' expr ')'
           {
-            $$= NEW_PTN Item_date_add_interval(@$, $3, $5, INTERVAL_DAY, 1);
+            $$= NEW_PTN Item_func_add_interval(@$, $3, $5, INTERVAL_DAY, 1);
           }
         | SUBDATE_SYM '(' expr ',' INTERVAL_SYM expr interval ')'
           {
-            $$= NEW_PTN Item_date_add_interval(@$, $3, $6, $7, 1);
+            $$= NEW_PTN Item_func_add_interval(@$, $3, $6, $7, 1);
           }
         | SUBSTRING '(' expr ',' expr ',' expr ')'
           {
@@ -11079,7 +11079,7 @@ function_call_nonkeyword:
           }
         | TIMESTAMP_ADD '(' interval_time_stamp ',' expr ',' expr ')'
           {
-            $$= NEW_PTN Item_date_add_interval(@$, $7, $5, $3, 0);
+            $$= NEW_PTN Item_func_add_interval(@$, $7, $5, $3, 0);
           }
         | TIMESTAMP_DIFF '(' interval_time_stamp ',' expr ',' expr ')'
           {

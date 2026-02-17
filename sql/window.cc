@@ -209,6 +209,8 @@ static Item_cache *make_result_item(Item *value) {
           result = new Item_cache_time();
           break;
         case MYSQL_TYPE_DATE:
+          result = new Item_cache_date();
+          break;
         case MYSQL_TYPE_DATETIME:
         case MYSQL_TYPE_TIMESTAMP:
           result = new Item_cache_datetime(value->data_type());

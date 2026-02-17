@@ -910,6 +910,10 @@ ErrConvString::ErrConvString(const Time_val time, uint dec) {
   err_buffer[buf_length] = 0;
 }
 
+ErrConvString::ErrConvString(const Date_val date) {
+  buf_length = date.to_string(err_buffer);
+  err_buffer[buf_length] = 0;
+}
 /**
    Convert value for dispatch to error message(see WL#751).
 

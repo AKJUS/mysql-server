@@ -1761,7 +1761,7 @@ String *Item_func_numhybrid::val_str(String *str) {
         default:
           break;
       }
-      return str_op(&str_value);
+      return str_op(str);
     default:
       assert(0);
   }
@@ -1874,9 +1874,10 @@ my_decimal *Item_func_numhybrid::val_decimal(my_decimal *decimal_value) {
     case STRING_RESULT: {
       switch (data_type()) {
         case MYSQL_TYPE_DATE:
+          return val_decimal_from_date(decimal_value);
         case MYSQL_TYPE_DATETIME:
         case MYSQL_TYPE_TIMESTAMP:
-          return val_decimal_from_date(decimal_value);
+          return val_decimal_from_datetime(decimal_value);
         case MYSQL_TYPE_TIME:
           return val_decimal_from_time(decimal_value);
         default:
@@ -1897,17 +1898,35 @@ my_decimal *Item_func_numhybrid::val_decimal(my_decimal *decimal_value) {
 }
 
 bool Item_func_numhybrid::val_date(Date_val *date, my_time_flags_t flags) {
-  return val_datetime(date, flags);
+  assert(fixed);
+  switch (data_type()) {
+    case MYSQL_TYPE_DATE:
+      return date_op(date, flags);
+    case MYSQL_TYPE_DATETIME:
+    case MYSQL_TYPE_TIMESTAMP: {
+      Datetime_val dt;
+      if (datetime_op(&dt, flags)) return true;
+      *date = Date_val::strip_time(dt);
+      return false;
+    }
+    case MYSQL_TYPE_TIME:
+      return get_date_from_time(date);
+    case MYSQL_TYPE_YEAR:
+      return get_date_from_int(date, flags);
+    default:
+      return Item::get_date_from_non_temporal(date, flags);
+  }
 }
 
 bool Item_func_numhybrid::val_datetime(Datetime_val *dt,
                                        my_time_flags_t flags) {
   assert(fixed);
   switch (data_type()) {
-    case MYSQL_TYPE_DATE:
     case MYSQL_TYPE_DATETIME:
     case MYSQL_TYPE_TIMESTAMP:
       return datetime_op(dt, flags);
+    case MYSQL_TYPE_DATE:
+      return get_datetime_from_date(dt, flags);
     case MYSQL_TYPE_TIME:
       return get_datetime_from_time(dt);
     case MYSQL_TYPE_YEAR:
@@ -2152,15 +2171,15 @@ longlong Item_func::val_int_from_real() {
 }
 
 bool Item_typecast_real::val_date(Date_val *date, my_time_flags_t flags) {
-  return val_datetime(date, flags);
+  return double_to_date_with_warn(val_real(), date, flags);
 }
 
 bool Item_typecast_real::val_datetime(Datetime_val *dt, my_time_flags_t flags) {
-  return my_double_to_datetime_with_warn(val_real(), dt, flags);
+  return double_to_datetime_with_warn(val_real(), dt, flags);
 }
 
 bool Item_typecast_real::val_time(Time_val *time) {
-  return my_double_to_time_with_warn(val_real(), time);
+  return double_to_time_with_warn(val_real(), time);
 }
 
 my_decimal *Item_typecast_real::val_decimal(my_decimal *decimal_value) {
@@ -3897,7 +3916,8 @@ bool Item_func_min_max::resolve_type_inner(THD *thd) {
   if (param_type_uses_non_param(thd)) return true;
   if (aggregate_type(func_name(), args, arg_count)) return true;
   hybrid_type = Field::result_merge_type(data_type());
-  if (hybrid_type == STRING_RESULT) {
+  m_eval_type = data_type();
+  if (is_string_type(m_eval_type)) {
     /*
       If one or more of the arguments have a temporal data type, temporal_item
       must be set for correct conversion from temporal values to various result
@@ -3945,6 +3965,10 @@ bool Item_func_min_max::resolve_type_inner(THD *thd) {
           set_data_type_string(new_size);
         }
       }
+      m_eval_type = temporal_item->data_type();
+      if (m_eval_type == MYSQL_TYPE_TIMESTAMP) {
+        m_eval_type = MYSQL_TYPE_DATETIME;
+      }
     }
   }
   /*
@@ -3961,12 +3985,7 @@ bool Item_func_min_max::resolve_type_inner(THD *thd) {
   return false;
 }
 
-bool Item_func_min_max::compare_as_dates() const {
-  return temporal_item != nullptr &&
-         is_temporal_type_with_date(temporal_item->data_type());
-}
-
-bool Item_func_min_max::cmp_datetimes(longlong *value) {
+bool Item_func_min_max::cmp_datetimes(longlong *value, my_time_flags_t) {
   THD *thd = current_thd;
   longlong res = 0;
   for (uint i = 0; i < arg_count; i++) {
@@ -4003,12 +4022,28 @@ bool Item_func_min_max::cmp_times(Time_val *value) {
   return false;
 }
 
+bool Item_func_min_max::cmp_dates(Date_val *value, my_time_flags_t flags) {
+  Date_val result;
+  for (uint i = 0; i < arg_count; i++) {
+    Date_val date;
+    if (args[i]->val_date(&date, flags)) {
+      if (current_thd->is_error()) return true;
+    }
+    if ((null_value = args[i]->null_value)) return true;
+    if (i == 0 || (date.compare(result) < 0) == m_is_least_func) {
+      result = date;
+    }
+  }
+  *value = result;
+  return false;
+}
+
 String *Item_func_min_max::str_op(String *str) {
   assert(fixed);
   null_value = false;
-  if (compare_as_dates()) {
+  if (m_eval_type == MYSQL_TYPE_DATETIME) {
     longlong result = 0;
-    if (cmp_datetimes(&result)) return error_str();
+    if (cmp_datetimes(&result, 0)) return error_str();
 
     /*
       If result is greater than 0, the winning argument was successfully
@@ -4033,6 +4068,21 @@ String *Item_func_min_max::str_op(String *str) {
       }
       return str;
     }
+  } else if (m_eval_type == MYSQL_TYPE_DATE) {
+    Date_val date;
+    if (cmp_dates(&date, 0)) return error_str();
+    if (str->alloc(MAX_DATE_STRING_REP_LENGTH)) return error_str();
+    str->length(date.to_string(str->ptr()));
+    if (str->needs_conversion(collation.collation)) {
+      uint errors = 0;
+      StringBuffer<STRING_BUFFER_USUAL_SIZE * 2> convert_string(nullptr);
+      bool copy_failed =
+          convert_string.copy(str->ptr(), str->length(), str->charset(),
+                              collation.collation, &errors);
+      if (copy_failed || errors || str->copy(convert_string))
+        return error_str();
+    }
+    return str;
   }
 
   // Find the least/greatest argument based on string value.
@@ -4065,8 +4115,10 @@ String *Item_func_min_max::str_op(String *str) {
 
 bool Item_func_min_max::datetime_op(Datetime_val *dt, my_time_flags_t flags) {
   assert(fixed);
+  assert(m_eval_type == MYSQL_TYPE_DATETIME ||
+         m_eval_type == MYSQL_TYPE_TIMESTAMP);
   longlong result = 0;
-  if (cmp_datetimes(&result)) return true;
+  if (cmp_datetimes(&result, flags)) return true;
   TIME_from_longlong_packed(dt, data_type(), result);
   int warnings;
   return check_date(*dt, non_zero_date(*dt), flags, &warnings);
@@ -4074,27 +4126,29 @@ bool Item_func_min_max::datetime_op(Datetime_val *dt, my_time_flags_t flags) {
 
 bool Item_func_min_max::time_op(Time_val *time) {
   assert(fixed);
-  longlong result = 0;
-  if (compare_as_dates()) {
-    if (cmp_datetimes(&result)) return true;
-    MYSQL_TIME mtime;
-    TIME_from_longlong_packed(&mtime, data_type(), result);
-    datetime_to_time(&mtime);
-    *time = Time_val{mtime};
-    return false;
-  }
-
+  assert(m_eval_type == MYSQL_TYPE_TIME);
   if (cmp_times(time)) return true;
+  return false;
+}
+
+bool Item_func_min_max::date_op(Date_val *date, my_time_flags_t flags) {
+  assert(fixed);
+  assert(m_eval_type == MYSQL_TYPE_DATE);
+  if (cmp_dates(date, flags)) return true;
   return false;
 }
 
 double Item_func_min_max::real_op() {
   assert(fixed);
   null_value = false;
-  if (compare_as_dates()) {
+  if (m_eval_type == MYSQL_TYPE_DATETIME) {
     longlong result = 0;
-    if (cmp_datetimes(&result)) return 0;
+    if (cmp_datetimes(&result, 0)) return 0;
     return double_from_datetime_packed(temporal_item->data_type(), result);
+  } else if (m_eval_type == MYSQL_TYPE_DATE) {
+    Date_val date;
+    if (cmp_dates(&date, 0)) return true;
+    return date.to_double();
   }
 
   // Find the least/greatest argument based on double value.
@@ -4111,9 +4165,13 @@ longlong Item_func_min_max::int_op() {
   assert(fixed);
   null_value = false;
   longlong res = 0;
-  if (compare_as_dates()) {
-    if (cmp_datetimes(&res)) return 0;
+  if (m_eval_type == MYSQL_TYPE_DATETIME) {
+    if (cmp_datetimes(&res, 0)) return 0;
     return longlong_from_datetime_packed(temporal_item->data_type(), res);
+  } else if (m_eval_type == MYSQL_TYPE_DATE) {
+    Date_val date;
+    if (cmp_dates(&date, 0)) return true;
+    return date.to_int();
   }
 
   // Find the least/greatest argument based on integer value.
@@ -4135,11 +4193,15 @@ longlong Item_func_min_max::int_op() {
 my_decimal *Item_func_min_max::decimal_op(my_decimal *dec) {
   assert(fixed);
   null_value = false;
-  if (compare_as_dates()) {
+  if (m_eval_type == MYSQL_TYPE_DATETIME) {
     longlong result = 0;
-    if (cmp_datetimes(&result)) return error_decimal(dec);
+    if (cmp_datetimes(&result, 0)) return error_decimal(dec);
     return my_decimal_from_datetime_packed(dec, temporal_item->data_type(),
                                            result);
+  } else if (m_eval_type == MYSQL_TYPE_DATE) {
+    Date_val date;
+    if (cmp_dates(&date, 0)) return error_decimal(dec);
+    return date_to_decimal(date, dec);
   }
 
   // Find the least/greatest argument based on decimal value.
