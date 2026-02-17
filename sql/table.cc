@@ -7811,8 +7811,7 @@ void warn_user_trimmed(THD *thd, LEX_STRING *user_arg, LEX_STRING *host_arg) {
   append_query_string(thd, system_charset_info, &host, &account);
   account.append((char)0);
   push_warning_printf(thd, Sql_condition::SL_WARNING, ER_WARN_ACCOUNT_TRIMMED,
-                      ER_THD(thd, ER_WARN_ACCOUNT_TRIMMED), account.ptr(),
-                      account.ptr());
+                      ER_THD(thd, ER_WARN_ACCOUNT_TRIMMED), account.ptr());
 }
 
 LEX_USER *LEX_USER::init(LEX_USER *ret, THD *thd [[maybe_unused]],
