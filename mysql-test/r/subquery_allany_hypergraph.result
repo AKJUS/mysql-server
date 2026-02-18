@@ -3125,8 +3125,8 @@ FROM otr;
 EXPLAIN
 -> Table scan on otr  (rows=15)
 -> Select #2 (subquery in projection; dependent)
-    -> Filter: ((<cache>(otr.v) = itr.val) and (otr.rf = itr.rf))  (rows=0.3)
-        -> Table scan on itr  (rows=6)
+    -> Filter: (<cache>(otr.v) = itr.val)  (rows=0.3)
+        -> Index lookup on itr using PRIMARY (rf = otr.rf)  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -3153,8 +3153,8 @@ FROM otr;
 EXPLAIN
 -> Table scan on otr  (rows=15)
 -> Select #2 (subquery in projection; dependent)
-    -> Filter: ((otr.rf = itr.rf) and (<cache>(otr.v) <> itr.val))  (rows=2.7)
-        -> Table scan on itr  (rows=6)
+    -> Filter: (<cache>(otr.v) <> itr.val)  (rows=2.7)
+        -> Index lookup on itr using PRIMARY (rf = otr.rf)  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -3181,8 +3181,8 @@ FROM otr;
 EXPLAIN
 -> Table scan on otr  (rows=15)
 -> Select #2 (subquery in projection; dependent)
-    -> Filter: ((<cache>(otr.v) <= itr.val) and (otr.rf = itr.rf))  (rows=1)
-        -> Table scan on itr  (rows=6)
+    -> Filter: (<cache>(otr.v) <= itr.val)  (rows=1)
+        -> Index lookup on itr using PRIMARY (rf = otr.rf)  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -3209,8 +3209,8 @@ FROM otr;
 EXPLAIN
 -> Table scan on otr  (rows=15)
 -> Select #2 (subquery in projection; dependent)
-    -> Filter: ((otr.rf = itr.rf) and (<cache>(otr.v) <> itr.val))  (rows=2.7)
-        -> Table scan on itr  (rows=6)
+    -> Filter: (<cache>(otr.v) <> itr.val)  (rows=2.7)
+        -> Index lookup on itr using PRIMARY (rf = otr.rf)  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -3237,8 +3237,8 @@ FROM otr;
 EXPLAIN
 -> Table scan on otr  (rows=15)
 -> Select #2 (subquery in projection; dependent)
-    -> Filter: ((<cache>(otr.v) = itr.val) and (otr.rf = itr.rf))  (rows=0.3)
-        -> Table scan on itr  (rows=6)
+    -> Filter: (<cache>(otr.v) = itr.val)  (rows=0.3)
+        -> Index lookup on itr using PRIMARY (rf = otr.rf)  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -3265,8 +3265,8 @@ FROM otr;
 EXPLAIN
 -> Table scan on otr  (rows=15)
 -> Select #2 (subquery in projection; dependent)
-    -> Filter: ((<cache>(otr.v) > itr.val) and (otr.rf = itr.rf))  (rows=1)
-        -> Table scan on itr  (rows=6)
+    -> Filter: (<cache>(otr.v) > itr.val)  (rows=1)
+        -> Index lookup on itr using PRIMARY (rf = otr.rf)  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -3293,8 +3293,8 @@ FROM otr;
 EXPLAIN
 -> Table scan on otr  (rows=15)
 -> Select #2 (subquery in projection; dependent)
-    -> Filter: (((otr.rf = itr.rf) and <if>(outer_field_is_not_null, ((<cache>(otr.vn) = itr.valn) or (itr.valn is null)), true)) and <if>(outer_field_is_not_null, <is_not_null_test>(itr.valn), true))  (rows=3)
-        -> Table scan on itr  (rows=6)
+    -> Filter: (<if>(outer_field_is_not_null, ((<cache>(otr.vn) = itr.valn) or (itr.valn is null)), true) and <if>(outer_field_is_not_null, <is_not_null_test>(itr.valn), true))  (rows=3)
+        -> Index lookup on itr using PRIMARY (rf = otr.rf)  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -3321,8 +3321,8 @@ FROM otr;
 EXPLAIN
 -> Table scan on otr  (rows=15)
 -> Select #2 (subquery in projection; dependent)
-    -> Filter: (((otr.rf = itr.rf) and <if>(outer_field_is_not_null, ((<cache>(otr.vn) <> itr.valn) or (itr.valn is null)), true)) and <if>(outer_field_is_not_null, <is_not_null_test>(itr.valn), true))  (rows=3)
-        -> Table scan on itr  (rows=6)
+    -> Filter: (<if>(outer_field_is_not_null, ((<cache>(otr.vn) <> itr.valn) or (itr.valn is null)), true) and <if>(outer_field_is_not_null, <is_not_null_test>(itr.valn), true))  (rows=3)
+        -> Index lookup on itr using PRIMARY (rf = otr.rf)  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -3349,8 +3349,8 @@ FROM otr;
 EXPLAIN
 -> Table scan on otr  (rows=15)
 -> Select #2 (subquery in projection; dependent)
-    -> Filter: (((otr.rf = itr.rf) and <if>(outer_field_is_not_null, ((<cache>(otr.vn) <= itr.valn) or (itr.valn is null)), true)) and <if>(outer_field_is_not_null, <is_not_null_test>(itr.valn), true))  (rows=3)
-        -> Table scan on itr  (rows=6)
+    -> Filter: (<if>(outer_field_is_not_null, ((<cache>(otr.vn) <= itr.valn) or (itr.valn is null)), true) and <if>(outer_field_is_not_null, <is_not_null_test>(itr.valn), true))  (rows=3)
+        -> Index lookup on itr using PRIMARY (rf = otr.rf)  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -3377,8 +3377,8 @@ FROM otr;
 EXPLAIN
 -> Table scan on otr  (rows=15)
 -> Select #2 (subquery in projection; dependent)
-    -> Filter: (((otr.rf = itr.rf) and <if>(outer_field_is_not_null, ((<cache>(otr.vn) <> itr.valn) or (itr.valn is null)), true)) and <if>(outer_field_is_not_null, <is_not_null_test>(itr.valn), true))  (rows=3)
-        -> Table scan on itr  (rows=6)
+    -> Filter: (<if>(outer_field_is_not_null, ((<cache>(otr.vn) <> itr.valn) or (itr.valn is null)), true) and <if>(outer_field_is_not_null, <is_not_null_test>(itr.valn), true))  (rows=3)
+        -> Index lookup on itr using PRIMARY (rf = otr.rf)  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -3405,8 +3405,8 @@ FROM otr;
 EXPLAIN
 -> Table scan on otr  (rows=15)
 -> Select #2 (subquery in projection; dependent)
-    -> Filter: (((otr.rf = itr.rf) and <if>(outer_field_is_not_null, ((<cache>(otr.vn) = itr.valn) or (itr.valn is null)), true)) and <if>(outer_field_is_not_null, <is_not_null_test>(itr.valn), true))  (rows=3)
-        -> Table scan on itr  (rows=6)
+    -> Filter: (<if>(outer_field_is_not_null, ((<cache>(otr.vn) = itr.valn) or (itr.valn is null)), true) and <if>(outer_field_is_not_null, <is_not_null_test>(itr.valn), true))  (rows=3)
+        -> Index lookup on itr using PRIMARY (rf = otr.rf)  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -3433,8 +3433,8 @@ FROM otr;
 EXPLAIN
 -> Table scan on otr  (rows=15)
 -> Select #2 (subquery in projection; dependent)
-    -> Filter: (((otr.rf = itr.rf) and <if>(outer_field_is_not_null, ((<cache>(otr.vn) > itr.valn) or (itr.valn is null)), true)) and <if>(outer_field_is_not_null, <is_not_null_test>(itr.valn), true))  (rows=3)
-        -> Table scan on itr  (rows=6)
+    -> Filter: (<if>(outer_field_is_not_null, ((<cache>(otr.vn) > itr.valn) or (itr.valn is null)), true) and <if>(outer_field_is_not_null, <is_not_null_test>(itr.valn), true))  (rows=3)
+        -> Index lookup on itr using PRIMARY (rf = otr.rf)  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -3479,8 +3479,8 @@ EXPLAIN
 -> Filter: <not>(<in_optimizer>(otr.v,<exists>(select #2)))  (rows=15)
     -> Table scan on otr  (rows=15)
     -> Select #2 (subquery in condition; dependent)
-        -> Filter: ((otr.rf = itr.rf) and (<cache>(otr.v) <> itr.val))  (rows=2.7)
-            -> Table scan on itr  (rows=6)
+        -> Filter: (<cache>(otr.v) <> itr.val)  (rows=2.7)
+            -> Index lookup on itr using PRIMARY (rf = otr.rf)  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -3502,8 +3502,8 @@ EXPLAIN
 -> Filter: <not>(<in_optimizer>(otr.v,<exists>(select #2)))  (rows=15)
     -> Table scan on otr  (rows=15)
     -> Select #2 (subquery in condition; dependent)
-        -> Filter: ((<cache>(otr.v) <= itr.val) and (otr.rf = itr.rf))  (rows=1)
-            -> Table scan on itr  (rows=6)
+        -> Filter: (<cache>(otr.v) <= itr.val)  (rows=1)
+            -> Index lookup on itr using PRIMARY (rf = otr.rf)  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -3528,8 +3528,8 @@ EXPLAIN
 -> Filter: <nop>(<in_optimizer>(otr.v,<exists>(select #2)))  (rows=15)
     -> Table scan on otr  (rows=15)
     -> Select #2 (subquery in condition; dependent)
-        -> Filter: ((otr.rf = itr.rf) and (<cache>(otr.v) <> itr.val))  (rows=2.7)
-            -> Table scan on itr  (rows=6)
+        -> Filter: (<cache>(otr.v) <> itr.val)  (rows=2.7)
+            -> Index lookup on itr using PRIMARY (rf = otr.rf)  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -3571,8 +3571,8 @@ EXPLAIN
 -> Filter: <nop>(<in_optimizer>(otr.v,<exists>(select #2)))  (rows=15)
     -> Table scan on otr  (rows=15)
     -> Select #2 (subquery in condition; dependent)
-        -> Filter: ((<cache>(otr.v) > itr.val) and (otr.rf = itr.rf))  (rows=1)
-            -> Table scan on itr  (rows=6)
+        -> Filter: (<cache>(otr.v) > itr.val)  (rows=1)
+            -> Index lookup on itr using PRIMARY (rf = otr.rf)  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -3592,8 +3592,8 @@ EXPLAIN
 -> Filter: <in_optimizer>(otr.vn,<exists>(select #2) is false)  (rows=15)
     -> Table scan on otr  (rows=15)
     -> Select #2 (subquery in condition; dependent)
-        -> Filter: (((otr.rf = itr.rf) and <if>(outer_field_is_not_null, ((<cache>(otr.vn) = itr.valn) or (itr.valn is null)), true)) and <if>(outer_field_is_not_null, <is_not_null_test>(itr.valn), true))  (rows=3)
-            -> Table scan on itr  (rows=6)
+        -> Filter: (<if>(outer_field_is_not_null, ((<cache>(otr.vn) = itr.valn) or (itr.valn is null)), true) and <if>(outer_field_is_not_null, <is_not_null_test>(itr.valn), true))  (rows=3)
+            -> Index lookup on itr using PRIMARY (rf = otr.rf)  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -3613,8 +3613,8 @@ EXPLAIN
 -> Filter: <not>(<in_optimizer>(otr.vn,<exists>(select #2)))  (rows=15)
     -> Table scan on otr  (rows=15)
     -> Select #2 (subquery in condition; dependent)
-        -> Filter: (((otr.rf = itr.rf) and <if>(outer_field_is_not_null, ((<cache>(otr.vn) <> itr.valn) or (itr.valn is null)), true)) and <if>(outer_field_is_not_null, <is_not_null_test>(itr.valn), true))  (rows=3)
-            -> Table scan on itr  (rows=6)
+        -> Filter: (<if>(outer_field_is_not_null, ((<cache>(otr.vn) <> itr.valn) or (itr.valn is null)), true) and <if>(outer_field_is_not_null, <is_not_null_test>(itr.valn), true))  (rows=3)
+            -> Index lookup on itr using PRIMARY (rf = otr.rf)  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -3634,8 +3634,8 @@ EXPLAIN
 -> Filter: <not>(<in_optimizer>(otr.vn,<exists>(select #2)))  (rows=15)
     -> Table scan on otr  (rows=15)
     -> Select #2 (subquery in condition; dependent)
-        -> Filter: (((otr.rf = itr.rf) and <if>(outer_field_is_not_null, ((<cache>(otr.vn) <= itr.valn) or (itr.valn is null)), true)) and <if>(outer_field_is_not_null, <is_not_null_test>(itr.valn), true))  (rows=3)
-            -> Table scan on itr  (rows=6)
+        -> Filter: (<if>(outer_field_is_not_null, ((<cache>(otr.vn) <= itr.valn) or (itr.valn is null)), true) and <if>(outer_field_is_not_null, <is_not_null_test>(itr.valn), true))  (rows=3)
+            -> Index lookup on itr using PRIMARY (rf = otr.rf)  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -3658,8 +3658,8 @@ EXPLAIN
 -> Filter: <nop>(<in_optimizer>(otr.vn,<exists>(select #2)))  (rows=15)
     -> Table scan on otr  (rows=15)
     -> Select #2 (subquery in condition; dependent)
-        -> Filter: ((otr.rf = itr.rf) and (<cache>(otr.vn) <> itr.valn))  (rows=2.7)
-            -> Table scan on itr  (rows=6)
+        -> Filter: (<cache>(otr.vn) <> itr.valn)  (rows=2.7)
+            -> Index lookup on itr using PRIMARY (rf = otr.rf)  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -3697,8 +3697,8 @@ EXPLAIN
 -> Filter: <nop>(<in_optimizer>(otr.vn,<exists>(select #2)))  (rows=15)
     -> Table scan on otr  (rows=15)
     -> Select #2 (subquery in condition; dependent)
-        -> Filter: ((<cache>(otr.vn) > itr.valn) and (otr.rf = itr.rf))  (rows=1)
-            -> Table scan on itr  (rows=6)
+        -> Filter: (<cache>(otr.vn) > itr.valn)  (rows=1)
+            -> Index lookup on itr using PRIMARY (rf = otr.rf)  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -7490,8 +7490,8 @@ FROM otr;
 EXPLAIN
 -> Table scan on otr  (rows=15)
 -> Select #2 (subquery in projection; dependent)
-    -> Filter: (((otr.rf = itr.rf) and <if>(outer_field_is_not_null, ((<cache>(otr.vn) = itr.valn) or (itr.valn is null)), true)) and <if>(outer_field_is_not_null, <is_not_null_test>(itr.valn), true))  (rows=3)
-        -> Table scan on itr  (rows=6)
+    -> Filter: (<if>(outer_field_is_not_null, ((<cache>(otr.vn) = itr.valn) or (itr.valn is null)), true) and <if>(outer_field_is_not_null, <is_not_null_test>(itr.valn), true))  (rows=3)
+        -> Index lookup on itr using PRIMARY (rf = otr.rf)  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -7611,8 +7611,8 @@ FROM otr;
 EXPLAIN
 -> Table scan on otr  (rows=15)
 -> Select #2 (subquery in projection; dependent)
-    -> Filter: (((otr.rf = itr.rf) and <if>(outer_field_is_not_null, ((<cache>(otr.vn) = itr.valn) or (itr.valn is null)), true)) and <if>(outer_field_is_not_null, <is_not_null_test>(itr.valn), true))  (rows=3)
-        -> Table scan on itr  (rows=6)
+    -> Filter: (<if>(outer_field_is_not_null, ((<cache>(otr.vn) = itr.valn) or (itr.valn is null)), true) and <if>(outer_field_is_not_null, <is_not_null_test>(itr.valn), true))  (rows=3)
+        -> Index lookup on itr using PRIMARY (rf = otr.rf)  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1
@@ -7820,8 +7820,8 @@ EXPLAIN
 -> Filter: <in_optimizer>(otr.vn,<exists>(select #2) is false)  (rows=15)
     -> Table scan on otr  (rows=15)
     -> Select #2 (subquery in condition; dependent)
-        -> Filter: (((otr.rf = itr.rf) and <if>(outer_field_is_not_null, ((<cache>(otr.vn) = itr.valn) or (itr.valn is null)), true)) and <if>(outer_field_is_not_null, <is_not_null_test>(itr.valn), true))  (rows=3)
-            -> Table scan on itr  (rows=6)
+        -> Filter: (<if>(outer_field_is_not_null, ((<cache>(otr.vn) = itr.valn) or (itr.valn is null)), true) and <if>(outer_field_is_not_null, <is_not_null_test>(itr.valn), true))  (rows=3)
+            -> Index lookup on itr using PRIMARY (rf = otr.rf)  (rows=3)
 
 Warnings:
 Note	1276	Field or reference 'test.otr.rf' of SELECT #2 was resolved in SELECT #1

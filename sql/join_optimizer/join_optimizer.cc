@@ -1631,7 +1631,8 @@ std::optional<CostingReceiver::ProposeRefsResult> CostingReceiver::ProposeRefs(
   TABLE *const table = order_info.table;
   const int key_idx = order_info.key_idx;
   const bool covering =
-      !table->no_keyread && table->covering_keys.is_set(key_idx);
+      IsClusteredPrimaryKey(table, key_idx) ||
+      (!table->no_keyread && table->covering_keys.is_set(key_idx));
 
   ProposeRefsResult result;
 
@@ -1660,22 +1661,21 @@ std::optional<CostingReceiver::ProposeRefsResult> CostingReceiver::ProposeRefs(
 
       case ProposeResult::kPathsFound:
         result.ref_without_parameters = true;
-        result.covering |= covering;
+        result.covering = covering;
         break;
 
       case ProposeResult::kNoPathFound:
         // An index scan is more interesting than a table scan if it follows an
         // interesting order that can be used to avoid a sort later, or if it is
         // covering so that it can reduce the volume of data to read.
-        bool clustered_primary_key = IsClusteredPrimaryKey(table, key_idx);
-        if (order != 0 || covering || clustered_primary_key) {
+        if (order != 0 || covering) {
           switch (ProposeIndexScan(table, node_idx, row_estimate, key_idx,
                                    reverse, order)) {
             case ProposeResult::kNoPathFound:
               break;
             case ProposeResult::kPathsFound:
               result.index_scan = true;
-              result.covering = covering || clustered_primary_key;
+              result.covering = covering;
               break;
             case ProposeResult::kError:
               return {};
