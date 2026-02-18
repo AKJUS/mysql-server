@@ -2806,3 +2806,63 @@ field1	field2
 NULL	1
 SET optimizer_switch='hypergraph_optimizer=default';
 DROP TABLE t1;
+#
+# Bug#38866140: Inconsistent row counts assertion with RAND
+#              predicates in hypergraph optimizer
+#
+CREATE TABLE t (i INT);
+INSERT INTO t VALUES (1), (2), (3);
+ANALYZE TABLE t;
+Table	Op	Msg_type	Msg_text
+test.t	analyze	status	OK
+CREATE TABLE t1 (
+col_date3 DATE DEFAULT NULL,
+col_int INT DEFAULT NULL,
+col_datetime6 DATETIME DEFAULT NULL,
+col_tinytext_character_set_utf8mb4_key TINYTEXT
+);
+INSERT INTO t1 VALUES
+('2024-01-01', 1, '2024-01-01 00:00:00', 'abc'),
+('2024-02-01', 2, '2024-02-01 00:00:00', 'def'),
+('2024-03-01', 3, '2024-03-01 00:00:00', 'ghi');
+ANALYZE TABLE t1;
+Table	Op	Msg_type	Msg_text
+test.t1	analyze	status	OK
+SELECT 1 FROM t AS t1, t AS t2, t AS t3
+WHERE t1.i <> t2.i AND t2.i = t3.i + RAND() AND t1.i <> t3.i;
+SELECT table2.col_date3 AS field2
+FROM t1 AS table1
+RIGHT JOIN t1 AS table2
+LEFT JOIN t1 AS table3 ON table2.col_date3 <> table3.col_int
+ON REPLACE(table1.col_date3, '', RAND(table3.col_int))
+LIKE table3.col_tinytext_character_set_utf8mb4_key
+WHERE table1.col_tinytext_character_set_utf8mb4_key >
+table2.col_tinytext_character_set_utf8mb4_key;
+SELECT 1 FROM t AS t1
+INNER JOIN t AS t2 ON t1.i <> t2.i
+INNER JOIN t AS t3 ON t2.i = t3.i + RAND()
+WHERE t1.i <> t3.i;
+SELECT 1 FROM t AS t1, t AS t2, t AS t3, t AS t4
+WHERE t1.i <> t2.i
+AND t2.i <> t4.i
+AND t3.i <> t4.i
+AND t2.i = t3.i + RAND();
+SELECT 1 FROM t AS t1, t AS t2, t AS t3
+WHERE t1.i + RAND() = t2.i
+AND t2.i + RAND() = t3.i
+AND t1.i <> t3.i
+AND t1.i <> t2.i;
+SELECT 1 FROM t AS t1, t AS t2, t AS t3, t AS t4
+WHERE t1.i <> t2.i
+AND t2.i = t3.i + RAND()
+AND t3.i <> t4.i
+AND t1.i <> t4.i;
+SELECT * FROM t AS t1
+INNER JOIN t AS t3 ON t1.i <> t3.i
+LEFT JOIN t AS t2 ON t1.i = t2.i + RAND()
+WHERE t2.i IS NULL OR t2.i <> t3.i;
+SELECT 1 FROM t AS t1, t AS t2, t AS t3
+WHERE t1.i = t2.i AND t2.i = t3.i + RAND() AND t1.i <> t3.i;
+SELECT 1 FROM t AS t1, t AS t2, t AS t3
+WHERE t1.i <> t2.i AND t2.i = t3.i + UUID_SHORT() AND t1.i <> t3.i;
+DROP TABLE t, t1;
