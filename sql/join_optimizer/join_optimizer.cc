@@ -6624,12 +6624,12 @@ AccessPath *CostingReceiver::ProposeAccessPath(
   // (If we really wanted to, we could probably fix that as well, though.)
   // These should never happen, up to numerical issues, but they currently do;
   // see bug #33550360.
+  bool verify_consistency = TraceStarted(m_thd);
+#ifndef NDEBUG
   const bool has_known_row_count_inconsistency_bugs =
       m_graph->has_reordered_left_joins || has_clamped_multipart_eq_ref ||
       has_semijoin_with_possibly_clamped_child ||
       m_graph->has_estimates_from_secondary_engine;
-  bool verify_consistency = TraceStarted(m_thd);
-#ifndef NDEBUG
   if (!has_known_row_count_inconsistency_bugs) {
     // Assert that we are consistent, even if we are not tracing.
     verify_consistency = true;
