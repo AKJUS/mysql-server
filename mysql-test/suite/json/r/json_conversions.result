@@ -18312,3 +18312,15 @@ validation_stage	side1	side2	side1_json_type	side2_json_type	side1_json_weightag
 # Bug #34416304 WriteRowToChunk : Assertion `!thd->is_error()' failed
 #
 ERROR 22003: Cannot get geometry object from data you send to the GEOMETRY field
+#
+# Bug#38980997: Assertion 'mtime.time_type == MYSQL_TIMESTAMP_DATE
+#               in JSON expressions
+#
+MONTHNAME(CAST('"5480-11-13"' AS JSON))
+November
+MONTHNAME(CAST('"5480-11-13 14:08:10.287786"' AS JSON))
+November
+MONTHNAME(CAST('"14:08:10.287786"' AS JSON))
+NULL
+Warnings:
+Warning	3156	Invalid JSON value for CAST to DATE from column cast_as_json at row 1

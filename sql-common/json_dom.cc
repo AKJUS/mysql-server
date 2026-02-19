@@ -3086,6 +3086,10 @@ bool Json_wrapper::coerce_date(
       if (!str_to_datetime(get_data(), get_data_length(), &mtime, flags,
                            &status) &&
           status.warnings == 0) {
+        if (mtime.time_type == MYSQL_TIMESTAMP_DATETIME ||
+            mtime.time_type == MYSQL_TIMESTAMP_DATETIME_TZ) {
+          datetime_to_date(&mtime);
+        }
         *date = Date_val(mtime);
         deprecation_checker(status);
         break;

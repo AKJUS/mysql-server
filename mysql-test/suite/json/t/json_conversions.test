@@ -5603,3 +5603,14 @@ COLUMNS(
 ) q;
 
 DROP TABLE t;
+
+--echo #
+--echo # Bug#38980997: Assertion 'mtime.time_type == MYSQL_TIMESTAMP_DATE
+--echo #               in JSON expressions
+--echo #
+
+SELECT MONTHNAME(CAST('"5480-11-13"' AS JSON));
+
+SELECT MONTHNAME(CAST('"5480-11-13 14:08:10.287786"' AS JSON));
+
+SELECT MONTHNAME(CAST('"14:08:10.287786"' AS JSON));
