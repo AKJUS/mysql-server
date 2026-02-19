@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12...3.31)
+#cmake_minimum_required(VERSION 3.12...3.31)
 
 project(
     zlib
@@ -7,6 +7,7 @@ project(
     HOMEPAGE_URL "https://zlib.net/"
     DESCRIPTION "a general-purpose lossless data-compression library")
 
+IF(DISABLE_THESE_LINES)
 # ============================================================================
 # CPack
 # ============================================================================
@@ -14,7 +15,6 @@ set(CPACK_PACKAGE_VENDOR "zlib-Project")
 set(CPACK_PACKAGE_DESCRIPTION_FILE ${zlib_SOURCE_DIR}/README)
 set(CPACK_RESOURCE_FILE_LICENSE ${zlib_SOURCE_DIR}/LICENSE)
 set(CPACK_RESOURCE_FILE_README ${zlib_SOURCE_DIR}/README)
-
 # ============================================================================
 # configuration
 # ============================================================================
@@ -33,16 +33,17 @@ if(NOT DEFINED CMAKE_BUILD_TYPE AND NOT IS_MULTI)
     message(STATUS "No CMAKE_BUILD_TYPE set -- using Release")
     set(CMAKE_BUILD_TYPE Release)
 endif(NOT DEFINED CMAKE_BUILD_TYPE AND NOT IS_MULTI)
+ENDIF(DISABLE_THESE_LINES)
 
 include(CheckCSourceCompiles)
 include(CheckFunctionExists)
 include(CheckIncludeFile)
 include(CMakePackageConfigHelpers)
 include(CheckTypeSize)
-include(CPack)
-include(GNUInstallDirs)
+#include(CPack)
+#include(GNUInstallDirs)
 
-set(CPACK_INCLUDED TRUE)
+#set(CPACK_INCLUDED TRUE)
 
 if(NOT ZLIB_CONF_WRITTEN)
     set(Z_PREFIX ${ZLIB_PREFIX})
@@ -96,11 +97,13 @@ check_include_file(unistd.h HAVE_UNISTD_H)
 #
 # Check visibility attribute is supported
 #
+IF(DISABLE_THESE_LINES)
 if(MSVC)
     set(CMAKE_REQUIRED_FLAGS "-WX")
 else(MSVC)
     set(CMAKE_REQUIRED_FLAGS "-Werror")
 endif(MSVC)
+ENDIF(DISABLE_THESE_LINES)
 
 check_c_source_compiles(
     "
@@ -110,9 +113,11 @@ check_c_source_compiles(
     "
     HAVE___ATTR__VIS_HIDDEN)
 
+IF(DISABLE_THESE_LINES)
 unset(CMAKE_COMPILE_FLAGS)
 set(ZLIB_PC ${zlib_BINARY_DIR}/zlib.pc)
 configure_file(${zlib_SOURCE_DIR}/zlib.pc.cmakein ${ZLIB_PC} @ONLY)
+ENDIF(DISABLE_THESE_LINES)
 configure_file(${zlib_BINARY_DIR}/zconf.h.cmakein ${zlib_BINARY_DIR}/zconf.h)
 
 # ============================================================================
@@ -149,6 +154,14 @@ set(ZLIB_SRCS
     uncompr.c
     zutil.c)
 
+
+ADD_CONVENIENCE_LIBRARY(zlib
+  ${ZLIB_SRCS} ${ZLIB_PUBLIC_HDRS} ${ZLIB_PRIVATE_HDRS})
+
+RETURN()
+
+# Skip anything below.
+################################################################
 if(WIN32)
     set(zlib_static_suffix "s")
     set(CMAKE_DEBUG_POSTFIX "d")
