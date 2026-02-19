@@ -441,8 +441,6 @@ longlong Item::val_date_temporal() {
 
 // TS-TODO: split into separate methods?
 longlong Item::val_temporal_with_round(enum_field_types type, uint8 dec) {
-  // Function is not used for TIME or DATE type
-  assert(type != MYSQL_TYPE_TIME && type != MYSQL_TYPE_DATE);
   longlong nr = val_date_temporal();
   const longlong diff =
       my_time_fraction_remainder(my_packed_time_get_frac_part(nr), dec);
@@ -7393,22 +7391,16 @@ type_conversion_status Item_int::save_in_field_inner(Field *field,
 }
 
 type_conversion_status Item_temporal::save_in_field_inner(Field *field, bool) {
+  const enum_field_types field_type = field->type();
+  longlong nr = is_temporal_type_with_time(field_type)
+                    ? val_temporal_with_round(field_type, field->decimals())
+                    : val_date_temporal();
   // TODO: call set_field_to_null_with_conversions below
-  assert(field->type() != MYSQL_TYPE_TIME && field->type() != MYSQL_TYPE_DATE);
-  switch (field->type()) {
-    case MYSQL_TYPE_DATETIME:
-    case MYSQL_TYPE_TIMESTAMP: {
-      longlong nr = val_temporal_with_round(field->type(), field->decimals());
-      if (null_value) {
-        return set_field_to_null(field);
-      }
-      field->set_notnull();
-      return field->store_packed(nr);
-    }
-    default:
-      assert(false);
-      return TYPE_ERR_BAD_VALUE;
+  if (null_value) {
+    return set_field_to_null(field);
   }
+  field->set_notnull();
+  return field->store_packed(nr);
 }
 
 type_conversion_status Item_decimal::save_in_field_inner(Field *field, bool) {

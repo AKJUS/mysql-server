@@ -1185,3 +1185,55 @@ FROM t1
 WHERE ci IN ('G', 'yBm', 'West Virginia', 'X');
 ERROR 22007: Truncated incorrect DOUBLE value: 'G'
 DROP TABLE t1, t2;
+#
+# Bug#38980338: Assertion 'field->type() != MYSQL_TYPE_TIME &&
+#               field->type() != MYSQL_TYPE_DATE' failed
+#
+CREATE TABLE t(c0 DATE, KEY(c0));
+INSERT INTO t VALUES(DATE'2026-02-19');
+SELECT *
+FROM t
+WHERE c0 NOT IN (FROM_UNIXTIME(71) ,"2026-02-19 00:00:00");
+c0
+Warnings:
+Warning	1292	Incorrect date value: '1802216313574129664' for column 'c0' at row 1
+SELECT *
+FROM t
+WHERE c0 NOT IN (FROM_UNIXTIME(71) ,"2026-02-19 01:02:03");
+c0
+2026-02-19
+Warnings:
+Warning	1292	Incorrect date value: '1802216313574129664' for column 'c0' at row 1
+SELECT *
+FROM t
+WHERE c0 IN (FROM_UNIXTIME(71) ,"2026-02-19 00:00:00");
+c0
+2026-02-19
+SELECT *
+FROM t
+WHERE c0 IN (FROM_UNIXTIME(71) ,"2026-02-19 01:02:03");
+c0
+DROP TABLE t;
+CREATE TABLE t(c0 TIME, KEY(c0));
+set timestamp = UNIX_TIMESTAMP('2026-02-19 11:12:13');
+INSERT INTO t VALUES(TIME'11:12:13');
+SELECT *
+FROM t
+WHERE c0 NOT IN (FROM_UNIXTIME(71) ,"2026-02-19 11:12:13");
+c0
+SELECT *
+FROM t
+WHERE c0 NOT IN (FROM_UNIXTIME(71) ,"2026-02-19 11:12:12");
+c0
+11:12:13
+SELECT *
+FROM t
+WHERE c0 IN (FROM_UNIXTIME(71) ,"2026-02-19 11:12:13");
+c0
+11:12:13
+SELECT *
+FROM t
+WHERE c0 IN (FROM_UNIXTIME(71) ,"2026-02-19 11:12:12");
+c0
+DROP TABLE t;
+set timestamp = DEFAULT;
