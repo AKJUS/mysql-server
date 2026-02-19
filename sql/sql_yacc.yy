@@ -16229,6 +16229,7 @@ ident_keywords_unambiguous:
         | SERIALIZABLE_SYM
         | SERIAL_SYM
         | SERVER_SYM
+        | SETS_SYM
         | SHARE_SYM
         | SIMPLE_SYM
         | SKIP_SYM
