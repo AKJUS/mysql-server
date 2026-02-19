@@ -522,12 +522,13 @@ static void dd_inplace_alter_copy_instant_metadata(
       }
     }
 
-    /* Get corresponding dd::column in new table */
-    dd::Column *new_dd_column = const_cast<dd::Column *>(
-        dd_find_column(new_dd_tab, old_dd_column->name().c_str()));
+    /* The column might have been renamed */
+    dd::Column *new_dd_column =
+        get_renamed_col(ha_alter_info, old_dd_column, new_dd_tab);
     if (new_dd_column == nullptr) {
-      /* This column might have been renamed */
-      new_dd_column = get_renamed_col(ha_alter_info, old_dd_column, new_dd_tab);
+      /* Get corresponding dd::column in new table if not renamed */
+      new_dd_column = const_cast<dd::Column *>(
+          dd_find_column(new_dd_tab, old_dd_column->name().c_str()));
     }
 
     if (new_dd_column == nullptr) {
