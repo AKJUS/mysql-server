@@ -2819,6 +2819,12 @@ bool Item_func_convert_tz::val_datetime(Datetime_val *dt, my_time_flags_t) {
     null_value = true;
     return true;
   }
+  if (dt->time_type == MYSQL_TIMESTAMP_DATE) {
+    // CONVERT_TZ will always return a datetime value
+    date_to_datetime(dt);
+  }
+  assert(dt->time_type == MYSQL_TIMESTAMP_DATETIME ||
+         dt->time_type == MYSQL_TIMESTAMP_DATETIME_TZ);
   bool not_used;
   const uint second_part = dt->second_part;
   my_time_tmp = from_tz->TIME_to_gmt_sec(dt, &not_used);

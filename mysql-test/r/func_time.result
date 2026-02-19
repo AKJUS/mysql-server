@@ -2262,3 +2262,10 @@ TIMEDIFF('0000-01-01 00:00:00.00000', '2025-08-01')
 -838:59:59.00000
 Warnings:
 Warning	1292	Truncated incorrect time value: '-17755872:00:00.00000'
+#
+# Bug#38980002: Assertion 'dt.time_type == MYSQL_TIMESTAMP_DATETIME ||
+#               dt.time_type == MYSQL_TIMESTAMP_DATETIME_TZ' failed
+#
+SELECT CEILING(CONVERT_TZ('2025-01-01' ,'-01:00','-08:00')) AS ceil;
+ceil
+20241231170000
