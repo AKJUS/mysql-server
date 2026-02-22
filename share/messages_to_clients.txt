@@ -10925,6 +10925,18 @@ ER_LH_CUSTOM_DATA_PLACEMENT_OVERRIDES
 ER_LH_AVRO_FILES_DATA_TYPE_MISMATCH
   eng "File %s: Col '%s' has different data type compared to other Avro files."
 
+ER_WARN_AUDIT_LOG_FILTER_RECOVERY_LOGGING_DISABLED
+  eng "The 'audit_log_filter_recovery_mode' variable is set to LOG_NOTHING_IF_INVALID_FILTER_DETECTED, meaning audit events will not be logged if the filter is invalid. Consider changing this variable to LOG_ALL_IF_INVALID_FILTER_DETECTED to ensure that all events are logged, even when the filter is invalid."
+
+ER_AUDIT_LOG_COMPONENT_INVALID_FILTER_ABORT
+  eng "The '%s' filter is invalid: %s The operation has been aborted. Please fix the filter using the '%s' UDF, or change the '%s' variable as required."
+
+ER_AUDIT_LOG_COMPONENT_JSON_INVALID_FILTER_CANNOT_BE_USED
+  eng "The '%s' filter is invalid and cannot be used until corrected. Please apply the '%s' UDF to resolve the issue."
+
+ER_WARN_AUDIT_LOG_FILTERS_INVALID
+ eng "Some filters are invalid. Details have been logged in the error log."
+
 #
 #  End of 9.x error messages (server-to-client).
 #
