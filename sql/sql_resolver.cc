@@ -4674,6 +4674,9 @@ bool Query_block::setup_group(THD *thd) {
       if (group_item->const_item() && group_item->is_null()) {
         group_list.clear();
       }
+      if (thd->is_error()) {
+        return true;
+      }
     }
   }
 
