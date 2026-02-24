@@ -3376,9 +3376,12 @@ void Qmgr::checkHeartbeat(Signal *signal) {
 
   set_hb_count(nodePtr.i)++;
   ndbrequire(nodePtr.p->phase == ZRUNNING);
-  ndbrequire(getNodeInfo(nodePtr.i).m_type == NodeInfo::DB);
+  const auto nodeInfo = getNodeInfo(nodePtr.i);
+  ndbrequire(nodeInfo.m_type == NodeInfo::DB);
 
-  if (get_hb_count(nodePtr.i) > 2) {
+  const unsigned first_missed_hb_to_log =
+      (ndb_heartbeat_send_twice_per_interval(nodeInfo.m_version) ? 1 : 2);
+  if (get_hb_count(nodePtr.i) > first_missed_hb_to_log) {
     signal->theData[0] = NDB_LE_MissedHeartbeat;
     signal->theData[1] = nodePtr.i;
     signal->theData[2] = get_hb_count(nodePtr.i) - 1;
@@ -3416,7 +3419,8 @@ void Qmgr::apiHbHandlingLab(Signal *signal, NDB_TICKS now) {
     const Uint32 nodeId = TnodePtr.i;
     ptrAss(TnodePtr, nodeRec);
 
-    const NodeInfo::NodeType type = getNodeInfo(nodeId).getType();
+    const auto nodeInfo = getNodeInfo(nodeId);
+    const NodeInfo::NodeType type = nodeInfo.getType();
     if (type == NodeInfo::DB) continue;
 
     if (type == NodeInfo::INVALID) continue;
@@ -3425,7 +3429,9 @@ void Qmgr::apiHbHandlingLab(Signal *signal, NDB_TICKS now) {
       jamLine(nodeId);
       set_hb_count(TnodePtr.i)++;
 
-      if (get_hb_count(TnodePtr.i) > 2) {
+      const unsigned first_missed_hb_to_log =
+          (ndb_heartbeat_send_twice_per_interval(nodeInfo.m_version) ? 1 : 2);
+      if (get_hb_count(TnodePtr.i) > first_missed_hb_to_log) {
         signal->theData[0] = NDB_LE_MissedHeartbeat;
         signal->theData[1] = nodeId;
         signal->theData[2] = get_hb_count(TnodePtr.i) - 1;
