@@ -833,7 +833,6 @@ void ClusterMgr::execAPI_REGCONF(const NdbApiSignal *signal,
   }
 
   cm_node.hbMissed = 0;
-  cm_node.hbCounter = 0;
   /*
     By convention, conf->apiHeartbeatInterval is in centiseconds rather than
     milliseconds. See also Qmgr::sendApiRegConf().
