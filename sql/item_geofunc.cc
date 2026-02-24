@@ -3155,18 +3155,16 @@ String *Item_func_as_wkt::val_str_ascii(String *str) {
 
   String swkb_tmp;
   String *swkb = args[0]->val_str(&swkb_tmp);
-
+  null_value = args[0]->null_value;
+  if (swkb == nullptr || null_value) {
+    return nullptr;
+  }
   Geometry_buffer buffer;
   Geometry *g;
   bool reverse = false;
   bool srid_default_ordering = true;
   bool is_geographic = false;
   bool lat_long = false;
-
-  if ((null_value = args[0]->null_value)) {
-    assert(is_nullable());
-    return nullptr;
-  }
 
   // args[0]->val_str() may have returned a string that we shouldn't modify, and
   // it may have modified swkb_tmp in the process. We need a local copy of the
@@ -3201,8 +3199,7 @@ String *Item_func_as_wkt::val_str_ascii(String *str) {
     String options_arg_tmp;
     String *options_arg = args[1]->val_str_ascii(&options_arg_tmp);
     null_value = args[1]->null_value;
-    if (null_value) {
-      assert(is_nullable());
+    if (options_arg == nullptr || null_value) {
       return nullptr;
     }
 
