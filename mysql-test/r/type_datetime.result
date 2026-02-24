@@ -1223,3 +1223,72 @@ GROUP BY field1;
 field1	field2
 NULL	1
 DROP TABLE t1;
+#
+# Bug#38819341: Incompatible behavior between integer columns when
+#               comparing with datetime
+#
+CREATE TABLE t1 (c1 INTEGER, c2 BIGINT);
+INSERT INTO t1 VALUES (1, 1);
+SELECT c1 = CAST(0.0 AS DATETIME) FROM t1;
+c1 = CAST(0.0 AS DATETIME)
+NULL
+Warnings:
+Warning	1292	Incorrect datetime value: '0.0'
+SELECT c2 = CAST(0.0 AS DATETIME) FROM t1;
+c2 = CAST(0.0 AS DATETIME)
+NULL
+Warnings:
+Warning	1292	Incorrect datetime value: '0.0'
+Warning	1292	Incorrect datetime value: '0.0'
+DROP TABLE t1;
+#
+# Bug#35093107: virtual bool Item_temporal_with_ref::get_date Assertion
+#
+set sql_mode = '';
+CREATE TABLE t1(c1 DATETIME DEFAULT NULL, KEY(c1));
+INSERT INTO t1 VALUES('2000-05-24 15:57:23');
+SELECT c1
+FROM t1
+GROUP BY (SUBSTR(c1, 2)) WITH ROLLUP
+HAVING - 0;
+c1
+SELECT DISTINCT NULLIF(c1, FOUND_ROWS())
+FROM t1
+GROUP BY FOUND_ROWS() WITH ROLLUP;
+NULLIF(c1, FOUND_ROWS())
+2000-05-24 15:57:23
+Warnings:
+Warning	1287	FOUND_ROWS() is deprecated and will be removed in a future release. Consider using COUNT(*) instead.
+Warning	1287	FOUND_ROWS() is deprecated and will be removed in a future release. Consider using COUNT(*) instead.
+DROP TABLE t1;
+set sql_mode = DEFAULT;
+#
+# Bug#34889757: Value change caused by DISTINCT and date functions
+#
+CREATE TABLE t (c1 int);
+INSERT INTO t VALUES (1);
+SELECT 1 % f1
+FROM (SELECT DAYNAME('2010-07-20') AS f1
+FROM t
+WHERE DATE_ADD(TIMEDIFF('2000-08-04 02:09:39', '2002-08-11 22:00:35'),
+INTERVAL 1 YEAR) NOT IN (1)
+) AS t2;
+1 % f1
+NULL
+Warnings:
+Warning	1292	Truncated incorrect time value: '-17707:50:56'
+Warning	1292	Truncated incorrect DOUBLE value: 'Tuesday'
+Warning	1365	Division by 0
+SELECT 1 % f1
+FROM (SELECT DISTINCT DAYNAME('2010-07-20') AS `f1`
+      FROM t
+WHERE DATE_ADD(TIMEDIFF('2000-08-04 02:09:39', '2002-08-11 22:00:35'),
+INTERVAL 1 YEAR) NOT IN (1)
+) AS t2;
+1 % f1
+NULL
+Warnings:
+Warning	1292	Truncated incorrect time value: '-17707:50:56'
+Warning	1292	Truncated incorrect DOUBLE value: 'Tuesday'
+Warning	1365	Division by 0
+DROP TABLE t;

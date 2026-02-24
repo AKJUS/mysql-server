@@ -950,3 +950,61 @@ eval $time_query;
 eval $datetime_query;
 
 DROP TABLE t1;
+
+--echo #
+--echo # Bug#38819341: Incompatible behavior between integer columns when
+--echo #               comparing with datetime
+--echo #
+
+CREATE TABLE t1 (c1 INTEGER, c2 BIGINT);
+INSERT INTO t1 VALUES (1, 1);
+
+SELECT c1 = CAST(0.0 AS DATETIME) FROM t1;
+SELECT c2 = CAST(0.0 AS DATETIME) FROM t1;
+
+DROP TABLE t1;
+
+--echo #
+--echo # Bug#35093107: virtual bool Item_temporal_with_ref::get_date Assertion
+--echo #
+
+set sql_mode = '';
+
+CREATE TABLE t1(c1 DATETIME DEFAULT NULL, KEY(c1));
+INSERT INTO t1 VALUES('2000-05-24 15:57:23');
+
+SELECT c1
+FROM t1
+GROUP BY (SUBSTR(c1, 2)) WITH ROLLUP
+HAVING - 0;
+
+SELECT DISTINCT NULLIF(c1, FOUND_ROWS())
+FROM t1
+GROUP BY FOUND_ROWS() WITH ROLLUP;
+
+DROP TABLE t1;
+
+set sql_mode = DEFAULT;
+
+--echo #
+--echo # Bug#34889757: Value change caused by DISTINCT and date functions
+--echo #
+
+CREATE TABLE t (c1 int);
+INSERT INTO t VALUES (1);
+
+SELECT 1 % f1
+FROM (SELECT DAYNAME('2010-07-20') AS f1
+      FROM t
+      WHERE DATE_ADD(TIMEDIFF('2000-08-04 02:09:39', '2002-08-11 22:00:35'),
+                              INTERVAL 1 YEAR) NOT IN (1)
+     ) AS t2;
+
+SELECT 1 % f1
+FROM (SELECT DISTINCT DAYNAME('2010-07-20') AS `f1`
+      FROM t
+      WHERE DATE_ADD(TIMEDIFF('2000-08-04 02:09:39', '2002-08-11 22:00:35'),
+                              INTERVAL 1 YEAR) NOT IN (1)
+     ) AS t2;
+
+DROP TABLE t;
