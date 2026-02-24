@@ -2630,4 +2630,71 @@ SELECT 1 FROM t t1
 
 DROP TABLE t;
 
+--echo #
+--echo # Bug#37173479: Hypergraph doesn't elide sort on effectively constant
+--echo #               expressions
+--echo #
+--echo # When WHERE pins all PK columns to constant values, all columns FD on
+--echo # the PK are also constant. ORDER BY on such columns should not require
+--echo # a sort.
+--echo #
+
+CREATE TABLE t(id INT PRIMARY KEY, a INT);
+INSERT INTO t VALUES (1, 10), (2, 20), (3, 30);
+ANALYZE TABLE t;
+
+--echo # Test 1: Single PK constant => ORDER BY dependent column elides sort
+let $query = SELECT * FROM t WHERE id = 1 ORDER BY a;
+eval EXPLAIN FORMAT=TREE $query;
+eval $query;
+
+--echo # Control: Without WHERE, sort IS needed
+EXPLAIN FORMAT=TREE SELECT * FROM t ORDER BY a;
+
+DROP TABLE t;
+
+--echo # Test 2: Multi-column PK, all constant => sort elided
+CREATE TABLE t2(id1 INT, id2 INT, a INT, PRIMARY KEY(id1, id2));
+INSERT INTO t2 VALUES (1, 1, 100), (1, 2, 200), (2, 1, 300);
+ANALYZE TABLE t2;
+
+let $query = SELECT * FROM t2 WHERE id1 = 1 AND id2 = 2 ORDER BY a;
+eval EXPLAIN FORMAT=TREE $query;
+eval $query;
+
+DROP TABLE t2;
+
+--echo # Test 3: Multiple ORDER BY columns, all FD-dependent on constant PK
+CREATE TABLE t3(id INT PRIMARY KEY, a INT, b INT);
+INSERT INTO t3 VALUES (1, 10, 100), (2, 20, 200), (3, 30, 300);
+ANALYZE TABLE t3;
+
+let $query = SELECT * FROM t3 WHERE id = 1 ORDER BY a, b;
+eval EXPLAIN FORMAT=TREE $query;
+eval $query;
+
+DROP TABLE t3;
+
+--echo # Test 4: Partial PK constant - sort must NOT be elided (negative test)
+CREATE TABLE t4(id1 INT, id2 INT, a INT, PRIMARY KEY(id1, id2));
+INSERT INTO t4 VALUES (1, 1, 100), (1, 2, 200), (2, 1, 300);
+ANALYZE TABLE t4;
+
+let $query = SELECT * FROM t4 WHERE id1 = 1 ORDER BY a;
+eval EXPLAIN FORMAT=TREE $query;
+eval $query;
+
+DROP TABLE t4;
+
+--echo # Test 5: NOT NULL unique key constant => sort elided
+CREATE TABLE t5(id INT PRIMARY KEY, a INT NOT NULL, b INT, UNIQUE KEY uk_a(a));
+INSERT INTO t5 VALUES (1, 10, 100), (2, 20, 200), (3, 30, 300);
+ANALYZE TABLE t5;
+
+let $query = SELECT * FROM t5 WHERE a = 10 ORDER BY b;
+eval EXPLAIN FORMAT=TREE $query;
+eval $query;
+
+DROP TABLE t5;
+
 --source include/disable_hypergraph.inc

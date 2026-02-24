@@ -3096,3 +3096,89 @@ WHERE 10 = (SELECT COUNT(*) FROM t t2) AND 1 = 1 AND t1.x IS NULL;
 1
 1
 DROP TABLE t;
+#
+# Bug#37173479: Hypergraph doesn't elide sort on effectively constant
+#               expressions
+#
+# When WHERE pins all PK columns to constant values, all columns FD on
+# the PK are also constant. ORDER BY on such columns should not require
+# a sort.
+#
+CREATE TABLE t(id INT PRIMARY KEY, a INT);
+INSERT INTO t VALUES (1, 10), (2, 20), (3, 30);
+ANALYZE TABLE t;
+Table	Op	Msg_type	Msg_text
+test.t	analyze	status	OK
+# Test 1: Single PK constant => ORDER BY dependent column elides sort
+EXPLAIN FORMAT=TREE SELECT * FROM t WHERE id = 1 ORDER BY a;
+EXPLAIN
+-> Single-row index lookup on t using PRIMARY (id = 1)  (cost=1.98..1.98 rows=1)
+
+SELECT * FROM t WHERE id = 1 ORDER BY a;
+id	a
+1	10
+# Control: Without WHERE, sort IS needed
+EXPLAIN FORMAT=TREE SELECT * FROM t ORDER BY a;
+EXPLAIN
+-> Sort: t.a  (cost=2.27..2.27 rows=3)
+    -> Index scan on t using PRIMARY  (cost=0.359..1.08 rows=3)
+
+DROP TABLE t;
+# Test 2: Multi-column PK, all constant => sort elided
+CREATE TABLE t2(id1 INT, id2 INT, a INT, PRIMARY KEY(id1, id2));
+INSERT INTO t2 VALUES (1, 1, 100), (1, 2, 200), (2, 1, 300);
+ANALYZE TABLE t2;
+Table	Op	Msg_type	Msg_text
+test.t2	analyze	status	OK
+EXPLAIN FORMAT=TREE SELECT * FROM t2 WHERE id1 = 1 AND id2 = 2 ORDER BY a;
+EXPLAIN
+-> Single-row index lookup on t2 using PRIMARY (id1 = 1, id2 = 2)  (cost=1.91..1.91 rows=0.707)
+
+SELECT * FROM t2 WHERE id1 = 1 AND id2 = 2 ORDER BY a;
+id1	id2	a
+1	2	200
+DROP TABLE t2;
+# Test 3: Multiple ORDER BY columns, all FD-dependent on constant PK
+CREATE TABLE t3(id INT PRIMARY KEY, a INT, b INT);
+INSERT INTO t3 VALUES (1, 10, 100), (2, 20, 200), (3, 30, 300);
+ANALYZE TABLE t3;
+Table	Op	Msg_type	Msg_text
+test.t3	analyze	status	OK
+EXPLAIN FORMAT=TREE SELECT * FROM t3 WHERE id = 1 ORDER BY a, b;
+EXPLAIN
+-> Single-row index lookup on t3 using PRIMARY (id = 1)  (cost=2.03..2.03 rows=1)
+
+SELECT * FROM t3 WHERE id = 1 ORDER BY a, b;
+id	a	b
+1	10	100
+DROP TABLE t3;
+# Test 4: Partial PK constant - sort must NOT be elided (negative test)
+CREATE TABLE t4(id1 INT, id2 INT, a INT, PRIMARY KEY(id1, id2));
+INSERT INTO t4 VALUES (1, 1, 100), (1, 2, 200), (2, 1, 300);
+ANALYZE TABLE t4;
+Table	Op	Msg_type	Msg_text
+test.t4	analyze	status	OK
+EXPLAIN FORMAT=TREE SELECT * FROM t4 WHERE id1 = 1 ORDER BY a;
+EXPLAIN
+-> Sort: t4.a  (cost=2.98..2.98 rows=2)
+    -> Index lookup on t4 using PRIMARY (id1 = 1)  (cost=1.11..2.22 rows=2)
+
+SELECT * FROM t4 WHERE id1 = 1 ORDER BY a;
+id1	id2	a
+1	1	100
+1	2	200
+DROP TABLE t4;
+# Test 5: NOT NULL unique key constant => sort elided
+CREATE TABLE t5(id INT PRIMARY KEY, a INT NOT NULL, b INT, UNIQUE KEY uk_a(a));
+INSERT INTO t5 VALUES (1, 10, 100), (2, 20, 200), (3, 30, 300);
+ANALYZE TABLE t5;
+Table	Op	Msg_type	Msg_text
+test.t5	analyze	status	OK
+EXPLAIN FORMAT=TREE SELECT * FROM t5 WHERE a = 10 ORDER BY b;
+EXPLAIN
+-> Single-row index lookup on t5 using uk_a (a = 10)  (cost=3.99..3.99 rows=1)
+
+SELECT * FROM t5 WHERE a = 10 ORDER BY b;
+id	a	b
+1	10	100
+DROP TABLE t5;
