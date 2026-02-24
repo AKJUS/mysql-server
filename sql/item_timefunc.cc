@@ -160,7 +160,10 @@ static bool sec_to_time(lldiv_t seconds, Time_val *time) {
       }
     }
   }
-
+  // Negative zero is not supported
+  if (negative && second == 0 && fraction == 0) {
+    negative = false;
+  }
   *time = Time_val(negative, second, fraction);
 
   return false;

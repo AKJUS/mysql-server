@@ -1460,3 +1460,10 @@ SELECT TIMEDIFF('0000-01-01 00:00:00.00000', '2025-08-01');
 --echo #
 
 SELECT CEILING(CONVERT_TZ('2025-01-01' ,'-01:00','-08:00')) AS ceil;
+
+--echo #
+--echo # Bug#38979962: Assertion 'hour != 0 && minute != 0 && second != 0 &&
+--echo #               microsecond != 0' failed'
+--echo #
+
+SELECT SEC_TO_TIME(-00.0000004584) AS tv;
