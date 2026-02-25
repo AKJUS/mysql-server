@@ -122,6 +122,49 @@ t3	CREATE TABLE `t3` (
   `i` int DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 DROP TABLE t3;
+# Tests for I_S.COLUMNS.EXTRA marker on masked columns.
+CREATE TABLE t4(i INT MASKING POLICY p1, j INT);
+CREATE TABLE t5(k INT);
+SELECT column_name, extra
+FROM information_schema.columns
+WHERE table_schema = database() AND table_name = 't4'
+ORDER BY column_name;
+COLUMN_NAME	EXTRA
+i	MASKING POLICY
+j	
+SELECT DISTINCT table_name
+FROM information_schema.columns
+WHERE table_schema = database()
+AND table_name IN ('t4', 't5')
+AND extra LIKE '%MASKING POLICY%'
+ORDER BY table_name;
+TABLE_NAME
+t4
+ALTER TABLE t4 ALTER COLUMN i DROP MASKING POLICY;
+SELECT column_name, extra
+FROM information_schema.columns
+WHERE table_schema = database() AND table_name = 't4'
+ORDER BY column_name;
+COLUMN_NAME	EXTRA
+i	
+j	
+SELECT DISTINCT table_name
+FROM information_schema.columns
+WHERE table_schema = database()
+AND table_name IN ('t4', 't5')
+AND extra LIKE '%MASKING POLICY%'
+ORDER BY table_name;
+TABLE_NAME
+ALTER TABLE t4 ALTER COLUMN i SET MASKING POLICY p1;
+ALTER TABLE t4 MODIFY COLUMN i INT MASKING POLICY p1 INVISIBLE;
+SELECT column_name, extra
+FROM information_schema.columns
+WHERE table_schema = database() AND table_name = 't4'
+ORDER BY column_name;
+COLUMN_NAME	EXTRA
+i	MASKING POLICY INVISIBLE
+j	
+DROP TABLE t4, t5;
 CREATE TABLE t(col INT MASKING POLICY ``);
 ERROR 42000: Incorrect routine name ''
 CREATE TABLE t(col INT MASKING POLICY ` `);

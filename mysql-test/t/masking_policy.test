@@ -86,6 +86,45 @@ ALTER TABLE t3 MODIFY COLUMN i INT;
 SHOW CREATE TABLE t3;
 DROP TABLE t3;
 
+--echo # Tests for I_S.COLUMNS.EXTRA marker on masked columns.
+
+CREATE TABLE t4(i INT MASKING POLICY p1, j INT);
+CREATE TABLE t5(k INT);
+
+SELECT column_name, extra
+FROM information_schema.columns
+WHERE table_schema = database() AND table_name = 't4'
+ORDER BY column_name;
+
+SELECT DISTINCT table_name
+FROM information_schema.columns
+WHERE table_schema = database()
+  AND table_name IN ('t4', 't5')
+  AND extra LIKE '%MASKING POLICY%'
+ORDER BY table_name;
+
+ALTER TABLE t4 ALTER COLUMN i DROP MASKING POLICY;
+SELECT column_name, extra
+FROM information_schema.columns
+WHERE table_schema = database() AND table_name = 't4'
+ORDER BY column_name;
+
+SELECT DISTINCT table_name
+FROM information_schema.columns
+WHERE table_schema = database()
+  AND table_name IN ('t4', 't5')
+  AND extra LIKE '%MASKING POLICY%'
+ORDER BY table_name;
+
+ALTER TABLE t4 ALTER COLUMN i SET MASKING POLICY p1;
+ALTER TABLE t4 MODIFY COLUMN i INT MASKING POLICY p1 INVISIBLE;
+SELECT column_name, extra
+FROM information_schema.columns
+WHERE table_schema = database() AND table_name = 't4'
+ORDER BY column_name;
+
+DROP TABLE t4, t5;
+
 # Masking policy names cannot be empty or end in a space. And they
 # cannot exceed 64 characters.
 --error ER_SP_WRONG_NAME

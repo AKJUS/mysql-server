@@ -5697,7 +5697,7 @@ String *Item_func_internal_get_dd_column_extra::val_str(String *str) {
     oss << (is_virtual ? "VIRTUAL GENERATED" : "STORED GENERATED");
   }
 
-  // Print the column property 'NOT SECONDARY'.
+  // Print column properties from COLUMNS.OPTIONS.
   if (properties_ptr != nullptr) {
     // Read required values from properties
     std::unique_ptr<dd::Properties> p(
@@ -5709,6 +5709,11 @@ String *Item_func_internal_get_dd_column_extra::val_str(String *str) {
              properties_ptr->c_ptr_safe());
       str->copy(oss.str().c_str(), oss.str().length(), system_charset_info);
       return str;
+    }
+
+    if (p->exists("masking_policy")) {
+      if (oss.str().length()) oss << " ";
+      oss << "MASKING POLICY";
     }
 
     if (p->exists("not_secondary")) {
