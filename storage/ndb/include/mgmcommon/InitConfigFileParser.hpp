@@ -49,7 +49,6 @@ class InitConfigFileParser {
    *   Constructor
    */
   InitConfigFileParser();
-  ~InitConfigFileParser();
 
   /**
    *   Reads the initial configuration file, checks syntax and semantic
@@ -132,7 +131,7 @@ class InitConfigFileParser {
   /**
    *   Information about parameters (min, max values etc)
    */
-  ConfigInfo *m_info;
+  const ConfigInfo *m_info;
 
   bool handle_mycnf_defaults(Vector<struct my_option> &options,
                              InitConfigFileParser::Context &ctx,

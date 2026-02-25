@@ -881,7 +881,7 @@ class ErrorCodesTable : public VirtualTable {
 #include "mgmapi/mgmapi_config_parameters.h"
 #include "mgmcommon/ConfigInfo.hpp"
 class ConfigParamsTable : public VirtualTable {
-  ConfigInfo m_config_info;
+  const ConfigInfo &m_config_info = ConfigInfo::default_instance();
   // Index by "row_number" into ConfigInfo
   Vector<const ConfigInfo::ParamInfo *> m_config_params;
 
