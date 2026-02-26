@@ -215,7 +215,10 @@ const NDB_TICKS NdbTick_getCurrentTicks(void) {
   }
 }
 
-const NDB_TICKS NdbTick_AddMilliseconds(NDB_TICKS ticks, Uint64 ms) {
+NDB_TICKS NdbTick_AddMilliseconds(NDB_TICKS ticks, Int64 ms) {
+  // Check ms against 100 years, if assert failed maybe caller messed up?
+  assert(ms < 100LL * 366 * 24 * 3600 * 1000);
+  assert(ms > -100LL * 366 * 24 * 3600 * 1000);
   assert(isInited);
   assert(NdbTick_IsValid(ticks));
   assert(NdbDuration::tick_frequency >= MILLISEC_PER_SEC);

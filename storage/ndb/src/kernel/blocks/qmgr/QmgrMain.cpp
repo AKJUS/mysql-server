@@ -722,7 +722,8 @@ void Qmgr::execREAD_LOCAL_SYSFILE_CONF(Signal *signal) {
 
 void Qmgr::setHbDelay(UintR aHbDelay) {
   const NDB_TICKS now = NdbTick_getCurrentTicks();
-  hb_send_timer.setDelay(aHbDelay < 10 ? 10 : aHbDelay);
+  // Send heartbeat twice as frequent than checking them.
+  hb_send_timer.setDelay(aHbDelay < 20 ? 10 : aHbDelay / 2);
   hb_send_timer.reset(now);
   hb_check_timer.setDelay(aHbDelay < 10 ? 10 : aHbDelay);
   hb_check_timer.reset(now);
