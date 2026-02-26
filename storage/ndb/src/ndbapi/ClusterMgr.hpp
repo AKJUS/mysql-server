@@ -126,8 +126,8 @@ class ClusterMgr : public trp_client {
   /**
    * The node state is protected for updates by ClusterMgrThreadMutex.
    * One can call hb_received and set hbMissed to 0 though without
-   * protection since this is safe. All other uses of hbCheckInterval,
-   * hbCounter and hbMissed is internal to ClusterMgr and done with
+   * protection since this is safe. All other uses of hbCheckInterval
+   * and hbMissed is internal to ClusterMgr and done with
    * protection of ClusterMgrThreadMutex.
    *
    * The node data is often read without protection as a way to decide
@@ -144,9 +144,10 @@ class ClusterMgr : public trp_client {
     /**
      * Heartbeat stuff
      */
-    Uint32 hbCheckInterval;  // Heartbeat interval
-    Uint32 hbCounter;        // # milliseconds passed since last hb sent
+    Uint32 hbCheckInterval;  // Heartbeat interval (ms)
     Uint32 hbMissed;         // # missed heartbeats
+    NDB_TICKS nextHbSend;
+    NDB_TICKS nextHbCheck;
 
     bool processInfoSent;  // ProcessInfo Report has been sent to node
   };
@@ -232,6 +233,7 @@ class ClusterMgr : public trp_client {
   void recalcMinDbVersion();
   void recalcMinApiVersion();
   void sendProcessInfoReport(NodeId nodeId);
+  Uint32 get_send_heartbeat_interval(const Node &node) const;
 
  public:
   /**
