@@ -182,6 +182,10 @@ bool PT_joined_table::contextualize_tabs(Parse_context *pc) {
     std::swap(m_left_pt_table, m_right_pt_table);
   }
 
+  char buff[NAME_LEN + 1];
+  if (check_stack_overrun(pc->thd, STACK_MIN_SIZE, pointer_cast<uchar *>(buff)))
+    return true; /* purecov: inspected */
+
   if (m_left_pt_table->contextualize(pc) || m_right_pt_table->contextualize(pc))
     return true;
 
