@@ -308,6 +308,11 @@ void ClusterMgr::startup() {
   NdbCondition_Broadcast(waitForHBCond);
 }
 
+Uint32 ClusterMgr::get_send_heartbeat_interval(const Node &cm_node) const {
+  // Send heartbeat twice as frequent than checking them.
+  return std::min(m_max_api_reg_req_interval, cm_node.hbCheckInterval / 2);
+}
+
 void ClusterMgr::threadMain() {
   startup();
 
@@ -332,7 +337,6 @@ void ClusterMgr::threadMain() {
 
   while (!theStop) {
     /* Sleep 1/5 of minHeartBeatInterval between each check */
-    const NDB_TICKS before = now;
     for (Uint32 i = 0; i < 5; i++) {
       NdbSleep_MilliSleep(minHeartBeatInterval / 5);
       {
@@ -352,7 +356,6 @@ void ClusterMgr::threadMain() {
       }
     }
     now = NdbTick_getCurrentTicks();
-    const Uint32 timeSlept = (Uint32)NdbTick_Elapsed(before, now).milliSec();
 
     lock();
     if (m_cluster_state == CS_waiting_for_clean_cache &&
@@ -407,21 +410,24 @@ void ClusterMgr::threadMain() {
         }
       }
 
-      cm_node.hbCounter += timeSlept;
-      if (cm_node.hbCounter >= m_max_api_reg_req_interval ||
-          cm_node.hbCounter >= cm_node.hbCheckInterval) {
-        /**
-         * It is now time to send a new Heartbeat
-         */
-        if (cm_node.hbCounter >= cm_node.hbCheckInterval) {
-          cm_node.hbMissed++;
-          cm_node.hbCounter = 0;
-          if (cm_node.hbMissed >= 2 && cm_node.hbCheckInterval > 0) {
-            g_eventLogger->warning("Node %u missed heartbeat %u from node %u.",
-                                   getOwnNodeId(), cm_node.hbMissed, nodeId);
-          }
+      // Check missed heartbeat
+      if (cm_node.hbCheckInterval == 0 ||
+          NdbTick_Compare(now, cm_node.nextHbCheck) >= 0) {
+        cm_node.hbMissed++;
+        cm_node.nextHbCheck =
+            NdbTick_AddMilliseconds(now, cm_node.hbCheckInterval);
+        if (cm_node.hbMissed >= 2 && cm_node.hbCheckInterval > 0) {
+          g_eventLogger->warning("Node %u missed heartbeat %u from node %u.",
+                                 getOwnNodeId(), cm_node.hbMissed, nodeId);
         }
+      }
 
+      /**
+       * It is now time to send a new Heartbeat
+       */
+
+      if (cm_node.hbCheckInterval == 0 ||
+          NdbTick_Compare(now, cm_node.nextHbSend) >= 0) {
         if (theNode.m_info.m_type != NodeInfo::DB)
           signal.theReceiversBlockNumber = API_CLUSTERMGR;
         else
@@ -436,6 +442,10 @@ void ClusterMgr::threadMain() {
           m_sent_API_REGREQ_to_myself = true;
         }
         raw_sendSignal(&signal, nodeId);
+        assert(m_max_api_reg_req_interval > 0);
+        Uint32 send_interval = get_send_heartbeat_interval(cm_node);
+        if (send_interval > 0)
+          cm_node.nextHbSend = NdbTick_AddMilliseconds(now, send_interval);
       }  // if
 
       /**
@@ -591,8 +601,7 @@ void ClusterMgr::trp_deliver_signal(const NdbApiSignal *sig,
   return;
 }
 
-ClusterMgr::Node::Node()
-    : hbCheckInterval(0), hbCounter(0), processInfoSent(false) {}
+ClusterMgr::Node::Node() : hbCheckInterval(0), processInfoSent(false) {}
 
 /**
  * recalcMinDbVersion
@@ -846,21 +855,40 @@ void ClusterMgr::execAPI_REGCONF(const NdbApiSignal *signal,
     By convention, conf->apiHeartbeatInterval is in centiseconds rather than
     milliseconds. See also Qmgr::sendApiRegConf().
    */
-  const Int64 interval =
-      (static_cast<Int64>(apiRegConf->apiHeartbeatInterval) * 10) - 50;
+  Int64 interval = static_cast<Int64>(apiRegConf->apiHeartbeatInterval) * 10;
 
   if (interval > UINT_MAX32) {
     // In case of overflow.
     assert(false); /* Note this assert fails on some upgrades... */
-    cm_node.hbCheckInterval = UINT_MAX32;
+    interval = UINT_MAX32;
   } else if (interval < minHeartBeatInterval) {
     /**
      * We use minHeartBeatInterval as a lower limit. This also prevents
      * against underflow.
      */
-    cm_node.hbCheckInterval = minHeartBeatInterval;
-  } else {
-    cm_node.hbCheckInterval = static_cast<Uint32>(interval);
+    interval = minHeartBeatInterval;
+  }
+  if (cm_node.hbCheckInterval == 0) {
+    // Initiate nextHbCheck and nextHbSend
+    NDB_TICKS now = NdbTick_getCurrentTicks();
+    cm_node.hbCheckInterval = interval;
+    cm_node.nextHbCheck = NdbTick_AddMilliseconds(now, cm_node.hbCheckInterval);
+    unsigned send_interval = get_send_heartbeat_interval(cm_node);
+    if (send_interval > 0)
+      cm_node.nextHbSend = NdbTick_AddMilliseconds(now, send_interval);
+  } else if (cm_node.hbCheckInterval != interval) {
+    // Adjust nextHbCheck and nextHbSend
+    Int64 old_send_interval = get_send_heartbeat_interval(cm_node);
+    cm_node.hbCheckInterval = interval;
+    Int64 new_send_interval = get_send_heartbeat_interval(cm_node);
+    cm_node.nextHbCheck = NdbTick_AddMilliseconds(
+        cm_node.nextHbCheck, interval - cm_node.hbCheckInterval);
+    if (cm_node.hbCheckInterval == 0)
+      NdbTick_Invalidate(&cm_node.nextHbSend);
+    else {
+      cm_node.nextHbSend = NdbTick_AddMilliseconds(
+          cm_node.nextHbSend, new_send_interval - old_send_interval);
+    }
   }
 
   // If responding nodes indicates that it is connected to other
@@ -1105,8 +1133,9 @@ void ClusterMgr::reportConnected(NodeId nodeId) {
    * us with the real time-out period to use.
    */
   cm_node.hbMissed = 0;
-  cm_node.hbCounter = 0;
   cm_node.hbCheckInterval = 0;
+  NdbTick_Invalidate(&cm_node.nextHbSend);
+  NdbTick_Invalidate(&cm_node.nextHbCheck);
   cm_node.processInfoSent = false;
 
   assert(theNode.is_connected() == false);
