@@ -3070,21 +3070,20 @@ bool Json_wrapper::coerce_date(
   switch (type()) {
     case enum_json_type::J_DATE:
       get_date(date);
-      return false;
+      break;
     case enum_json_type::J_DATETIME:
     case enum_json_type::J_TIMESTAMP: {
       MYSQL_TIME ltime;
       get_datetime(&ltime);
       datetime_to_date(&ltime);
       *date = Date_val(ltime);
-      return false;
+      break;
     }
     case enum_json_type::J_STRING: {
       MYSQL_TIME_STATUS status;
       MYSQL_TIME mtime;
       set_zero_time(&mtime, MYSQL_TIMESTAMP_DATE);
-      if (!str_to_datetime(get_data(), get_data_length(), &mtime, flags,
-                           &status) &&
+      if (!str_to_datetime(get_data(), get_data_length(), &mtime, 0, &status) &&
           status.warnings == 0) {
         if (mtime.time_type == MYSQL_TIMESTAMP_DATETIME ||
             mtime.time_type == MYSQL_TIMESTAMP_DATETIME_TZ) {
@@ -3100,7 +3099,7 @@ bool Json_wrapper::coerce_date(
       error_handler("DATE", ER_INVALID_JSON_VALUE_FOR_CAST);
       return true;
   }
-  return false;
+  return date->check_date(flags) != 0;
 }
 
 namespace {

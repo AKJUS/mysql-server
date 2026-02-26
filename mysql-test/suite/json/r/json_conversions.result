@@ -18311,16 +18311,62 @@ validation_stage	side1	side2	side1_json_type	side2_json_type	side1_json_weightag
 #
 # Bug #34416304 WriteRowToChunk : Assertion `!thd->is_error()' failed
 #
+CREATE TABLE t (
+`a` DOUBLE,
+`b` DATETIME
+) engine=innodb;
+INSERT INTO t VALUES();
+INSERT INTO t VALUES();
+INSERT INTO t VALUES();
+INSERT INTO t VALUES();
+INSERT INTO t VALUES();
+SELECT * FROM t,
+JSON_TABLE(
+'[{"w":[{"a":true},false],"e":"r"},"x","c",1]','$[*]'
+COLUMNS(
+b VARCHAR(6595)
+EXISTS PATH '$[0].a'  ,
+a GEOMETRY
+EXISTS PATH '$.ba'
+ )
+) q;
 ERROR 22003: Cannot get geometry object from data you send to the GEOMETRY field
+DROP TABLE t;
 #
 # Bug#38980997: Assertion 'mtime.time_type == MYSQL_TIMESTAMP_DATE
 #               in JSON expressions
 #
+SELECT MONTHNAME(CAST('"5480-11-13"' AS JSON));
 MONTHNAME(CAST('"5480-11-13"' AS JSON))
 November
+SELECT MONTHNAME(CAST('"5480-11-13 14:08:10.287786"' AS JSON));
 MONTHNAME(CAST('"5480-11-13 14:08:10.287786"' AS JSON))
 November
+SELECT MONTHNAME(CAST('"14:08:10.287786"' AS JSON));
 MONTHNAME(CAST('"14:08:10.287786"' AS JSON))
 NULL
 Warnings:
 Warning	3156	Invalid JSON value for CAST to DATE from column cast_as_json at row 1
+#
+# Bug#38998827: Assert in Date_val::day_number
+#
+CREATE TABLE t (d DATE, dt DATETIME);
+INSERT IGNORE INTO t VALUES('0000-00-00', '0000-00-00 00:00:00');
+Warnings:
+Warning	1264	Out of range value for column 'd' at row 1
+Warning	1264	Out of range value for column 'dt' at row 1
+SELECT DATEDIFF(
+JSON_REPLACE('{"a":[3],"a":"\'{a:[0,0],a:3}\'","a":false,"c":[0,4]}',
+'$', d),
+CURRENT_DATE) AS col
+FROM t;
+col
+NULL
+SELECT DATEDIFF(
+JSON_REPLACE('{"a":[3],"a":"\'{a:[0,0],a:3}\'","a":false,"c":[0,4]}',
+'$', dt),
+CURRENT_TIMESTAMP) AS col
+FROM t;
+col
+NULL
+DROP TABLE t;
