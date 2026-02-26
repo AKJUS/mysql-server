@@ -2655,7 +2655,7 @@ void dd_write_table(dd::Object_id dd_space_id, Table *dd_table,
       dd_column->se_private_data().set(dd_index_key_strings[DD_TABLE_ID],
                                        table->id);
 
-      /* Write physical post only for tables having row versions */
+      /* Write physical pos only for tables having row versions */
       if (!has_row_versions || dd_column->is_virtual()) {
         continue;
       }
