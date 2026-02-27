@@ -926,6 +926,26 @@ secondary_engine_check_optimizer_request_t SecondaryEngineStateCheckHook(
   return secondary_engine->secondary_engine_check_optimizer_request;
 }
 
+/**
+  Enables the secondary engine nrows hook on the join hypergraph when it is
+  available and likely to be beneficial.
+
+  The hook is installed only if:
+  - the query has more than two nodes (to avoid overhead on small joins and
+    single-table queries), and
+  - we are executing on the primary engine (since the secondary engine already
+    has control over cardinality estimates otherwise).
+*/
+void MaybeSetSecondaryEngineNrowsHook(THD *thd, JoinHypergraph *graph) {
+  if (graph->nodes.size() <= 2 ||
+      thd->secondary_engine_optimization() ==
+          Secondary_engine_optimization::SECONDARY) {
+    return;
+  }
+
+  graph->set_secondary_engine_nrows_hook(RetrieveSecondaryEngineNrowsHook(thd));
+}
+
 /// Returns the MATCH function of a predicate that can be pushed down to a
 /// full-text index. This can be done if the predicate is a MATCH function,
 /// or in some cases (see IsSargableFullTextIndexPredicate() for details)
@@ -6598,7 +6618,7 @@ AccessPath *CostingReceiver::ProposeAccessPath(
         "force_subplan_" + GetForceSubplanToken(path, m_query_block->join);
     DBUG_EXECUTE_IF(token.c_str(), path->forced_by_dbug = true;);
   });
-  assert(!IsSecondaryEngineNrowsHookApplicable(path, m_thd, m_graph) ||
+  assert(!IsSecondaryEngineNrowsHookApplicable(path, m_graph) ||
          path->signature > 0 ||
          !IsSecondaryNrowsHookEnabledAndApplicable(path, m_thd, m_graph));
   if (existing_paths->empty()) {
@@ -6609,8 +6629,7 @@ AccessPath *CostingReceiver::ProposeAccessPath(
                    << " is first alternative, keeping\n";
     }
     AccessPath *insert_position = new (m_thd->mem_root) AccessPath(*path);
-    assert(!IsSecondaryEngineNrowsHookApplicable(insert_position, m_thd,
-                                                 m_graph) ||
+    assert(!IsSecondaryEngineNrowsHookApplicable(insert_position, m_graph) ||
            insert_position->signature > 0 ||
            !IsSecondaryNrowsHookEnabledAndApplicable(path, m_thd, m_graph));
     existing_paths->push_back(insert_position);
@@ -6733,7 +6752,7 @@ AccessPath *CostingReceiver::ProposeAccessPath(
       }
     }
   }
-  assert(!IsSecondaryEngineNrowsHookApplicable(path, m_thd, m_graph) ||
+  assert(!IsSecondaryEngineNrowsHookApplicable(path, m_graph) ||
          path->signature > 0 ||
          !IsSecondaryNrowsHookEnabledAndApplicable(path, m_thd, m_graph));
   if (insert_position == nullptr) {
@@ -6744,8 +6763,7 @@ AccessPath *CostingReceiver::ProposeAccessPath(
                    << " is potential alternative, keeping\n";
     }
     insert_position = new (m_thd->mem_root) AccessPath(*path);
-    assert(!IsSecondaryEngineNrowsHookApplicable(insert_position, m_thd,
-                                                 m_graph) ||
+    assert(!IsSecondaryEngineNrowsHookApplicable(insert_position, m_graph) ||
            insert_position->signature > 0 ||
            !IsSecondaryNrowsHookEnabledAndApplicable(path, m_thd, m_graph));
     existing_paths->emplace_back(insert_position);
@@ -9360,6 +9378,8 @@ static AccessPath *FindBestQueryPlanInner(THD *thd, Query_block *query_block,
         SecondaryEngineStateCheckHook(thd);
   }
 
+  MaybeSetSecondaryEngineNrowsHook(thd, &graph);
+
   CostingReceiver receiver(
       thd, query_block, graph, &orderings, &sort_ahead_orderings,
       &active_indexes, &spatial_indexes, &fulltext_searches, fulltext_tables,
@@ -9803,9 +9823,8 @@ static AccessPath *FindBestQueryPlanInner(THD *thd, Query_block *query_block,
 #ifndef NDEBUG
   WalkAccessPaths(
       root_path, join, WalkAccessPathPolicy::ENTIRE_QUERY_BLOCK,
-      [&secondary_engine_cost_hook, &thd, &graph](AccessPath *path,
-                                                  const JOIN *) {
-        if (!IsSecondaryEngineNrowsHookApplicable(path, thd, &graph)) {
+      [&secondary_engine_cost_hook, &graph](AccessPath *path, const JOIN *) {
+        if (!IsSecondaryEngineNrowsHookApplicable(path, &graph)) {
           assert(path->HasConsistentCostsAndRows(graph));
           // For RAPID, these row counts may not be consistent at this
           // point, see PopulateNrowsStatisticFromQkrnToAp().

@@ -98,51 +98,32 @@ static bool IsSecondaryNrowsHookIneligiblePath(AccessPath *path) {
          path->type == AccessPath::ZERO_ROWS_AGGREGATED;
 }
 
-bool IsSecondaryEngineNrowsHookApplicable(AccessPath *path, THD *thd,
+bool IsSecondaryEngineNrowsHookApplicable(AccessPath *path,
                                           const JoinHypergraph *graph) {
   assert(path != nullptr);
-  if (path == nullptr || IsSecondaryNrowsHookIneligiblePath(path) ||
-      (path->type == AccessPath::SORT &&
-       IsSecondaryNrowsHookIneligiblePath(path->sort().child)) ||
-      graph->nodes.size() <= 2U ||
-      thd->secondary_engine_optimization() ==
-          Secondary_engine_optimization::SECONDARY) {
-    // do not apply for fast, possibly point-select queries.
-    // not yet applied to secondary.
-    return false;
-  }
-  return true;
+  return graph->has_secondary_engine_nrows_hook() &&
+         !IsSecondaryNrowsHookIneligiblePath(path) &&
+         !(path->type == AccessPath::SORT &&
+           IsSecondaryNrowsHookIneligiblePath(path->sort().child));
 }
 
 bool IsSecondaryNrowsHookEnabledAndApplicable(AccessPath *path, THD *thd,
                                               const JoinHypergraph *graph) {
-  SecondaryEngineNrowsParameters params{thd};
-  const auto nrow_hook = RetrieveSecondaryEngineNrowsHook(params.thd);
-  if (!nrow_hook.has_value()) {
-    return false;
-  }
-  if (!IsSecondaryEngineNrowsHookApplicable(path, thd, graph)) {
+  if (!IsSecondaryEngineNrowsHookApplicable(path, graph)) {
     return false;
   }
   // Since params.access_path is nullptr, following returns the state of nrow
   // hook if true, implies the hook is enabled, and if false, implies the hook
   // is disabled.
-  return nrow_hook.value()(params);
+  return graph->call_secondary_engine_nrows_hook(
+      SecondaryEngineNrowsParameters{thd});
 }
 
 bool ApplySecondaryEngineNrowsHook(
     const SecondaryEngineNrowsParameters &params) {
-  const auto nrow_hook = RetrieveSecondaryEngineNrowsHook(params.thd);
-  if (!nrow_hook.has_value()) {
-    return false;
-  }
-
-  if (!IsSecondaryEngineNrowsHookApplicable(params.access_path, params.thd,
-                                            params.graph)) {
-    return false;
-  }
-
-  return nrow_hook.value()(params);
+  return IsSecondaryEngineNrowsHookApplicable(params.access_path,
+                                              params.graph) &&
+         params.graph->call_secondary_engine_nrows_hook(params);
 }
 
 AccessPath *NewStreamingAccessPath(THD *thd, AccessPath *child, JOIN *join,

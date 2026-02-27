@@ -52,6 +52,7 @@ class Query_block;
 class THD;
 struct MEM_ROOT;
 struct RelationalExpression;
+struct SecondaryEngineNrowsParameters;
 struct TABLE;
 
 /**
@@ -328,7 +329,31 @@ struct JoinHypergraph {
     m_sargable_join_predicates.emplace(predicate, position);
   }
 
+  using secondary_engine_nrows_hook_t =
+      bool (*)(const SecondaryEngineNrowsParameters &params);
+
+  /// Returns true if the secondary engine nrows hook is available.
+  bool has_secondary_engine_nrows_hook() const {
+    return m_secondary_engine_nrows_hook != nullptr;
+  }
+
+  /// Calls the secondary engine nrows hook.
+  /// Requires has_secondary_engine_nrows_hook() == true; asserts otherwise.
+  bool call_secondary_engine_nrows_hook(
+      const SecondaryEngineNrowsParameters &params) const {
+    assert(m_secondary_engine_nrows_hook != nullptr);
+    return m_secondary_engine_nrows_hook(params);
+  }
+
+  /// Sets the secondary engine nrows hook (nullptr means unavailable).
+  void set_secondary_engine_nrows_hook(
+      secondary_engine_nrows_hook_t secondary_engine_nrows_hook) {
+    m_secondary_engine_nrows_hook = secondary_engine_nrows_hook;
+  }
+
  private:
+  secondary_engine_nrows_hook_t m_secondary_engine_nrows_hook = nullptr;
+
   // For each sargable join condition, maps into its index in “predicates”.
   // We need the predicate index when applying the join to figure out whether
   // we have already applied the predicate or not; see

@@ -1935,12 +1935,11 @@ bool ApplySecondaryEngineNrowsHook(
   Returns whether SecondaryNrows is applicable given the parameters.
 
   @param path access path to be verified.
-  @param thd current query thd.
   @param graph current query block hypergraph.
 
   @return true if nrows hook is applicable.
 */
-bool IsSecondaryEngineNrowsHookApplicable(AccessPath *path, THD *thd,
+bool IsSecondaryEngineNrowsHookApplicable(AccessPath *path,
                                           const JoinHypergraph *graph);
 
 /**
