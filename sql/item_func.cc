@@ -2992,9 +2992,13 @@ double Item_func_sqrt::val_real() {
 double Item_func_pow::val_real() {
   assert(fixed);
   const double value = args[0]->val_real();
+  if (current_thd->is_error()) return 0.0;
+  if ((null_value = args[0]->null_value)) return 0.0;
+
   const double val2 = args[1]->val_real();
-  if ((null_value = (args[0]->null_value || args[1]->null_value)))
-    return 0.0; /* purecov: inspected */
+  if (current_thd->is_error()) return 0.0;
+  if ((null_value = args[0]->null_value)) return 0.0;
+
   const double pow_result = pow(value, val2);
   return check_float_overflow(pow_result);
 }
@@ -3629,13 +3633,15 @@ double my_double_round(double value, longlong dec, bool dec_unsigned,
 
 double Item_func_round::real_op() {
   const double value = args[0]->val_real();
+  if (current_thd->is_error()) return 0.0;
+  if ((null_value = args[0]->null_value)) return 0.0;
+
   const longlong decimal_places = args[1]->val_int();
+  if (current_thd->is_error()) return 0.0;
+  if ((null_value = args[1]->null_value)) return 0.0;
 
-  if (!(null_value = args[0]->null_value || args[1]->null_value))
-    return my_double_round(value, decimal_places, args[1]->unsigned_flag,
-                           truncate);
-
-  return 0.0;
+  return my_double_round(value, decimal_places, args[1]->unsigned_flag,
+                         truncate);
 }
 
 /*
@@ -3657,10 +3663,15 @@ static inline ulonglong my_unsigned_round(ulonglong value, ulonglong to,
 
 longlong Item_func_round::int_op() {
   const longlong value = args[0]->val_int();
+  if (current_thd->is_error()) return 0;
+  if ((null_value = args[0]->null_value)) return 0;
+
   const longlong dec = args[1]->val_int();
+  if (current_thd->is_error()) return 0;
+  if ((null_value = args[1]->null_value)) return 0;
+
   decimals = 0;
   ulonglong abs_dec;
-  if ((null_value = args[0]->null_value || args[1]->null_value)) return 0;
   if ((dec >= 0) || args[1]->unsigned_flag)
     return value;  // integer have not digits after point
 
@@ -3722,18 +3733,25 @@ longlong Item_func_round::int_op() {
 }
 
 my_decimal *Item_func_round::decimal_op(my_decimal *decimal_value) {
-  my_decimal val, *value = args[0]->val_decimal(&val);
+  my_decimal val;
+  my_decimal *value = args[0]->val_decimal(&val);
+  if (value == nullptr) {
+    null_value = args[0]->null_value;
+    return nullptr;
+  }
   longlong dec = args[1]->val_int();
+  if (current_thd->is_error()) return nullptr;
+  if ((null_value = args[1]->null_value)) return nullptr;
+
   if (dec >= 0 || args[1]->unsigned_flag)
     dec = min<ulonglong>(dec, decimals);
   else if (dec < INT_MIN)
     dec = INT_MIN;
 
-  if (!(null_value = (args[0]->null_value || args[1]->null_value ||
-                      my_decimal_round(E_DEC_FATAL_ERROR, value, (int)dec,
-                                       truncate, decimal_value) > 1)))
-    return decimal_value;
-  return nullptr;
+  if ((null_value = my_decimal_round(E_DEC_FATAL_ERROR, value, (int)dec,
+                                     truncate, decimal_value) > 1))
+    return nullptr;
+  return decimal_value;
 }
 
 bool Item_func_rand::do_itemize(Parse_context *pc, Item **res) {
