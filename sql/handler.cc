@@ -9024,18 +9024,6 @@ const handlerton *SecondaryEngineHandlerton(const THD *thd) {
 
 std::atomic<const char *> default_secondary_engine_name;
 
-secondary_engine_nrows_t RetrieveSecondaryEngineNrowsHook(THD *thd) {
-  const handlerton *secondary_engine = SecondaryEngineHandlerton(thd);
-  if (secondary_engine == nullptr) {
-    secondary_engine = EligibleSecondaryEngineHandlerton(thd, nullptr);
-  }
-  if (secondary_engine == nullptr) {
-    return nullptr;
-  }
-
-  return secondary_engine->secondary_engine_nrows;
-}
-
 /**
   Retrieves the secondary engine handlerton if possible.
 

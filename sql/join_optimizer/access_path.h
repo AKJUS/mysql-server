@@ -1943,19 +1943,6 @@ bool IsSecondaryEngineNrowsHookApplicable(AccessPath *path,
                                           const JoinHypergraph *graph);
 
 /**
-  Returns whether SecondaryNrows hook enabled and is applicable given the
-  parameters.
-
-  @param path access path to be verified.
-  @param thd current query thd.
-  @param graph current query block hypergraph.
-
-  @return true if nrows hook enabled and is applicable.
-*/
-bool IsSecondaryNrowsHookEnabledAndApplicable(AccessPath *path, THD *thd,
-                                              const JoinHypergraph *graph);
-
-/**
   Returns a map of all tables read when `path` or any of its children are
   executed. Only iterators that are part of the same query block as `path`
   are considered.

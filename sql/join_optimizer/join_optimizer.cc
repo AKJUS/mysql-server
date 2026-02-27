@@ -926,6 +926,19 @@ secondary_engine_check_optimizer_request_t SecondaryEngineStateCheckHook(
   return secondary_engine->secondary_engine_check_optimizer_request;
 }
 
+/// Gets the secondary storage engine nrows hook function, if any.
+secondary_engine_nrows_t RetrieveSecondaryEngineNrowsHook(THD *thd) {
+  const handlerton *secondary_engine = SecondaryEngineHandlerton(thd);
+  if (secondary_engine == nullptr) {
+    secondary_engine = EligibleSecondaryEngineHandlerton(thd, nullptr);
+  }
+  if (secondary_engine == nullptr) {
+    return nullptr;
+  }
+
+  return secondary_engine->secondary_engine_nrows;
+}
+
 /**
   Enables the secondary engine nrows hook on the join hypergraph when it is
   available and likely to be beneficial.
@@ -945,6 +958,22 @@ void MaybeSetSecondaryEngineNrowsHook(THD *thd, JoinHypergraph *graph) {
 
   graph->set_secondary_engine_nrows_hook(RetrieveSecondaryEngineNrowsHook(thd));
 }
+
+#ifndef NDEBUG
+// Returns whether SecondaryNrows hook is enabled and is applicable given the
+// parameters.
+bool IsSecondaryNrowsHookEnabledAndApplicable(AccessPath *path, THD *thd,
+                                              const JoinHypergraph *graph) {
+  if (!IsSecondaryEngineNrowsHookApplicable(path, graph)) {
+    return false;
+  }
+  // Since params.access_path is nullptr, following returns the state of nrow
+  // hook if true, implies the hook is enabled, and if false, implies the hook
+  // is disabled.
+  return graph->call_secondary_engine_nrows_hook(
+      SecondaryEngineNrowsParameters{thd});
+}
+#endif
 
 /// Returns the MATCH function of a predicate that can be pushed down to a
 /// full-text index. This can be done if the predicate is a MATCH function,

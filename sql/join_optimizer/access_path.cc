@@ -107,18 +107,6 @@ bool IsSecondaryEngineNrowsHookApplicable(AccessPath *path,
            IsSecondaryNrowsHookIneligiblePath(path->sort().child));
 }
 
-bool IsSecondaryNrowsHookEnabledAndApplicable(AccessPath *path, THD *thd,
-                                              const JoinHypergraph *graph) {
-  if (!IsSecondaryEngineNrowsHookApplicable(path, graph)) {
-    return false;
-  }
-  // Since params.access_path is nullptr, following returns the state of nrow
-  // hook if true, implies the hook is enabled, and if false, implies the hook
-  // is disabled.
-  return graph->call_secondary_engine_nrows_hook(
-      SecondaryEngineNrowsParameters{thd});
-}
-
 bool ApplySecondaryEngineNrowsHook(
     const SecondaryEngineNrowsParameters &params) {
   return IsSecondaryEngineNrowsHookApplicable(params.access_path,

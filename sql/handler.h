@@ -2654,10 +2654,6 @@ const handlerton *SecondaryEngineHandlerton(const THD *thd);
 const handlerton *EligibleSecondaryEngineHandlerton(
     THD *thd, const LEX_CSTRING *secondary_engine_in_name);
 
-// Returns the secondary_engine_nrows hook from plugin, if the plugin is
-// installed and the hook is installed.
-secondary_engine_nrows_t RetrieveSecondaryEngineNrowsHook(THD *thd);
-
 // FIXME: Temporary workaround to enable storage engine plugins to use the
 // before_commit hook. Remove after WL#11320 has been completed.
 using se_before_commit_t = void (*)(void *arg);
