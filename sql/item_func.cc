@@ -1883,8 +1883,8 @@ my_decimal *Item_func_numhybrid::val_decimal(my_decimal *decimal_value) {
         default:
           break;
       }
-      String *res;
-      if (!(res = str_op(&str_value))) return nullptr;
+      String *res = str_op(&str_value);
+      if (res == nullptr) return nullptr;
 
       str2my_decimal(E_DEC_FATAL_ERROR, res->ptr(), res->length(),
                      res->charset(), decimal_value);
@@ -1894,6 +1894,7 @@ my_decimal *Item_func_numhybrid::val_decimal(my_decimal *decimal_value) {
     default:
       assert(0);
   }
+  if (null_value) val = nullptr;
   return val;
 }
 
