@@ -959,3 +959,39 @@ WHERE c0 IN (FROM_UNIXTIME(71) ,"2026-02-19 11:12:12");
 DROP TABLE t;
 
 set timestamp = DEFAULT;
+
+--echo #
+--echo # Bug#37864937: Wrong Result of an and expression
+--echo #
+
+CREATE TABLE t0(c0 DECIMAL(1, 0));
+INSERT INTO t0(c0) VALUES(0);
+
+SELECT (NOT IFNULL(c0, c0)) AND 0.1 IN (c0) FROM t0;
+
+SELECT * FROM t0 WHERE (NOT IFNULL(c0, c0)) AND 0.1 IN (c0);
+
+SELECT * FROM t0 WHERE (NOT IFNULL(c0, c0)) AND 0. IN (c0);
+
+SELECT * FROM t0 WHERE (NOT IFNULL(c0, c0)) AND 10. IN (c0);
+
+DROP TABLE t0;
+
+--echo #
+--echo # Bug#37864930: Wrong Right Join involving a predicate containing IFNULL
+--echo #
+
+CREATE TABLE t0(c0 DECIMAL);
+CREATE TABLE t2(c0 INT);
+
+INSERT INTO t0(c0) VALUES (NULL), (1);
+INSERT INTO t2(c0) VALUES (0);
+
+SELECT IFNULL(t0.c0, 1) IN (t0.c0)
+FROM t0 RIGHT JOIN t2 ON 0.5 = t0.c0;
+
+SELECT *
+FROM t0 RIGHT JOIN t2 ON 0.5 = t0.c0
+WHERE IFNULL(t0.c0, 1) IN (t0.c0);
+
+DROP TABLE t0, t2;

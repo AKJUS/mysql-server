@@ -4006,6 +4006,14 @@ static bool check_simple_equality(THD *thd, Item *left_item, Item *right_item,
       field_item->unsigned_flag != const_item->unsigned_flag) {
     return false;
   }
+  /*
+    DECIMAL constants must not have larger fraction than field.
+    Unless the excess fraction is zero, the substitution cannot be correct.
+  */
+  if (field_item->result_type() == DECIMAL_RESULT &&
+      const_item->decimals > field_item->decimals) {
+    return false;
+  }
   if (field_item->result_type() == STRING_RESULT) {
     const CHARSET_INFO *cs = field_item->field->charset();
     if (item == nullptr) {
