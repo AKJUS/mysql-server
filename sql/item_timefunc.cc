@@ -2941,6 +2941,8 @@ bool Item_func_add_interval::resolve_type(THD *thd) {
 
 bool Item_func_add_interval::eval_datetime(Datetime_val *dt,
                                            my_time_flags_t flags) {
+  THD *thd = current_thd;
+
   // Add flags mandated by the class to the passed flags
   flags |= eval_flags();
 
@@ -2968,8 +2970,18 @@ bool Item_func_add_interval::eval_datetime(Datetime_val *dt,
       dt->time_type == MYSQL_TIMESTAMP_DATE) {
     date_to_datetime(dt);
   }
-  null_value =
-      date_add_interval_with_warn(current_thd, dt, m_interval_type, interval);
+  null_value = date_add_interval_with_warn(thd, dt, m_interval_type, interval);
+  if (null_value) return null_value;
+
+  // date_add_interval_with_warn may return zero date, which may not be wanted
+  int warnings = 0;
+  if (check_date(*dt, non_zero_date(*dt), flags, &warnings)) {
+    (void)make_truncated_value_warning(thd, Sql_condition::SL_WARNING,
+                                       ErrConvString(dt, 6),
+                                       MYSQL_TIMESTAMP_DATETIME, NullS);
+    null_value = true;
+  }
+
   return null_value;
 }
 
