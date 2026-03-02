@@ -1378,7 +1378,7 @@ class Ndb_schema_dist_data {
   bool metadata_changed;
 
   void init(Ndb_cluster_connection *cluster_connection) {
-    const Uint32 max_subscribers = cluster_connection->max_api_nodeid() + 1;
+    const Uint32 max_subscribers = MAX_NODES;
     m_own_nodeid = cluster_connection->node_id();
     NDB_SCHEMA_OBJECT::init(m_own_nodeid);
 
@@ -1436,6 +1436,14 @@ class Ndb_schema_dist_data {
                     data_node_id, subscriber_node_id);
     ndbcluster::ndbrequire(subscriber_node_id != 0);
 
+    if (subscriber_node_id > MAX_NODES_ID) {
+      ndb_log_error(
+          "Ignoring subscribe from node %u. "
+          "The maximum supported node ID is %u",
+          subscriber_node_id, MAX_NODES_ID);
+      return;
+    }
+
     Node_subscribers *subscribers = find_node_subscribers(data_node_id);
     if (subscribers) {
       subscribers->set(subscriber_node_id);
@@ -1450,6 +1458,14 @@ class Ndb_schema_dist_data {
     ndb_log_verbose(1, "Data node %d reports unsubscribe from node %d",
                     data_node_id, subscriber_node_id);
     ndbcluster::ndbrequire(subscriber_node_id != 0);
+
+    if (subscriber_node_id > MAX_NODES_ID) {
+      ndb_log_error(
+          "Ignoring unsubscribe from node %u. "
+          "The maximum supported node ID is %u",
+          subscriber_node_id, MAX_NODES_ID);
+      return;
+    }
 
     Node_subscribers *subscribers = find_node_subscribers(data_node_id);
     if (subscribers) {
@@ -4218,6 +4234,23 @@ class Ndb_schema_event_handler {
                                             pOp->getReqNodeId());
         // No 'check_wakeup_clients', adding subscribers doesn't complete
         // anything
+
+        DBUG_EXECUTE_IF("ndb_test_high_api_node_id", {
+          // Test the subscription of an API node with an ID higher than
+          // the existing ones.
+          m_schema_dist_data.report_subscribe(pOp->getNdbdNodeId(),
+                                              MAX_NODES_ID);
+
+          // Test the subscription of a node with an ID higher than
+          // the cluster limit.
+          m_schema_dist_data.report_subscribe(pOp->getNdbdNodeId(),
+                                              MAX_NODES_ID + 1);
+
+          // Clean up step to revert the fake subscription introduced
+          // by the test.
+          m_schema_dist_data.report_unsubscribe(pOp->getNdbdNodeId(),
+                                                MAX_NODES_ID);
+        });
         break;
       }
 
@@ -4225,6 +4258,14 @@ class Ndb_schema_event_handler {
         /* Remove node as subscriber */
         m_schema_dist_data.report_unsubscribe(pOp->getNdbdNodeId(),
                                               pOp->getReqNodeId());
+
+        DBUG_EXECUTE_IF("ndb_test_high_api_node_id", {
+          // Test the unsubscription of a node with an ID higher than
+          // the cluster limit.
+          m_schema_dist_data.report_unsubscribe(pOp->getNdbdNodeId(),
+                                                MAX_NODES_ID + 1);
+        });
+
         check_wakeup_clients(Ndb_schema_dist::NODE_UNSUBSCRIBE,
                              "Node unsubscribed");
         break;
