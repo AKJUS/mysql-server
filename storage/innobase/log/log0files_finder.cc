@@ -75,7 +75,7 @@ static bool log_files_validate_format(
     if (curr_format_int > to_int(Log_format::CURRENT)) {
       const auto file_path = log_file_path(files_ctx, file.m_id);
       ib::error(ER_IB_MSG_LOG_FILE_FORMAT_UNKNOWN, ulong{curr_format_int},
-                file_path.c_str(), REFMAN "upgrading-downgrading.html");
+                file_path.c_str(), REFMAN "upgrading.html");
       return false;
     }
     if (curr_format_int < to_int(Log_format::VERSION_8_0_30)) {
