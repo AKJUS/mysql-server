@@ -909,6 +909,7 @@ dberr_t Builder::copy_columns(Copy_ctx &ctx, size_t &mv_rows_added,
         auto err =
             get_virtual_column(ctx, ifield, col, src_field, mv_rows_added);
         if (err != DB_SUCCESS) {
+          key_buffer->pop_unfinished_tuple();
           return err;
         }
       } else {
@@ -927,6 +928,7 @@ dberr_t Builder::copy_columns(Copy_ctx &ctx, size_t &mv_rows_added,
         } else if (!dict_table_is_comp(m_index->table)) {
           /* Heap is created when new table is not compact. */
           ib::info(ER_IB_DDL_CONVERT_HEAP_NOT_FOUND);
+          key_buffer->pop_unfinished_tuple();
 
           DBUG_EXECUTE_IF("ddl_convert_charset_without_heap_fail",
                           { return DB_ERROR; });
@@ -1097,6 +1099,7 @@ dberr_t Builder::copy_row(Copy_ctx &ctx, size_t &mv_rows_added) noexcept {
     }
 
     if (unlikely(!key_buffer->will_fit(ctx.m_data_size))) {
+      key_buffer->pop_unfinished_tuple();
       if (!is_multi_value_index) {
         ctx.m_n_rows_added = 0;
       }

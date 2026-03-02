@@ -103,6 +103,13 @@ struct Key_sort_buffer : private ut::Non_copyable {
     return static_cast<dfield_t *>(mem_heap_alloc(m_heap, sz));
   }
 
+  /** Pops the unfinished tuple which was allocated with alloc(), but
+  deep_copy() wasn't called yet for it yet. */
+  void pop_unfinished_tuple() noexcept {
+    ut_a(m_n_tuples + 1 == m_dtuples.size());
+    m_dtuples.pop_back();
+  }
+
   /** Check if n bytes will fit in the buffer, or it is the first tuple,
   in which case we ignore the limit to ensure forward progress.
   @param[in] n                  Number of bytes to check.
