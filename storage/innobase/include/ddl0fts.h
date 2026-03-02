@@ -69,8 +69,8 @@ struct FTS {
   defines information the scan thread will fetch and put to the linked list
   for parallel tokenization/sort threads to process */
   struct Doc_item {
-    /** Field contains document string */
-    dfield_t *m_field{};
+    /** Field which contains a document string to index */
+    dfield_t m_field{};
 
     /** Document ID */
     doc_id_t m_doc_id{};
