@@ -2574,4 +2574,60 @@ SET optimizer_trace='enabled=off';
 
 DROP TABLE t1;
 
+--echo #
+--echo # Bug#35368475: FilterIterator should short-circuit on constant-false
+--echo #               conditions
+--echo #
+--echo # When the filter condition is const_for_execution() and evaluates to
+--echo # false, FilterIterator should return EOF immediately without scanning
+--echo # the source iterator.
+--echo #
+
+CREATE TABLE t(x INT);
+INSERT INTO t VALUES (), (), (), (), (), (), (), (), (), ();
+ANALYZE TABLE t;
+
+--echo # Test 1: Constant-false uncorrelated subquery.
+--echo # "never executed" on table scan proves DoInit() short-circuited.
+--replace_regex /actual time=\S+/actual time=N/g /cost=\S+/cost=N/g
+EXPLAIN ANALYZE SELECT 1 FROM t t1 WHERE 100 = (SELECT COUNT(*) FROM t t2);
+SELECT 1 FROM t t1 WHERE 100 = (SELECT COUNT(*) FROM t t2);
+
+--echo # Test 2: Constant-true subquery -- all 10 rows returned normally.
+SELECT 1 FROM t t1 WHERE 10 = (SELECT COUNT(*) FROM t t2);
+
+--echo # Test 3: NULL subquery condition -- 0 rows (NULL is not true).
+SELECT 1 FROM t t1 WHERE NULL = (SELECT COUNT(*) FROM t t2);
+
+--echo # Test 4: Mixed conjunction -- constant-false subquery short-circuits.
+--echo # "never executed" proves source was never initialized.
+--replace_regex /actual time=\S+/actual time=N/g /cost=\S+/cost=N/g
+EXPLAIN ANALYZE SELECT 1 FROM t t1
+  WHERE 0 = (SELECT COUNT(*) FROM t t2) AND t1.x IS NULL;
+SELECT 1 FROM t t1
+  WHERE 0 = (SELECT COUNT(*) FROM t t2) AND t1.x IS NULL;
+
+--echo # Test 5: Mixed conjunction, constant-true -- no short-circuit.
+SELECT 1 FROM t t1
+  WHERE 10 = (SELECT COUNT(*) FROM t t2) AND t1.x IS NULL;
+
+--echo # Test 6: Constant-false as the second AND-term.
+--replace_regex /actual time=\S+/actual time=N/g /cost=\S+/cost=N/g
+EXPLAIN ANALYZE SELECT 1 FROM t t1
+  WHERE t1.x IS NULL AND 0 = (SELECT COUNT(*) FROM t t2);
+
+--echo # Test 7: NULL conjunct in mixed AND -- short-circuits.
+SELECT 1 FROM t t1
+  WHERE NULL = (SELECT COUNT(*) FROM t t2) AND t1.x IS NULL;
+
+--echo # Test 8: Three-way AND with one constant-false term.
+SELECT 1 FROM t t1
+  WHERE t1.x IS NULL AND 0 = (SELECT COUNT(*) FROM t t2) AND t1.x IS NOT NULL;
+
+--echo # Test 9: Three-way AND, all constant-true -- returns rows normally.
+SELECT 1 FROM t t1
+  WHERE 10 = (SELECT COUNT(*) FROM t t2) AND 1 = 1 AND t1.x IS NULL;
+
+DROP TABLE t;
+
 --source include/disable_hypergraph.inc

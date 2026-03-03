@@ -2994,3 +2994,105 @@ no_table_scan
 1
 SET optimizer_trace='enabled=off';
 DROP TABLE t1;
+#
+# Bug#35368475: FilterIterator should short-circuit on constant-false
+#               conditions
+#
+# When the filter condition is const_for_execution() and evaluates to
+# false, FilterIterator should return EOF immediately without scanning
+# the source iterator.
+#
+CREATE TABLE t(x INT);
+INSERT INTO t VALUES (), (), (), (), (), (), (), (), (), ();
+ANALYZE TABLE t;
+Table	Op	Msg_type	Msg_text
+test.t	analyze	status	OK
+# Test 1: Constant-false uncorrelated subquery.
+# "never executed" on table scan proves DoInit() short-circuited.
+EXPLAIN ANALYZE SELECT 1 FROM t t1 WHERE 100 = (SELECT COUNT(*) FROM t t2);
+EXPLAIN
+-> Filter: <cache>((100 = (select #2)))  (cost=N rows=10) (actual time=N rows=0 loops=1)
+    -> Table scan on t1  (cost=N rows=10) (never executed)
+    -> Select #2 (subquery in condition; run only once)
+        -> Aggregate: count(0)  (cost=N rows=1) (actual time=N rows=1 loops=1)
+            -> Table scan on t2  (cost=N rows=10) (actual time=N rows=10 loops=1)
+
+SELECT 1 FROM t t1 WHERE 100 = (SELECT COUNT(*) FROM t t2);
+1
+# Test 2: Constant-true subquery -- all 10 rows returned normally.
+SELECT 1 FROM t t1 WHERE 10 = (SELECT COUNT(*) FROM t t2);
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+# Test 3: NULL subquery condition -- 0 rows (NULL is not true).
+SELECT 1 FROM t t1 WHERE NULL = (SELECT COUNT(*) FROM t t2);
+1
+# Test 4: Mixed conjunction -- constant-false subquery short-circuits.
+# "never executed" proves source was never initialized.
+EXPLAIN ANALYZE SELECT 1 FROM t t1
+WHERE 0 = (SELECT COUNT(*) FROM t t2) AND t1.x IS NULL;
+EXPLAIN
+-> Filter: ((t1.x is null) and <cache>((0 = (select #2))))  (cost=N rows=1) (actual time=N rows=0 loops=1)
+    -> Table scan on t1  (cost=N rows=10) (never executed)
+    -> Select #2 (subquery in condition; run only once)
+        -> Aggregate: count(0)  (cost=N rows=1) (actual time=N rows=1 loops=1)
+            -> Table scan on t2  (cost=N rows=10) (actual time=N rows=10 loops=1)
+
+SELECT 1 FROM t t1
+WHERE 0 = (SELECT COUNT(*) FROM t t2) AND t1.x IS NULL;
+1
+# Test 5: Mixed conjunction, constant-true -- no short-circuit.
+SELECT 1 FROM t t1
+WHERE 10 = (SELECT COUNT(*) FROM t t2) AND t1.x IS NULL;
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+# Test 6: Constant-false as the second AND-term.
+EXPLAIN ANALYZE SELECT 1 FROM t t1
+WHERE t1.x IS NULL AND 0 = (SELECT COUNT(*) FROM t t2);
+EXPLAIN
+-> Filter: ((t1.x is null) and <cache>((0 = (select #2))))  (cost=N rows=1) (actual time=N rows=0 loops=1)
+    -> Table scan on t1  (cost=N rows=10) (never executed)
+    -> Select #2 (subquery in condition; run only once)
+        -> Aggregate: count(0)  (cost=N rows=1) (actual time=N rows=1 loops=1)
+            -> Table scan on t2  (cost=N rows=10) (actual time=N rows=10 loops=1)
+
+# Test 7: NULL conjunct in mixed AND -- short-circuits.
+SELECT 1 FROM t t1
+WHERE NULL = (SELECT COUNT(*) FROM t t2) AND t1.x IS NULL;
+1
+# Test 8: Three-way AND with one constant-false term.
+SELECT 1 FROM t t1
+WHERE t1.x IS NULL AND 0 = (SELECT COUNT(*) FROM t t2) AND t1.x IS NOT NULL;
+1
+# Test 9: Three-way AND, all constant-true -- returns rows normally.
+SELECT 1 FROM t t1
+WHERE 10 = (SELECT COUNT(*) FROM t t2) AND 1 = 1 AND t1.x IS NULL;
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+DROP TABLE t;

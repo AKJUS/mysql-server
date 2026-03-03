@@ -96,11 +96,12 @@ class FilterIterator final : public RowIterator {
   void UnlockRow() override { m_source->UnlockRow(); }
 
  private:
-  bool DoInit() override { return m_source->Init(); }
+  bool DoInit() override;
   int DoRead() override;
 
   unique_ptr_destroy_only<RowIterator> m_source;
   Item *m_condition;
+  bool m_no_rows{false};
 };
 
 /**
