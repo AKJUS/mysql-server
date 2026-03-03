@@ -1269,3 +1269,19 @@ FROM t0 RIGHT JOIN t2 ON 0.5 = t0.c0
 WHERE IFNULL(t0.c0, 1) IN (t0.c0);
 c0	c0
 DROP TABLE t0, t2;
+#
+# Bug#38979801: Assertion failed: in_item
+#
+CREATE TABLE t (
+c0 datetime,
+my_id bigint
+);
+INSERT INTO t VALUES
+(TIMESTAMP'2025-01-01 00:00:01', 1), (TIMESTAMP'2025-01-01 00:00:00', 2);
+SELECT * FROM t WHERE my_id NOT IN ('3544-04-19', c0);
+c0	my_id
+2025-01-01 00:00:01	1
+2025-01-01 00:00:00	2
+Warnings:
+Warning	1292	Truncated incorrect DOUBLE value: '3544-04-19'
+DROP TABLE t;

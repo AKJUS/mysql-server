@@ -5592,7 +5592,7 @@ bool Item_func_in::resolve_type(THD *thd) {
   left_result_type = args[0]->result_type();
   Item_result cmp_type = STRING_RESULT;
 
-  const uint found_types = collect_cmp_types(args, arg_count, true);
+  uint found_types = collect_cmp_types(args, arg_count, true);
   if (found_types == 0) return true;
 
   m_values_are_const = true;
@@ -5786,14 +5786,22 @@ bool Item_func_in::resolve_type(THD *thd) {
           bool converted;
           if (convert_constant_item(thd, field, &arg[0], &converted))
             return true;
+          if (converted) {
+            Item_result res =
+                item_cmp_type(left_result_type, arg[0]->result_type());
+            if ((found_types & (1U << (int)res)) == 0) {
+              found_types |= (1U << (int)res);
+              type_cnt++;
+            }
+          }
           consts_are_integer &= is_integer_type(arg[0]->data_type());
         }
       }
       /*
-        If all constant values are now of integer type, the IN operation
-        can be carried out as an integer operation.
+        If all values are const and all constant values are now of integer
+        type, the IN operation can be carried out as an integer operation.
       */
-      if (consts_are_integer) {
+      if (m_values_are_const && consts_are_integer) {
         cmp_type = INT_RESULT;
       }
     }
