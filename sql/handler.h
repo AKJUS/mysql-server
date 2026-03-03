@@ -5121,6 +5121,7 @@ class handler {
   int ha_check_for_upgrade(HA_CHECK_OPT *check_opt);
   /** to be actually called to get 'check()' functionality*/
   int ha_check(THD *thd, HA_CHECK_OPT *check_opt);
+  int ha_check_foreign_constraints(THD *thd, size_t n_threads);
   int ha_repair(THD *thd, HA_CHECK_OPT *check_opt);
   void ha_start_bulk_insert(ha_rows rows);
   int ha_end_bulk_insert();
@@ -5245,6 +5246,17 @@ class handler {
   @param[in] thd user session
   @return true iff bulk load can be done on the table. */
   virtual bool bulk_load_check(THD *thd [[maybe_unused]]) const {
+    return false;
+  }
+
+  /** Check whether all records in the child table satisfy the foreign key
+  constraints.
+  @param[in]  thd  user session.
+  @param[in]  n_threads  number of threads to use.
+  @return true iff foreign key constraints are satisfied. */
+  virtual int check_foreign_constraints(THD *thd [[maybe_unused]],
+                                        size_t n_threads
+                                        [[maybe_unused]]) const {
     return false;
   }
 

@@ -4853,6 +4853,10 @@ int handler::ha_check(THD *thd, HA_CHECK_OPT *check_opt) {
   return check(thd, check_opt);
 }
 
+int handler::ha_check_foreign_constraints(THD *thd, size_t n_threads) {
+  return check_foreign_constraints(thd, n_threads);
+}
+
 /**
   A helper function to mark a transaction read-write,
   if it is started.

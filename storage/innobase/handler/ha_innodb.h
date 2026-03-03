@@ -475,6 +475,10 @@ class ha_innobase : public handler {
   @return true iff bulk load can be done on the table. */
   bool bulk_load_check(THD *thd) const override;
 
+  /** Check the table for any foreign key constraint violations.
+  @return 0 when there are no violations (success) */
+  int check_foreign_constraints(THD *thd, size_t n_threads) const override;
+
   /** Used during bulk load on a non-empty table, called after the CSV file
   input is exhausted and we need to copy any existing data from the original
   table to the duplicated one.

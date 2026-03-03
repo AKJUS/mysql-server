@@ -545,8 +545,10 @@ bool Sql_cmd_load_table::execute_bulk(THD *thd) {
     tdc_remove_table(thd, TDC_RT_REMOVE_ALL, table_ref->db,
                      table_ref->table_name, false);
     if (m_non_empty_table && !info.m_is_dryrun) {
-      tdc_remove_table(thd, TDC_RT_REMOVE_ALL, new_table_ref.db,
-                       new_table_ref.table_name, false);
+      if (new_table_ref.db != nullptr && new_table_ref.table_name != nullptr) {
+        tdc_remove_table(thd, TDC_RT_REMOVE_ALL, new_table_ref.db,
+                         new_table_ref.table_name, false);
+      }
     }
 
     // Post DDL action for truncate (and rename, create and remove tables during
@@ -558,6 +560,13 @@ bool Sql_cmd_load_table::execute_bulk(THD *thd) {
 
   if (!table_ref->table->file->is_table_empty()) {
     m_non_empty_table = true;
+  }
+
+  if (m_non_empty_table && table_ref->table->s->foreign_keys > 0) {
+    my_error(ER_NOT_SUPPORTED_YET, MYF(0),
+             "BULK LOAD: Non-empty table with foreign keys");
+    success = false;
+    return false;
   }
 
   if (m_non_empty_table && !info.m_is_dryrun) {
@@ -604,12 +613,11 @@ bool Sql_cmd_load_table::execute_bulk(THD *thd) {
     return true;
   }
 
-  /*
-  Open the table after truncate. Here we open the destination table, on which
-  we already have an exclusive metadata lock.
-  */
-  if (open_tables(thd, &table_ref, &counter, MYSQL_OPEN_HAS_MDL_LOCK)) {
-    my_error(ER_INTERNAL_ERROR, MYF(0), "BULK LOAD: open_tables failed");
+  /* Open the table after truncate. Here we open the destination table, on
+  which we already have an exclusive metadata lock.  */
+  Open_table_context ot_ctx(thd, MYSQL_OPEN_REOPEN);
+  if (open_table(thd, table_ref, &ot_ctx)) {
+    my_error(ER_INTERNAL_ERROR, MYF(0), "BULK LOAD: open_table failed");
     success = false;
     return true;
   }
@@ -642,6 +650,33 @@ bool Sql_cmd_load_table::execute_bulk(THD *thd) {
       my_error(ER_INTERNAL_ERROR, MYF(0),
                "BULK LOAD: bulk_driver_service failed");
       success = false;
+      return true;
+    }
+  }
+
+  const bool no_fk_check =
+      thd->variables.option_bits & OPTION_NO_FOREIGN_KEY_CHECKS;
+
+  if (table_ref->table->s->foreign_keys > 0 && !no_fk_check) {
+    auto *share = table_ref->table->s;
+    for (TABLE_SHARE_FOREIGN_KEY_INFO *fk = share->foreign_key;
+         fk < share->foreign_key + share->foreign_keys; ++fk) {
+      Table_ref fk_table(fk->referenced_table_db.str,
+                         fk->referenced_table_db.length,
+                         fk->referenced_table_name.str,
+                         fk->referenced_table_name.length, TL_WRITE);
+
+      if (lock_table_names(thd, &fk_table, nullptr,
+                           thd->variables.lock_wait_timeout, 0)) {
+        return true;
+      }
+    }
+
+    if (table_ref->table->file->ha_check_foreign_constraints(thd,
+                                                             m_concurrency)) {
+      /* Foreign key constraint check failed. */
+      my_error(ER_BULK_LOADER_COMPONENT_ERROR, MYF(0),
+               "Foreign key check failed");
       return true;
     }
   }

@@ -11146,12 +11146,6 @@ bool ha_innobase::bulk_load_check(THD *) const {
     return false;
   }
 
-  if (!table->foreign_set.empty()) {
-    my_error(ER_FEATURE_UNSUPPORTED, MYF(0), "TABLE WITH FOREIGN KEYS",
-             "LOAD DATA ALGORITHM = BULK");
-    return false;
-  }
-
   return true;
 }
 

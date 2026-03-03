@@ -157,6 +157,7 @@ SET(INNOBASE_SOURCES
   handler/ha_innodb.cc
   handler/ha_innopart.cc
   handler/handler0alter.cc
+  handler/ha0check.cc
   handler/i_s.cc
   handler/p_s.cc
   ibuf/ibuf0ibuf.cc
