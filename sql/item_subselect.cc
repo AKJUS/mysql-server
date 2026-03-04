@@ -1088,8 +1088,9 @@ bool Query_result_max_min_subquery::cmp_int() {
 */
 bool Query_result_max_min_subquery::cmp_decimal() {
   Item *maxmin = ((Item_singlerow_subselect *)item)->element_index(0);
-  my_decimal cval, *cvalue = cache->val_decimal(&cval);
-  my_decimal mval, *mvalue = maxmin->val_decimal(&mval);
+  my_decimal cval, mval;
+  my_decimal *cvalue = cache->val_decimal(&cval);
+  my_decimal *mvalue = maxmin->val_decimal(&mval);
   if (cache->null_value || maxmin->null_value)
     return (ignore_nulls) ? !(cache->null_value) : !(maxmin->null_value);
   return (fmax) ? (my_decimal_cmp(cvalue, mvalue) > 0)
@@ -1270,7 +1271,7 @@ my_decimal *Item_singlerow_subselect::val_decimal(my_decimal *decimal_value) {
     return retval;
   } else {
     reset();
-    return error_decimal(decimal_value);
+    return nullptr;
   }
 }
 
@@ -1893,7 +1894,9 @@ String *Item_exists_subselect::val_str(String *str) {
 
 my_decimal *Item_exists_subselect::val_decimal(my_decimal *decimal_value) {
   const longlong val = val_bool();
-  if (null_value) return nullptr;
+  if (null_value || current_thd->is_error()) {
+    return nullptr;
+  }
   int2my_decimal(E_DEC_FATAL_ERROR, val, false, decimal_value);
   return decimal_value;
 }

@@ -250,7 +250,7 @@ bool Item::val_bool() {
     case DECIMAL_RESULT: {
       my_decimal decimal_value;
       my_decimal *val = val_decimal(&decimal_value);
-      if (val) return !my_decimal_is_zero(val);
+      if (val != nullptr) return !my_decimal_is_zero(val);
       return false;
     }
     case REAL_RESULT:
@@ -319,8 +319,11 @@ String *Item::val_string_from_int(String *str) {
 }
 
 String *Item::val_string_from_decimal(String *str) {
-  my_decimal dec_buf, *dec = val_decimal(&dec_buf);
-  if (null_value) return error_str();
+  my_decimal dec_buf;
+  my_decimal *dec = val_decimal(&dec_buf);
+  if (dec == nullptr) {
+    return nullptr;
+  }
   my_decimal_round(E_DEC_FATAL_ERROR, dec, decimals, false, &dec_buf);
   my_decimal2string(E_DEC_FATAL_ERROR, &dec_buf, str);
   return str;
@@ -367,23 +370,27 @@ String *Item::val_string_from_time(String *str) {
 my_decimal *Item::val_decimal_from_real(my_decimal *decimal_value) {
   DBUG_TRACE;
   const double nr = val_real();
-  if (null_value) return nullptr;
+  if (null_value || current_thd->is_error()) {
+    return nullptr;
+  }
   double2my_decimal(E_DEC_FATAL_ERROR, nr, decimal_value);
   return decimal_value;
 }
 
 my_decimal *Item::val_decimal_from_int(my_decimal *decimal_value) {
   const longlong nr = val_int();
-  if (null_value) return nullptr;
+  if (null_value || current_thd->is_error()) {
+    return nullptr;
+  }
   int2my_decimal(E_DEC_FATAL_ERROR, nr, unsigned_flag, decimal_value);
   return decimal_value;
 }
 
 my_decimal *Item::val_decimal_from_string(my_decimal *decimal_value) {
-  String *res;
-
-  if (!(res = val_str(&str_value))) return nullptr;
-
+  String *res = val_str(&str_value);
+  if (res == nullptr) {
+    return nullptr;
+  }
   if (str2my_decimal(E_DEC_FATAL_ERROR & ~E_DEC_BAD_NUM, res->ptr(),
                      res->length(), res->charset(), decimal_value)) {
     /*
@@ -394,36 +401,34 @@ my_decimal *Item::val_decimal_from_string(my_decimal *decimal_value) {
     push_warning_printf(
         current_thd, Sql_condition::SL_WARNING, ER_TRUNCATED_WRONG_VALUE,
         ER_THD(current_thd, ER_TRUNCATED_WRONG_VALUE), "DECIMAL", err.ptr());
+    if (current_thd->is_error()) return nullptr;
   }
   return decimal_value;
 }
 
 my_decimal *Item::val_decimal_from_date(my_decimal *decimal_value) {
-  assert(fixed);
   Date_val date;
   if (val_date(&date, 0)) {
-    return error_decimal(decimal_value);
+    return nullptr;
   }
   if (date_to_decimal(date, decimal_value) == nullptr) {
-    return error_decimal(decimal_value);
+    return nullptr;
   }
   return decimal_value;
 }
 
 my_decimal *Item::val_decimal_from_time(my_decimal *decimal_value) {
-  assert(fixed);
   Time_val time;
   if (val_time(&time)) {
-    return error_decimal(decimal_value);
+    return nullptr;
   }
   return time_to_decimal(time, decimal_value);
 }
 
 my_decimal *Item::val_decimal_from_datetime(my_decimal *decimal_value) {
-  assert(fixed);
   Datetime_val dt;
   if (val_datetime(&dt, 0)) {
-    return error_decimal(decimal_value);
+    return nullptr;
   }
   return datetime_to_decimal(&dt, decimal_value);
 }
@@ -472,7 +477,6 @@ longlong Item::val_temporal_with_round(enum_field_types type, uint8 dec) {
 }
 
 double Item::val_real_from_decimal() {
-  /* Note that fix_fields may not be called for Item_avg_field items */
   double result;
   my_decimal value_buff;
   my_decimal *dec_val = val_decimal(&value_buff);
@@ -493,7 +497,6 @@ double Item::val_real_from_string() {
 }
 
 longlong Item::val_int_from_decimal() {
-  /* Note that fix_fields may not be called for Item_avg_field items */
   longlong result;
   my_decimal value;
   my_decimal *dec_val = val_decimal(&value);
@@ -3769,17 +3772,15 @@ void Item_decimal::set_decimal_value(const my_decimal *value_par) {
 }
 
 String *Item_float::val_str(String *str) {
-  // following assert is redundant, because fixed=1 assigned in constructor
   assert(fixed);
   str->set_real(value, decimals, &my_charset_bin);
   return str;
 }
 
 my_decimal *Item_float::val_decimal(my_decimal *decimal_value) {
-  // following assert is redundant, because fixed=1 assigned in constructor
   assert(fixed);
   double2my_decimal(E_DEC_FATAL_ERROR, value, decimal_value);
-  return (decimal_value);
+  return decimal_value;
 }
 
 bool Item_string::set_str_with_copy(const char *str_arg, uint length_arg,
@@ -5353,8 +5354,7 @@ bool Item_param::set_value(THD *, sp_rcontext *, Item **it) {
     case DECIMAL_RESULT: {
       my_decimal dv_buf;
       my_decimal *dv = arg->val_decimal(&dv_buf);
-
-      if (!dv) return true;
+      if (dv == nullptr) return true;
 
       set_decimal(dv);
       break;
@@ -7271,8 +7271,11 @@ type_conversion_status Item::save_in_field_inner(Field *field,
       if (field_type == MYSQL_TYPE_NEWDECIMAL) {
         my_decimal decimal_value;
         my_decimal *value = val_decimal(&decimal_value);
-        if (null_value)
+        if (null_value) {
           return set_field_to_null_with_conversions(field, no_conversions);
+        } else if (value == nullptr) {
+          return TYPE_ERR_BAD_VALUE;
+        }
         field->set_notnull();
         return field->store_decimal(value);
       }
@@ -7326,8 +7329,11 @@ type_conversion_status Item::save_in_field_inner(Field *field,
   if (result_type() == DECIMAL_RESULT) {
     my_decimal decimal_value;
     my_decimal *value = val_decimal(&decimal_value);
-    if (null_value)
+    if (null_value) {
       return set_field_to_null_with_conversions(field, no_conversions);
+    } else if (value == nullptr) {
+      return TYPE_ERR_BAD_VALUE;
+    }
     field->set_notnull();
     return field->store_decimal(value);
   }
@@ -7693,7 +7699,6 @@ longlong Item_hex_string::val_int() {
 }
 
 my_decimal *Item_hex_string::val_decimal(my_decimal *decimal_value) {
-  // following assert is redundant, because fixed=1 assigned in constructor
   assert(fixed);
   const ulonglong value = (ulonglong)val_int();
   int2my_decimal(E_DEC_FATAL_ERROR, value, true, decimal_value);
@@ -10024,7 +10029,9 @@ bool resolve_const_item(THD *thd, Item **ref, Item *comp_item) {
     case DECIMAL_RESULT: {
       my_decimal decimal_value;
       my_decimal *result = item->val_decimal(&decimal_value);
-      if (thd->is_error()) return true;
+      if (result == nullptr && thd->is_error()) {
+        return true;
+      }
       const bool null_value = item->null_value;
       new_item = (null_value ? (Item *)new Item_null(item->item_name)
                              : (Item *)new Item_decimal(item->item_name, result,
@@ -10121,10 +10128,15 @@ int stored_field_cmp_to_item(THD *thd, Field *field, Item *item) {
   }
   if (res_type == INT_RESULT) return 0;  // Both are of type int
   if (res_type == DECIMAL_RESULT) {
-    my_decimal item_buf, *item_val, field_buf, *field_val;
-    item_val = item->val_decimal(&item_buf);
-    if (item->null_value) return 0;
-    field_val = field->val_decimal(&field_buf);
+    my_decimal item_buf, field_buf;
+    my_decimal *item_val = item->val_decimal(&item_buf);
+    if (item_val == nullptr) {
+      return 0;
+    }
+    my_decimal *field_val = field->val_decimal(&field_buf);
+    if (field_val == nullptr) {
+      return 0;
+    }
     return my_decimal_cmp(field_val, item_val);
   }
 
@@ -10585,9 +10597,13 @@ bool Item_cache_datetime::val_datetime(Datetime_val *dt,
 
   if ((value_cached || str_value_cached) && null_value) return true;
 
-  if (str_value_cached)  // TS-TODO: reuse MYSQL_TIME_cache eventually.
-    return get_datetime_from_string(dt, flags);
-
+  if (str_value_cached) {  // TS-TODO: reuse MYSQL_TIME_cache eventually.
+    if (get_datetime_from_string(dt, flags)) {
+      return (null_value = true);
+    } else {
+      return false;
+    }
+  }
   if ((!value_cached && !cache_value_int()) || null_value)
     return (null_value = true);
 
@@ -10716,10 +10732,9 @@ double Item_cache_json::val_real() {
 my_decimal *Item_cache_json::val_decimal(my_decimal *decimal_value) {
   Json_wrapper wr;
 
-  if (val_json(&wr)) return error_decimal(decimal_value);
-
-  if (null_value) return error_decimal(decimal_value);
-
+  if (val_json(&wr) || null_value) {
+    return nullptr;
+  }
   return wr.coerce_decimal(JsonCoercionWarnHandler{whence(cached_field)},
                            decimal_value);
 }
@@ -10925,12 +10940,11 @@ String *Item_cache_str::val_str(String *) {
 
 my_decimal *Item_cache_str::val_decimal(my_decimal *decimal_val) {
   assert(fixed);
-  if (!has_value()) return nullptr;
-  if (value)
-    str2my_decimal(E_DEC_FATAL_ERROR, value->ptr(), value->length(),
-                   value->charset(), decimal_val);
-  else
-    decimal_val = nullptr;
+  if (!has_value() || !value) {
+    return nullptr;
+  }
+  str2my_decimal(E_DEC_FATAL_ERROR, value->ptr(), value->length(),
+                 value->charset(), decimal_val);
   return decimal_val;
 }
 

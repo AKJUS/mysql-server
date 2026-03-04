@@ -871,8 +871,9 @@ Field *Item_func::tmp_table_field(TABLE *table) {
 my_decimal *Item_func::val_decimal(my_decimal *decimal_value) {
   assert(fixed);
   longlong nr = val_int();
-  if (null_value) return nullptr; /* purecov: inspected */
-  if (current_thd->is_error()) return error_decimal(decimal_value);
+  if (null_value || current_thd->is_error()) {
+    return nullptr;
+  }
   int2my_decimal(E_DEC_FATAL_ERROR, nr, unsigned_flag, decimal_value);
   return decimal_value;
 }
@@ -880,8 +881,9 @@ my_decimal *Item_func::val_decimal(my_decimal *decimal_value) {
 String *Item_real_func::val_str(String *str) {
   assert(fixed);
   double nr = val_real();
-  if (null_value) return nullptr; /* purecov: inspected */
-  if (current_thd->is_error()) return error_str();
+  if (null_value || current_thd->is_error()) {
+    return nullptr;
+  }
   str->set_real(nr, decimals, collation.collation);
   return str;
 }
@@ -889,7 +891,9 @@ String *Item_real_func::val_str(String *str) {
 my_decimal *Item_real_func::val_decimal(my_decimal *decimal_value) {
   assert(fixed);
   double nr = val_real();
-  if (null_value) return nullptr; /* purecov: inspected */
+  if (null_value || current_thd->is_error()) {
+    return nullptr;
+  }
   double2my_decimal(E_DEC_FATAL_ERROR, nr, decimal_value);
   return decimal_value;
 }
@@ -1863,11 +1867,17 @@ my_decimal *Item_func_numhybrid::val_decimal(my_decimal *decimal_value) {
       break;
     case INT_RESULT: {
       const longlong result = int_op();
+      if (null_value || current_thd->is_error()) {
+        return nullptr;
+      }
       int2my_decimal(E_DEC_FATAL_ERROR, result, unsigned_flag, decimal_value);
       break;
     }
     case REAL_RESULT: {
       const double result = real_op();
+      if (null_value || current_thd->is_error()) {
+        return nullptr;
+      }
       double2my_decimal(E_DEC_FATAL_ERROR, result, decimal_value);
       break;
     }
@@ -2026,13 +2036,16 @@ bool Item_typecast_unsigned::resolve_type(THD *thd) {
 
 longlong Item_typecast_unsigned::val_int() {
   longlong value = 0;
+  null_value = false;
 
   if (args[0]->cast_to_int_type() == DECIMAL_RESULT) {
-    my_decimal tmp, *dec = args[0]->val_decimal(&tmp);
-    null_value = args[0]->null_value;
-    if (!null_value) {
-      my_decimal2int(E_DEC_FATAL_ERROR, dec, !dec->sign(), &value);
+    my_decimal tmp;
+    my_decimal *dec = args[0]->val_decimal(&tmp);
+    if (dec == nullptr) {
+      null_value = args[0]->null_value;
+      return 0;
     }
+    my_decimal2int(E_DEC_FATAL_ERROR, dec, !dec->sign(), &value);
   } else if (args[0]->cast_to_int_type() != STRING_RESULT ||
              args[0]->is_temporal()) {
     value = args[0]->val_int();
@@ -2052,35 +2065,42 @@ String *Item_typecast_decimal::val_str(String *str) {
   my_decimal tmp_buf;
   my_decimal *tmp = val_decimal(&tmp_buf);
   if (tmp == nullptr) return nullptr;
-  if (null_value) return nullptr;
   my_decimal2string(E_DEC_FATAL_ERROR, tmp, str);
   return str;
 }
 
 double Item_typecast_decimal::val_real() {
-  my_decimal tmp_buf, *tmp = val_decimal(&tmp_buf);
+  my_decimal tmp_buf;
+  my_decimal *tmp = val_decimal(&tmp_buf);
+  if (tmp == nullptr) {
+    return 0.0;
+  }
   double res;
-  if (null_value) return 0.0;
   my_decimal2double(E_DEC_FATAL_ERROR, tmp, &res);
   return res;
 }
 
 longlong Item_typecast_decimal::val_int() {
-  my_decimal tmp_buf, *tmp = val_decimal(&tmp_buf);
+  my_decimal tmp_buf;
+  my_decimal *tmp = val_decimal(&tmp_buf);
+  if (tmp == nullptr) {
+    return 0;
+  }
   longlong res;
-  if (null_value) return 0;
   my_decimal2int(E_DEC_FATAL_ERROR, tmp, unsigned_flag, &res);
   return res;
 }
 
 my_decimal *Item_typecast_decimal::val_decimal(my_decimal *dec) {
   uint precision;
+  null_value = false;
+
   my_decimal tmp_buf;
   my_decimal *tmp = args[0]->val_decimal(&tmp_buf);
-  null_value = args[0]->null_value;
-  if (tmp == nullptr) return nullptr;
-
-  if (null_value) return nullptr;
+  if (tmp == nullptr) {
+    null_value = args[0]->null_value;
+    return nullptr;
+  }
   my_decimal_round(E_DEC_FATAL_ERROR, tmp, decimals, false, dec);
   bool sign = dec->sign();
   if (unsigned_flag) {
@@ -2185,7 +2205,9 @@ bool Item_typecast_real::val_time(Time_val *time) {
 
 my_decimal *Item_typecast_real::val_decimal(my_decimal *decimal_value) {
   const double result = val_real();
-  if (null_value) return nullptr;
+  if (null_value || current_thd->is_error()) {
+    return nullptr;
+  }
   double2my_decimal(E_DEC_FATAL_ERROR, result, decimal_value);
 
   return decimal_value;
@@ -2267,16 +2289,22 @@ err:
 */
 
 my_decimal *Item_func_plus::decimal_op(my_decimal *decimal_value) {
-  my_decimal value1, *val1;
-  my_decimal value2, *val2;
-  val1 = args[0]->val_decimal(&value1);
-  if ((null_value = args[0]->null_value)) return nullptr;
-  val2 = args[1]->val_decimal(&value2);
-  if ((null_value = args[1]->null_value)) return nullptr;
+  my_decimal value1, value2;
+  null_value = false;
 
+  my_decimal *val1 = args[0]->val_decimal(&value1);
+  if (val1 == nullptr) {
+    null_value = args[0]->null_value;
+    return nullptr;
+  }
+  my_decimal *val2 = args[1]->val_decimal(&value2);
+  if (val2 == nullptr) {
+    null_value = args[1]->null_value;
+    return nullptr;
+  }
   if (check_decimal_overflow(my_decimal_add(E_DEC_FATAL_ERROR & ~E_DEC_OVERFLOW,
                                             decimal_value, val1, val2)) > 3) {
-    return error_decimal(decimal_value);
+    return nullptr;
   }
   return decimal_value;
 }
@@ -2374,18 +2402,22 @@ err:
 */
 
 my_decimal *Item_func_minus::decimal_op(my_decimal *decimal_value) {
-  my_decimal value1, *val1;
-  my_decimal value2, *val2;
+  my_decimal value1, value2;
+  null_value = false;
 
-  val1 = args[0]->val_decimal(&value1);
-  if ((null_value = args[0]->null_value)) return nullptr;
-
-  val2 = args[1]->val_decimal(&value2);
-  if ((null_value = args[1]->null_value)) return nullptr;
-
+  my_decimal *val1 = args[0]->val_decimal(&value1);
+  if (val1 == nullptr) {
+    null_value = args[0]->null_value;
+    return nullptr;
+  }
+  my_decimal *val2 = args[1]->val_decimal(&value2);
+  if (val2 == nullptr) {
+    null_value = args[1]->null_value;
+    return nullptr;
+  }
   if (check_decimal_overflow(my_decimal_sub(E_DEC_FATAL_ERROR & ~E_DEC_OVERFLOW,
                                             decimal_value, val1, val2)) > 3) {
-    return error_decimal(decimal_value);
+    return nullptr;
   }
   /*
    Allow sign mismatch only if sql_mode includes MODE_NO_UNSIGNED_SUBTRACTION
@@ -2393,7 +2425,7 @@ my_decimal *Item_func_minus::decimal_op(my_decimal *decimal_value) {
   */
   if (unsigned_flag && decimal_value->sign()) {
     raise_decimal_overflow();
-    return error_decimal(decimal_value);
+    return nullptr;
   }
   return decimal_value;
 }
@@ -2497,16 +2529,22 @@ err:
 /** See Item_func_plus::decimal_op for comments. */
 
 my_decimal *Item_func_mul::decimal_op(my_decimal *decimal_value) {
-  my_decimal value1, *val1;
-  my_decimal value2, *val2;
-  val1 = args[0]->val_decimal(&value1);
-  if ((null_value = args[0]->null_value)) return nullptr;
-  val2 = args[1]->val_decimal(&value2);
-  if ((null_value = args[1]->null_value)) return nullptr;
+  my_decimal value1, value2;
+  null_value = false;
 
+  my_decimal *val1 = args[0]->val_decimal(&value1);
+  if (val1 == nullptr) {
+    null_value = args[0]->null_value;
+    return nullptr;
+  }
+  my_decimal *val2 = args[1]->val_decimal(&value2);
+  if (val2 == nullptr) {
+    null_value = args[1]->null_value;
+    return nullptr;
+  }
   if (check_decimal_overflow(my_decimal_mul(E_DEC_FATAL_ERROR & ~E_DEC_OVERFLOW,
                                             decimal_value, val1, val2)) > 3) {
-    return error_decimal(decimal_value);
+    return nullptr;
   }
   return decimal_value;
 }
@@ -2541,20 +2579,25 @@ double Item_func_div_base::real_op() {
 }
 
 my_decimal *Item_func_div_base::decimal_op(my_decimal *decimal_value) {
-  my_decimal value1, *val1;
-  my_decimal value2, *val2;
+  my_decimal value1, value2;
+  null_value = false;
   int err;
 
-  val1 = args[0]->val_decimal(&value1);
-  if ((null_value = args[0]->null_value)) return nullptr;
-  val2 = args[1]->val_decimal(&value2);
-  if ((null_value = args[1]->null_value)) return nullptr;
-
+  my_decimal *val1 = args[0]->val_decimal(&value1);
+  if (val1 == nullptr) {
+    null_value = args[0]->null_value;
+    return nullptr;
+  }
+  my_decimal *val2 = args[1]->val_decimal(&value2);
+  if (val2 == nullptr) {
+    null_value = args[1]->null_value;
+    return nullptr;
+  }
   if ((err = check_decimal_overflow(
            my_decimal_div(E_DEC_FATAL_ERROR & ~E_DEC_OVERFLOW & ~E_DEC_DIV_ZERO,
                           decimal_value, val1, val2, m_prec_increment))) > 3) {
     if (err == E_DEC_DIV_ZERO) signal_divide_by_null();
-    return error_decimal(decimal_value);
+    return nullptr;
   }
   return decimal_value;
 }
@@ -2632,7 +2675,7 @@ bool Item_func_div::resolve_type(THD *thd) {
 
 longlong Item_func_div_base::int_op() {
   assert(fixed);
-
+  null_value = false;
   /*
     Perform division using DECIMAL math if either of the operands has a
     non-integer type
@@ -2641,13 +2684,17 @@ longlong Item_func_div_base::int_op() {
       args[1]->result_type() != INT_RESULT) {
     my_decimal tmp;
     my_decimal *val0p = args[0]->val_decimal(&tmp);
-    if ((null_value = args[0]->null_value)) return 0;
-    if (current_thd->is_error()) return error_int();
+    if (val0p == nullptr) {
+      null_value = args[0]->null_value;
+      return 0;
+    }
     const my_decimal val0 = *val0p;
 
     my_decimal *val1p = args[1]->val_decimal(&tmp);
-    if ((null_value = args[1]->null_value)) return 0;
-    if (current_thd->is_error()) return error_int();
+    if (val1p == nullptr) {
+      null_value = args[1]->null_value;
+      return 0;
+    }
     const my_decimal val1 = *val1p;
 
     int err;
@@ -2760,13 +2807,21 @@ double Item_func_mod::real_op() {
 }
 
 my_decimal *Item_func_mod::decimal_op(my_decimal *decimal_value) {
-  my_decimal value1, *val1;
-  my_decimal value2, *val2;
+  assert(fixed);
+  null_value = false;
 
-  val1 = args[0]->val_decimal(&value1);
-  if ((null_value = args[0]->null_value)) return nullptr;
-  val2 = args[1]->val_decimal(&value2);
-  if ((null_value = args[1]->null_value)) return nullptr;
+  my_decimal value1, value2;
+
+  my_decimal *val1 = args[0]->val_decimal(&value1);
+  if (val1 == nullptr) {
+    null_value = args[0]->null_value;
+    return nullptr;
+  }
+  my_decimal *val2 = args[1]->val_decimal(&value2);
+  if (val2 == nullptr) {
+    null_value = args[1]->null_value;
+    return nullptr;
+  }
   switch (my_decimal_mod(E_DEC_FATAL_ERROR & ~E_DEC_DIV_ZERO, decimal_value,
                          val1, val2)) {
     case E_DEC_TRUNCATED:
@@ -2826,13 +2881,17 @@ longlong Item_func_neg::int_op() {
 }
 
 my_decimal *Item_func_neg::decimal_op(my_decimal *decimal_value) {
-  my_decimal val, *value = args[0]->val_decimal(&val);
-  if (!(null_value = args[0]->null_value)) {
-    my_decimal2decimal(value, decimal_value);
-    my_decimal_neg(decimal_value);
-    return decimal_value;
+  assert(fixed);
+  null_value = false;
+  my_decimal val;
+  my_decimal *value = args[0]->val_decimal(&val);
+  if (value == nullptr) {
+    null_value = args[0]->null_value;
+    return nullptr;
   }
-  return nullptr;
+  my_decimal2decimal(value, decimal_value);
+  my_decimal_neg(decimal_value);
+  return decimal_value;
 }
 
 void Item_func_neg::fix_num_length_and_dec() {
@@ -2888,13 +2947,18 @@ longlong Item_func_abs::int_op() {
 }
 
 my_decimal *Item_func_abs::decimal_op(my_decimal *decimal_value) {
-  my_decimal val, *value = args[0]->val_decimal(&val);
-  if (!(null_value = args[0]->null_value)) {
-    my_decimal2decimal(value, decimal_value);
-    if (decimal_value->sign()) my_decimal_neg(decimal_value);
-    return decimal_value;
+  assert(fixed);
+  null_value = false;
+
+  my_decimal val;
+  my_decimal *value = args[0]->val_decimal(&val);
+  if (value == nullptr) {
+    null_value = args[0]->null_value;
+    return nullptr;
   }
-  return nullptr;
+  my_decimal2decimal(value, decimal_value);
+  if (decimal_value->sign()) my_decimal_neg(decimal_value);
+  return decimal_value;
 }
 
 bool Item_func_abs::resolve_type(THD *thd) {
@@ -3471,11 +3535,13 @@ longlong Item_func_ceiling::int_op() {
       null_value = args[0]->null_value;
       break;
     case DECIMAL_RESULT: {
-      my_decimal dec_buf, *dec;
-      if ((dec = Item_func_ceiling::decimal_op(&dec_buf)))
+      my_decimal dec_buf;
+      my_decimal *dec = Item_func_ceiling::decimal_op(&dec_buf);
+      if (dec != nullptr) {
         my_decimal2int(E_DEC_FATAL_ERROR, dec, unsigned_flag, &result);
-      else
+      } else {
         result = 0;
+      }
       break;
     }
     default:
@@ -3491,12 +3557,20 @@ double Item_func_ceiling::real_op() {
 }
 
 my_decimal *Item_func_ceiling::decimal_op(my_decimal *decimal_value) {
-  my_decimal val, *value = args[0]->val_decimal(&val);
-  if (!(null_value =
-            (args[0]->null_value ||
-             my_decimal_ceiling(E_DEC_FATAL_ERROR, value, decimal_value) > 1)))
-    return decimal_value;
-  return nullptr;
+  assert(fixed);
+  null_value = false;
+
+  my_decimal val;
+  my_decimal *value = args[0]->val_decimal(&val);
+  if (value == nullptr) {
+    null_value = args[0]->null_value;
+    return nullptr;
+  }
+  if (my_decimal_ceiling(E_DEC_FATAL_ERROR, value, decimal_value) > 1) {
+    null_value = true;
+    return nullptr;
+  }
+  return decimal_value;
 }
 
 longlong Item_func_floor::int_op() {
@@ -3507,11 +3581,13 @@ longlong Item_func_floor::int_op() {
       null_value = args[0]->null_value;
       break;
     case DECIMAL_RESULT: {
-      my_decimal dec_buf, *dec;
-      if ((dec = Item_func_floor::decimal_op(&dec_buf)))
+      my_decimal dec_buf;
+      my_decimal *dec = Item_func_floor::decimal_op(&dec_buf);
+      if (dec != nullptr) {
         my_decimal2int(E_DEC_FATAL_ERROR, dec, unsigned_flag, &result);
-      else
+      } else {
         result = 0;
+      }
       break;
     }
     default:
@@ -3527,12 +3603,20 @@ double Item_func_floor::real_op() {
 }
 
 my_decimal *Item_func_floor::decimal_op(my_decimal *decimal_value) {
-  my_decimal val, *value = args[0]->val_decimal(&val);
-  if (!(null_value =
-            (args[0]->null_value ||
-             my_decimal_floor(E_DEC_FATAL_ERROR, value, decimal_value) > 1)))
-    return decimal_value;
-  return nullptr;
+  assert(fixed);
+  null_value = false;
+
+  my_decimal val;
+  my_decimal *value = args[0]->val_decimal(&val);
+  if (value == nullptr) {
+    null_value = args[0]->null_value;
+    return nullptr;
+  }
+  if (my_decimal_floor(E_DEC_FATAL_ERROR, value, decimal_value) > 1) {
+    null_value = true;
+    return nullptr;
+  }
+  return decimal_value;
 }
 
 bool Item_func_round::resolve_type(THD *thd) {
@@ -3733,6 +3817,9 @@ longlong Item_func_round::int_op() {
 }
 
 my_decimal *Item_func_round::decimal_op(my_decimal *decimal_value) {
+  assert(fixed);
+  null_value = false;
+
   my_decimal val;
   my_decimal *value = args[0]->val_decimal(&val);
   if (value == nullptr) {
@@ -3749,8 +3836,9 @@ my_decimal *Item_func_round::decimal_op(my_decimal *decimal_value) {
     dec = INT_MIN;
 
   if ((null_value = my_decimal_round(E_DEC_FATAL_ERROR, value, (int)dec,
-                                     truncate, decimal_value) > 1))
+                                     truncate, decimal_value) > 1)) {
     return nullptr;
+  }
   return decimal_value;
 }
 
@@ -4214,20 +4302,28 @@ my_decimal *Item_func_min_max::decimal_op(my_decimal *dec) {
   null_value = false;
   if (m_eval_type == MYSQL_TYPE_DATETIME) {
     longlong result = 0;
-    if (cmp_datetimes(&result, 0)) return error_decimal(dec);
+    if (cmp_datetimes(&result, 0)) return nullptr;
     return my_decimal_from_datetime_packed(dec, temporal_item->data_type(),
                                            result);
   } else if (m_eval_type == MYSQL_TYPE_DATE) {
     Date_val date;
-    if (cmp_dates(&date, 0)) return error_decimal(dec);
+    if (cmp_dates(&date, 0)) return nullptr;
     return date_to_decimal(date, dec);
   }
 
   // Find the least/greatest argument based on decimal value.
-  my_decimal tmp_buf, *res = args[0]->val_decimal(dec);
+  my_decimal tmp_buf;
+  my_decimal *res = args[0]->val_decimal(dec);
+  if (res == nullptr) {
+    null_value = args[0]->null_value;
+    return nullptr;
+  }
   for (uint i = 0; i < arg_count; i++) {
     my_decimal *tmp = args[i]->val_decimal(res == dec ? &tmp_buf : dec);
-    if ((null_value = args[i]->null_value)) return nullptr;
+    if (tmp == nullptr) {
+      null_value = args[i]->null_value;
+      return nullptr;
+    }
     if (i == 0 || (my_decimal_cmp(tmp, res) < 0) == m_is_least_func) res = tmp;
   }
   //  Result must me copied from temporary buffer to remain valid after return.
@@ -4328,7 +4424,7 @@ my_decimal *Item_rollup_group_item::val_decimal(my_decimal *dec) {
     return nullptr;
   }
   my_decimal *res = args[0]->val_decimal(dec);
-  if ((null_value = args[0]->null_value)) return nullptr;
+  null_value = args[0]->null_value;
   return res;
 }
 
@@ -4514,12 +4610,13 @@ longlong Item_func_field::val_int() {
       }
     }
   } else if (cmp_type == DECIMAL_RESULT) {
-    my_decimal dec_arg_buf, *dec_arg, dec_buf,
-        *dec = args[0]->val_decimal(&dec_buf);
-    if (args[0]->null_value) return 0;
+    my_decimal dec_buf;
+    my_decimal *dec = args[0]->val_decimal(&dec_buf);
+    if (dec == nullptr) return 0;
     for (uint i = 1; i < arg_count; i++) {
-      dec_arg = args[i]->val_decimal(&dec_arg_buf);
-      if (!args[i]->null_value && !my_decimal_cmp(dec_arg, dec)) {
+      my_decimal dec_arg_buf;
+      my_decimal *dec_arg = args[i]->val_decimal(&dec_arg_buf);
+      if (dec_arg != nullptr && my_decimal_cmp(dec_arg, dec) == 0) {
         return i;
       }
     }
@@ -4964,8 +5061,7 @@ bool udf_handler::call_init_func() {
       switch (args[i]->result_type()) {
         case STRING_RESULT:
         case DECIMAL_RESULT: {
-          get_string(i);
-          if (thd->is_error()) return true;
+          if (get_string(i)) return true;
           break;
         }
         case INT_RESULT:
@@ -5009,7 +5105,7 @@ bool udf_handler::get_arguments() {
         if (get_and_convert_string(i)) return true;
         break;
       case DECIMAL_RESULT:
-        get_string(i);
+        if (get_string(i)) return true;
         break;
       case INT_RESULT:
         *((longlong *)to) = args[i]->val_int();
@@ -5187,15 +5283,19 @@ String *udf_handler::result_string(const char *res, size_t res_length,
   Get the details of the input String arguments.
 
   @param [in] index of the argument to be looked in the arguments array
+
+  @returns false if success (including null value), true if error.
 */
-void udf_handler::get_string(uint index) {
+bool udf_handler::get_string(uint index) {
   String *res = args[index]->val_str(&buffers[index]);
+  if (res == nullptr && current_thd->is_error()) return true;
   if (!args[index]->null_value) {
     f_args.args[index] = res->ptr();
     f_args.lengths[index] = res->length();
   } else {
     f_args.lengths[index] = 0;
   }
+  return false;
 }
 
 /**
@@ -5210,24 +5310,22 @@ void udf_handler::get_string(uint index) {
 */
 bool udf_handler::get_and_convert_string(uint index) {
   String *res = args[index]->val_str(&buffers[index]);
-
-  if (!args[index]->null_value) {
-    uint errors = 0;
-    if (arg_buffers[index].copy(res->ptr(), res->length(), res->charset(),
-                                m_args_extension.charset_info[index],
-                                &errors)) {
-      return true;
-    }
-    if (errors) {
-      report_conversion_error(m_args_extension.charset_info[index], res->ptr(),
-                              res->length(), res->charset());
-      return true;
-    }
-    f_args.args[index] = arg_buffers[index].c_ptr_safe();
-    f_args.lengths[index] = arg_buffers[index].length();
-  } else {
+  if (res == nullptr) {
     f_args.lengths[index] = 0;
+    return current_thd->is_error();
   }
+  uint errors = 0;
+  if (arg_buffers[index].copy(res->ptr(), res->length(), res->charset(),
+                              m_args_extension.charset_info[index], &errors)) {
+    return true;
+  }
+  if (errors) {
+    report_conversion_error(m_args_extension.charset_info[index], res->ptr(),
+                            res->length(), res->charset());
+    return true;
+  }
+  f_args.args[index] = arg_buffers[index].c_ptr_safe();
+  f_args.lengths[index] = arg_buffers[index].length();
   return false;
 }
 
@@ -5306,29 +5404,37 @@ String *Item_func_udf_int::val_str(String *str) {
 }
 
 longlong Item_func_udf_decimal::val_int() {
-  my_decimal dec_buf, *dec = val_decimal(&dec_buf);
+  assert(fixed);
+  my_decimal dec_buf;
+  my_decimal *dec = val_decimal(&dec_buf);
+  if (dec == nullptr) return 0;
   longlong result;
-  if (null_value) return 0;
   my_decimal2int(E_DEC_FATAL_ERROR, dec, unsigned_flag, &result);
   return result;
 }
 
 double Item_func_udf_decimal::val_real() {
-  my_decimal dec_buf, *dec = val_decimal(&dec_buf);
+  assert(fixed);
+  my_decimal dec_buf;
+  my_decimal *dec = val_decimal(&dec_buf);
+  if (dec == nullptr) return 0.0;
   double result;
-  if (null_value) return 0.0;
   my_decimal2double(E_DEC_FATAL_ERROR, dec, &result);
   return result;
 }
 
 my_decimal *Item_func_udf_decimal::val_decimal(my_decimal *dec_buf) {
+  assert(fixed);
   THD_in_loadable_function_handler thd_in_loadable_function_handler;
   return udf.val_decimal(&null_value, dec_buf);
 }
 
 String *Item_func_udf_decimal::val_str(String *str) {
-  my_decimal dec_buf, *dec = val_decimal(&dec_buf);
-  if (null_value) return nullptr;
+  assert(fixed);
+  my_decimal dec_buf;
+  my_decimal *dec = val_decimal(&dec_buf);
+  if (dec == nullptr) return nullptr;
+
   if (str->length() < DECIMAL_MAX_STR_LENGTH)
     str->length(DECIMAL_MAX_STR_LENGTH);
   my_decimal_round(E_DEC_FATAL_ERROR, dec, decimals, false, &dec_buf);
@@ -6046,8 +6152,7 @@ longlong Item_func_benchmark::val_int() {
       break;
     case DECIMAL_RESULT:
       for (ulonglong loop = 0; loop < loop_count && !thd->killed; loop++) {
-        (void)args[1]->val_decimal(&tmp_decimal);
-        if (thd->is_error()) return error_int();
+        if (args[1]->val_decimal(&tmp_decimal) == nullptr) return 0;
       }
       break;
     case ROW_RESULT:
@@ -8534,8 +8639,7 @@ bool Item_func_sp::val_time(Time_val *time) {
 }
 
 my_decimal *Item_func_sp::val_decimal(my_decimal *dec_buf) {
-  if (execute()) return error_decimal(dec_buf);
-  if (null_value) return nullptr;
+  if (execute() || null_value) return nullptr;
   return sp_result_field->val_decimal(dec_buf);
 }
 

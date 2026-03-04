@@ -1280,9 +1280,7 @@ static bool fill_value_maps(const Mem_root_array<HistogramSetting> &settings,
         }
         case histograms::Value_map_type::DECIMAL: {
           my_decimal buffer;
-          my_decimal *value;
-          value = field->val_decimal(&buffer);
-
+          my_decimal *value = field->val_decimal(&buffer);
           if (field->is_null())
             value_map->add_null_values(1);
           else if (value_map->add_values(*value, 1))
@@ -2433,7 +2431,7 @@ bool Histogram::get_selectivity_dispatcher(Item *item, const enum_operator op,
     case Value_map_type::DECIMAL: {
       my_decimal buffer;
       const my_decimal *value = item->val_decimal(&buffer);
-      if (item->is_null()) return true;
+      if (value == nullptr) return true;
 
       *selectivity = apply_operator(op, *value);
       return false;

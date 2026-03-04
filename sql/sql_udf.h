@@ -134,7 +134,7 @@ class udf_handler {
   bool get_arguments();
   String *result_string(const char *res, size_t res_length, String *str,
                         String *save_str);
-  void get_string(uint index);
+  bool get_string(uint index);
   bool get_and_convert_string(uint index);
 };
 

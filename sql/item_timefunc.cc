@@ -2055,7 +2055,7 @@ longlong Item_timeval_func::val_int() {
 my_decimal *Item_timeval_func::val_decimal(my_decimal *decimal_value) {
   my_timeval tm;
   if (val_timeval(&tm)) {
-    return error_decimal(decimal_value);
+    return nullptr;
   }
   return timeval_to_decimal(&tm, decimal_value);
 }
@@ -2155,10 +2155,12 @@ bool get_interval_value(Item *args, interval_type int_type, String *str_value,
   longlong value = 0;
 
   if (int_type == INTERVAL_SECOND && args->decimals) {
-    my_decimal decimal_value, *val;
+    my_decimal decimal_value;
     lldiv_t tmp;
-    if (!(val = args->val_decimal(&decimal_value))) return true;
-    if (args->null_value) return true;
+    my_decimal *val = args->val_decimal(&decimal_value);
+    if (val == nullptr) {
+      return true;
+    }
     const int lldiv_result = my_decimal2lldiv_t(E_DEC_FATAL_ERROR, val, &tmp);
     if (lldiv_result == E_DEC_OVERFLOW) return true;
 
@@ -2536,11 +2538,15 @@ bool Item_func_sec_to_time::resolve_type(THD *thd) {
 }
 
 bool Item_func_sec_to_time::val_time(Time_val *time) {
+  assert(fixed);
+  null_value = false;
+
   my_decimal tmp;
   my_decimal *val = args[0]->val_decimal(&tmp);
-  if (val == nullptr) return (null_value = true);
-  if ((null_value = args[0]->null_value)) return true;
-
+  if (val == nullptr) {
+    null_value = args[0]->null_value;
+    return true;
+  }
   lldiv_t seconds;
   if (my_decimal2lldiv_t(0, val, &seconds)) {
     time->set_extreme_value(val->sign());
@@ -2743,14 +2749,20 @@ bool Item_func_from_unixtime::resolve_type(THD *thd) {
 }
 
 bool Item_func_from_unixtime::val_datetime(Datetime_val *dt, my_time_flags_t) {
+  assert(fixed);
   THD *thd = current_thd;
   lldiv_t lld;
+  null_value = false;
   if (decimals) {
-    my_decimal *val, decimal_value;
-    if (!(val = args[0]->val_decimal(&decimal_value)) || args[0]->null_value)
+    my_decimal decimal_value;
+    my_decimal *val = args[0]->val_decimal(&decimal_value);
+    if (val == nullptr) {
+      null_value = args[0]->null_value;
+      return true;
+    }
+    if (0 != my_decimal2lldiv_t(E_DEC_FATAL_ERROR, val, &lld)) {
       return (null_value = true);
-    if (0 != my_decimal2lldiv_t(E_DEC_FATAL_ERROR, val, &lld))
-      return (null_value = true);
+    }
   } else {
     lld.quot = args[0]->val_int();
     lld.rem = 0;
@@ -3741,7 +3753,6 @@ bool Item_func_maketime::val_time(Time_val *time) {
   my_decimal tmp;
   my_decimal *sec = args[2]->val_decimal(&tmp);
   if (sec == nullptr) return (null_value = true);
-  if ((null_value = args[2]->null_value)) return true;
 
   lldiv_t second;
   if ((null_value = (my_decimal2lldiv_t(E_DEC_FATAL_ERROR, sec, &second) ||

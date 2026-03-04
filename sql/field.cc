@@ -3246,18 +3246,16 @@ String *Field_new_decimal::val_str(String *val_buffer, String *) const {
 bool Field_new_decimal::val_date(Date_val *date, my_time_flags_t flags) const {
   my_decimal buf;
   my_decimal *decimal_value = val_decimal(&buf);
-  if (decimal_value == nullptr) return true;
-
+  // No error or null value expected here
+  assert(decimal_value != nullptr);
   return decimal_to_date_with_warn(decimal_value, date, flags);
 }
 
 bool Field_new_decimal::val_time(Time_val *time) const {
   my_decimal buf;
   my_decimal *decimal_value = val_decimal(&buf);
-  if (decimal_value == nullptr) {
-    time->set_zero();
-    return true;
-  }
+  // No error or null value expected here
+  assert(decimal_value != nullptr);
   return decimal_to_time_with_warn(decimal_value, time);
 }
 
@@ -3265,9 +3263,8 @@ bool Field_new_decimal::val_datetime(Datetime_val *dt,
                                      my_time_flags_t flags) const {
   my_decimal buf;
   my_decimal *decimal_value = val_decimal(&buf);
-  if (decimal_value == nullptr) {
-    return true;
-  }
+  // No error or null value expected here
+  assert(decimal_value != nullptr);
   return decimal_to_datetime_with_warn(decimal_value, dt, flags);
 }
 
@@ -7911,8 +7908,7 @@ my_decimal *Field_json::val_decimal(my_decimal *decimal_value) const {
   Json_wrapper wr;
   if (val_json(&wr)) {
     /* purecov: begin inspected */
-    my_decimal_set_zero(decimal_value);
-    return decimal_value;
+    return nullptr;
     /* purecov: end */
   }
   return wr.coerce_decimal(JsonCoercionWarnHandler{field_name}, decimal_value);

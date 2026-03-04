@@ -2028,18 +2028,22 @@ int Arg_comparator::compare_real() {
 int Arg_comparator::compare_decimal() {
   my_decimal decimal1;
   my_decimal *val1 = (*left)->val_decimal(&decimal1);
-  if (current_thd->is_error()) return 0;
-  if (!(*left)->null_value) {
-    my_decimal decimal2;
-    my_decimal *val2 = (*right)->val_decimal(&decimal2);
+  if (val1 == nullptr) {
     if (current_thd->is_error()) return 0;
-    if (!(*right)->null_value) {
-      if (set_null) owner->null_value = false;
-      return my_decimal_cmp(val1, val2);
-    }
+    assert((*left)->null_value);
+    if (set_null) owner->null_value = true;
+    return -1;
   }
-  if (set_null) owner->null_value = true;
-  return -1;
+  my_decimal decimal2;
+  my_decimal *val2 = (*right)->val_decimal(&decimal2);
+  if (val2 == nullptr) {
+    if (current_thd->is_error()) return 0;
+    assert((*right)->null_value);
+    if (set_null) owner->null_value = true;
+    return -1;
+  }
+  if (set_null) owner->null_value = false;
+  return my_decimal_cmp(val1, val2);
 }
 
 int Arg_comparator::compare_real_fixed() {
@@ -3253,7 +3257,8 @@ longlong Item_func_interval::val_int() {
     Item *el = row->element_index(i);
     if (use_decimal_comparison && ((el->result_type() == DECIMAL_RESULT) ||
                                    (el->result_type() == INT_RESULT))) {
-      my_decimal e_dec_buf, *e_dec = el->val_decimal(&e_dec_buf);
+      my_decimal e_dec_buf;
+      my_decimal *e_dec = el->val_decimal(&e_dec_buf);
       /* Skip NULL ranges. */
       if (el->null_value) continue;
       if (my_decimal_cmp(e_dec, dec) > 0) return i - 1;
@@ -3684,14 +3689,24 @@ longlong Item_func_between::val_int() {  // ANSI BETWEEN
     if (args[0]->null_value) return 0; /* purecov: inspected */
     if (!args[1]->null_value && !args[2]->null_value) return value;
   } else if (cmp_type == DECIMAL_RESULT) {
-    my_decimal dec_buf, *dec = args[0]->val_decimal(&dec_buf), a_buf, *a_dec,
-                        b_buf, *b_dec;
-    if ((null_value = args[0]->null_value)) return 0; /* purecov: inspected */
-    a_dec = args[1]->val_decimal(&a_buf);
-    b_dec = args[2]->val_decimal(&b_buf);
-    if (!args[1]->null_value && !args[2]->null_value)
+    my_decimal dec_buf, a_buf, b_buf;
+    my_decimal *dec = args[0]->val_decimal(&dec_buf);
+    if (dec == nullptr) {
+      null_value = args[0]->null_value;
+      return 0;
+    }
+    my_decimal *a_dec = args[1]->val_decimal(&a_buf);
+    if (a_dec == nullptr && current_thd->is_error()) {
+      return 0;
+    }
+    my_decimal *b_dec = args[2]->val_decimal(&b_buf);
+    if (b_dec == nullptr && current_thd->is_error()) {
+      return 0;
+    }
+    if (!args[1]->null_value && !args[2]->null_value) {
       return (longlong)((my_decimal_cmp(dec, a_dec) >= 0 &&
                          my_decimal_cmp(dec, b_dec) <= 0) != negated);
+    }
     if (args[1]->null_value && args[2]->null_value)
       null_value = true;
     else if (args[1]->null_value)
@@ -3774,14 +3789,18 @@ longlong Item_func_ifnull::int_op() {
 my_decimal *Item_func_ifnull::decimal_op(my_decimal *decimal_value) {
   assert(fixed);
   my_decimal *value = args[0]->val_decimal(decimal_value);
-  if (current_thd->is_error()) return error_decimal(decimal_value);
+  if (value == nullptr && current_thd->is_error()) {
+    return nullptr;
+  }
   if (!args[0]->null_value) {
     null_value = false;
     return value;
   }
   value = args[1]->val_decimal(decimal_value);
-  if (current_thd->is_error()) return error_decimal(decimal_value);
-  if ((null_value = args[1]->null_value)) return nullptr;
+  if (value == nullptr) {
+    null_value = args[1]->null_value;
+    return nullptr;
+  }
   return value;
 }
 
@@ -3969,7 +3988,7 @@ String *Item_func_if::val_str(String *str) {
 my_decimal *Item_func_if::val_decimal(my_decimal *decimal_value) {
   assert(fixed);
   Item *arg = args[0]->val_bool() ? args[1] : args[2];
-  if (current_thd->is_error()) return error_decimal(decimal_value);
+  if (current_thd->is_error()) return nullptr;
   my_decimal *value = arg->val_decimal(decimal_value);
   null_value = arg->null_value;
   return value;
@@ -4094,12 +4113,11 @@ String *Item_func_nullif::val_str(String *str) {
 
 my_decimal *Item_func_nullif::val_decimal(my_decimal *decimal_value) {
   assert(fixed);
-  my_decimal *res;
   if (!cmp.compare()) {
     null_value = true;
     return nullptr;
   }
-  res = args[0]->val_decimal(decimal_value);
+  my_decimal *res = args[0]->val_decimal(decimal_value);
   null_value = args[0]->null_value;
   return res;
 }
@@ -4257,11 +4275,6 @@ my_decimal *Item_func_case::val_decimal(my_decimal *decimal_value) {
     null_value = item->null_value;
     return res;
   }
-
-  if (current_thd->is_error()) {
-    return error_decimal(decimal_value);
-  }
-
   null_value = true;
   return nullptr;
 }
@@ -4665,7 +4678,7 @@ my_decimal *Item_func_coalesce::decimal_op(my_decimal *decimal_value) {
   null_value = false;
   for (uint i = 0; i < arg_count; i++) {
     my_decimal *res = args[i]->val_decimal(decimal_value);
-    if (current_thd->is_error()) return error_decimal(decimal_value);
+    if (res == nullptr && current_thd->is_error()) return nullptr;
     if (!args[i]->null_value) return res;
   }
   null_value = true;
@@ -5099,7 +5112,7 @@ bool In_vector_decimal::find_item(Item *item) {
   if (m_used_size == 0) return false;
   my_decimal val;
   const my_decimal *dec = item->val_decimal(&val);
-  if (item->null_value) return false;
+  if (dec == nullptr) return false;
   return std::binary_search(base.begin(), base.begin() + m_used_size, *dec);
 }
 
@@ -5323,13 +5336,13 @@ int cmp_item_row::compare(const cmp_item *c) const {
 
 void cmp_item_decimal::store_value(Item *item) {
   my_decimal *val = item->val_decimal(&value);
-  /* val may be zero if item is nnull */
-  if (val && val != &value) my_decimal2decimal(val, &value);
+  if (val != nullptr && val != &value) my_decimal2decimal(val, &value);
   set_null_value(item->null_value);
 }
 
 int cmp_item_decimal::cmp(Item *arg) {
-  my_decimal tmp_buf, *tmp = arg->val_decimal(&tmp_buf);
+  my_decimal tmp_buf;
+  my_decimal *tmp = arg->val_decimal(&tmp_buf);
   return (m_null_value || arg->null_value) ? UNKNOWN
                                            : (my_decimal_cmp(&value, tmp) != 0);
 }
@@ -8304,10 +8317,9 @@ static bool append_decimal_value(Item *comparand, bool is_multi_column_key,
                                  String *join_key_buffer) {
   my_decimal decimal_buffer;
   const my_decimal *decimal = comparand->val_decimal(&decimal_buffer);
-  if (comparand->null_value) {
+  if (decimal == nullptr) {
     return true;
   }
-
   if (decimal_is_zero(decimal)) {
     // Encode zero as an empty string. Write length = 0 to indicate that.
     if (is_multi_column_key) {

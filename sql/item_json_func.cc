@@ -1159,7 +1159,7 @@ static my_decimal *val_decimal_from_json(Item_func *item,
                                          my_decimal *decimal_value) {
   Json_wrapper wr;
   if (item->val_json(&wr)) {
-    return item->error_decimal(decimal_value);
+    return nullptr;
   }
   if (item->null_value) return nullptr;
   return wr.coerce_decimal(JsonCoercionWarnHandler{item->func_name()},
@@ -1292,9 +1292,7 @@ bool sql_scalar_to_json(Item *arg, const char *calling_function, String *value,
     case MYSQL_TYPE_NEWDECIMAL: {
       my_decimal m;
       my_decimal *r = arg->val_decimal(&m);
-      if (current_thd->is_error()) return true;
-      if (arg->null_value) return false;
-      assert(r != nullptr);
+      if (r == nullptr) return current_thd->is_error();
 
       if (create_scalar<Json_decimal>(scalar, &dom, *r))
         return true; /* purecov: inspected */
@@ -4423,7 +4421,7 @@ Item_func_json_value::create_json_value_default(THD *thd, Item *item) {
       my_decimal *buffer = new (mem_root) my_decimal;
       if (buffer == nullptr) return nullptr;
       const my_decimal *value = item->val_decimal(buffer);
-      if (thd->is_error()) return nullptr;
+      if (value == nullptr) return nullptr;
       if (!decimal_within_range(this, value) || value->frac > decimals) {
         my_error(ER_DATA_OUT_OF_RANGE, MYF(0), "DECIMAL DEFAULT", func_name());
         return nullptr;
@@ -5253,7 +5251,7 @@ my_decimal *Item_func_json_value::extract_decimal_value(my_decimal *value) {
   Json_wrapper wr;
   const Default_value *return_default = nullptr;
   if (extract_json_value(&wr, &return_default) || null_value) {
-    return error_decimal(value);
+    return nullptr;
   }
 
   if (return_default != nullptr) {
@@ -5267,7 +5265,7 @@ my_decimal *Item_func_json_value::extract_decimal_value(my_decimal *value) {
 
   if (handle_json_value_conversion_error(m_on_error, "DECIMAL", this) ||
       null_value) {
-    return error_decimal(value);
+    return nullptr;
   }
 
   *value = *m_default_error->decimal_default;

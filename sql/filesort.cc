@@ -1331,8 +1331,9 @@ size_t make_sortkey_from_item(Item *item, Item_result result_type,
     }
     case DECIMAL_RESULT: {
       assert(!is_varlen);
-      my_decimal dec_buf, *dec_val = item->val_decimal(&dec_buf);
-      if (current_thd->is_error()) {
+      my_decimal dec_buf;
+      my_decimal *dec_val = item->val_decimal(&dec_buf);
+      if (dec_val == nullptr && current_thd->is_error()) {
         return UINT_MAX;
       }
       /*

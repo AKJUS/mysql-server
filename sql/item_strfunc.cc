@@ -184,8 +184,8 @@ bool Item_str_func::fix_fields(THD *thd, Item **ref) {
 my_decimal *Item_str_func::val_decimal(my_decimal *decimal_value) {
   assert(fixed);
   char buff[64];
-  String *res, tmp(buff, sizeof(buff), &my_charset_bin);
-  res = val_str(&tmp);
+  String tmp(buff, sizeof(buff), &my_charset_bin);
+  String *res = val_str(&tmp);
   if (res == nullptr) return nullptr;
   (void)str2my_decimal(E_DEC_FATAL_ERROR, res->ptr(), res->length(),
                        res->charset(), decimal_value);
@@ -2304,31 +2304,33 @@ bool Item_func_format::resolve_type(THD *thd) {
 
 String *Item_func_format::val_str_ascii(String *str) {
   size_t str_length;
-  /* Number of decimal digits */
-  int dec;
-  /* Number of characters used to represent the decimals, including '.' */
-  uint32 dec_length;
-  MY_LOCALE *lc;
   assert(fixed);
 
-  dec = (int)args[1]->val_int();
+  null_value = false;
+
+  // Number of decimal digits
+  int dec = (int)args[1]->val_int();
   if (args[1]->null_value) {
     null_value = true;
     return nullptr;
   }
 
-  lc = locale ? locale : get_locale(args[2]);
+  MY_LOCALE *lc = locale ? locale : get_locale(args[2]);
 
   dec = set_zone(dec, 0, FORMAT_MAX_DECIMALS);
-  dec_length = dec ? dec + 1 : 0;
+
+  // Number of characters used to represent the decimals, including '.'
+  uint32 dec_length = dec != 0 ? dec + 1 : 0;
   null_value = false;
 
   if (args[0]->result_type() == DECIMAL_RESULT ||
       args[0]->result_type() == INT_RESULT) {
-    my_decimal dec_val, rnd_dec, *res;
-    res = args[0]->val_decimal(&dec_val);
-    if ((null_value = args[0]->null_value))
-      return nullptr; /* purecov: inspected */
+    my_decimal dec_val, rnd_dec;
+    my_decimal *res = args[0]->val_decimal(&dec_val);
+    if (res == nullptr) {
+      null_value = args[0]->null_value;
+      return nullptr;
+    }
     my_decimal_round(E_DEC_FATAL_ERROR, res, dec, false, &rnd_dec);
     my_decimal2string(E_DEC_FATAL_ERROR, &rnd_dec, str);
     str_length = str->length();

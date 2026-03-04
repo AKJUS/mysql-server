@@ -2123,12 +2123,12 @@ my_decimal *Item_sum_sum::val_decimal(my_decimal *val) {
     if (hybrid_type != DECIMAL_RESULT) return val_decimal_from_real(val);
 
     if (wf_common_init()) {
-      return error_decimal(val);
+      return nullptr;
     }
 
     my_decimal *const argd = args[0]->val_decimal(&dec_buffs[0]);
 
-    if (!args[0]->null_value) {
+    if (argd != nullptr) {
       my_decimal tmp;
       if (m_window->do_inverse()) {
         assert(m_count > 0 && m_count > m_frame_null_count);
@@ -2141,6 +2141,7 @@ my_decimal *Item_sum_sum::val_decimal(my_decimal *val) {
         m_count++;
       }
     } else {
+      if (current_thd->is_error()) return nullptr;
       if (m_window->do_inverse()) {
         assert(m_count >= m_frame_null_count && m_frame_null_count > 0);
         m_count--;
@@ -2150,14 +2151,15 @@ my_decimal *Item_sum_sum::val_decimal(my_decimal *val) {
         m_frame_null_count++;
       }
     }
-
     null_value = (m_count == m_frame_null_count);
 
-    return &dec_buffs[1];
+    return null_value ? nullptr : &dec_buffs[1];
   }
 
   if (aggr) aggr->endup();
-  if (hybrid_type == DECIMAL_RESULT) return (dec_buffs + curr_dec_buff);
+  if (hybrid_type == DECIMAL_RESULT) {
+    return null_value ? nullptr : (dec_buffs + curr_dec_buff);
+  }
   return val_decimal_from_real(val);
 }
 
@@ -2399,21 +2401,17 @@ my_decimal *Item_sum_avg::val_decimal(my_decimal *val) {
 
   if (m_is_window_function) {
     if (hybrid_type != DECIMAL_RESULT) {
-      my_decimal *result = val_decimal_from_real(val);
-      return result;
+      return val_decimal_from_real(val);
     }
-
     if (wf_common_init()) {
-      return error_decimal(val);
+      return nullptr;
     }
-
     /*
       dec_buff[0]:   the current value
       dec_buff[1]:   holds sum so far
     */
     my_decimal *argd = args[0]->val_decimal(&dec_buffs[0]);
-
-    if (!args[0]->null_value) {
+    if (argd != nullptr) {
       my_decimal tmp;
       if (m_window->do_inverse()) {
         assert(m_count > 0 && m_count > m_frame_null_count);
@@ -2426,6 +2424,7 @@ my_decimal *Item_sum_avg::val_decimal(my_decimal *val) {
         m_count++;
       }
     } else {
+      if (current_thd->is_error()) return nullptr;
       if (m_window->do_inverse()) {
         assert(m_count >= m_frame_null_count && m_frame_null_count > 0);
         m_frame_null_count--;
@@ -2463,8 +2462,7 @@ my_decimal *Item_sum_avg::val_decimal(my_decimal *val) {
      Item_sum_avg::val_real().
      */
     if (hybrid_type != DECIMAL_RESULT) {
-      my_decimal *result = val_decimal_from_real(val);
-      return result;
+      return val_decimal_from_real(val);
     }
 
     sum_dec = dec_buffs + curr_dec_buff;
@@ -3062,7 +3060,7 @@ my_decimal *Item_sum_hybrid::val_decimal(my_decimal *val) {
   assert(fixed);
   if (m_is_window_function) {
     if (wf_common_init()) {
-      return error_decimal(val);
+      return nullptr;
     }
     bool ret = false;
     m_optimize ? ret = compute() : add();
@@ -3070,8 +3068,7 @@ my_decimal *Item_sum_hybrid::val_decimal(my_decimal *val) {
   }
   if (null_value) return nullptr;
   my_decimal *retval = value->val_decimal(val);
-  if ((null_value = value->null_value))
-    assert(retval == nullptr || my_decimal_is_zero(retval));
+  null_value = value->null_value;
   return retval;
 }
 
@@ -3266,6 +3263,7 @@ bool Item_sum_bit::val_time(Time_val *time) {
 }
 
 my_decimal *Item_sum_bit::val_decimal(my_decimal *dec_buf) {
+  assert(fixed);
   if (m_is_window_function) {
     /*
       For a group aggregate function, add() is called by Aggregator* classes;
@@ -3273,7 +3271,7 @@ my_decimal *Item_sum_bit::val_decimal(my_decimal *dec_buf) {
       here.
     */
     if (!wf_common_init()) {
-      if (add()) return error_decimal(dec_buf);
+      if (add()) return nullptr;
     }
   }
 
@@ -3600,17 +3598,19 @@ void Item_sum_sum::update_field() {
   DBUG_TRACE;
   assert(aggr->Aggrtype() != Aggregator::DISTINCT_AGGREGATOR);
   if (hybrid_type == DECIMAL_RESULT) {
-    my_decimal value, *arg_val = args[0]->val_decimal(&value);
-    if (!args[0]->null_value) {
-      if (!result_field->is_null()) {
-        my_decimal field_value,
-            *field_val = result_field->val_decimal(&field_value);
-        my_decimal_add(E_DEC_FATAL_ERROR, dec_buffs, arg_val, field_val);
-        result_field->store_decimal(dec_buffs);
-      } else {
-        result_field->store_decimal(arg_val);
-        result_field->set_notnull();
-      }
+    my_decimal value;
+    my_decimal *arg_val = args[0]->val_decimal(&value);
+    if (arg_val == nullptr) {
+      return;
+    }
+    if (!result_field->is_null()) {
+      my_decimal field_value;
+      my_decimal *field_val = result_field->val_decimal(&field_value);
+      my_decimal_add(E_DEC_FATAL_ERROR, dec_buffs, arg_val, field_val);
+      result_field->store_decimal(dec_buffs);
+    } else {
+      result_field->store_decimal(arg_val);
+      result_field->set_notnull();
     }
   } else {
     uchar *res = result_field->field_ptr();
@@ -3642,18 +3642,19 @@ void Item_sum_avg::update_field() {
   assert(aggr->Aggrtype() != Aggregator::DISTINCT_AGGREGATOR);
 
   if (hybrid_type == DECIMAL_RESULT) {
-    my_decimal value, *arg_val = args[0]->val_decimal(&value);
-    if (!args[0]->null_value) {
-      binary2my_decimal(E_DEC_FATAL_ERROR, res, dec_buffs + 1, f_precision,
-                        f_scale);
-      field_count = sint8korr(res + dec_bin_size);
-      my_decimal_add(E_DEC_FATAL_ERROR, dec_buffs, arg_val, dec_buffs + 1);
-      my_decimal2binary(E_DEC_FATAL_ERROR, dec_buffs, res, f_precision,
-                        f_scale);
-      res += dec_bin_size;
-      field_count++;
-      int8store(res, field_count);
+    my_decimal value;
+    my_decimal *arg_val = args[0]->val_decimal(&value);
+    if (arg_val == nullptr) {
+      return;
     }
+    binary2my_decimal(E_DEC_FATAL_ERROR, res, dec_buffs + 1, f_precision,
+                      f_scale);
+    field_count = sint8korr(res + dec_bin_size);
+    my_decimal_add(E_DEC_FATAL_ERROR, dec_buffs, arg_val, dec_buffs + 1);
+    my_decimal2binary(E_DEC_FATAL_ERROR, dec_buffs, res, f_precision, f_scale);
+    res += dec_bin_size;
+    field_count++;
+    int8store(res, field_count);
   } else {
     double nr;
 
@@ -3828,8 +3829,9 @@ void Item_sum_hybrid::min_max_update_int_field() {
 void Item_sum_hybrid::min_max_update_decimal_field() {
   my_decimal nr_val;
   const my_decimal *const nr = args[0]->val_decimal(&nr_val);
-  if (args[0]->null_value) return;
-
+  if (nr == nullptr) {
+    return;
+  }
   if (result_field->is_null()) {
     result_field->set_notnull();
   } else {
@@ -4006,7 +4008,9 @@ my_decimal *Item_aggr_std_field::val_decimal(my_decimal *dec_buf) {
   if (m_result_type == REAL_RESULT) return val_decimal_from_real(dec_buf);
   my_decimal tmp_dec;
   my_decimal *dec = Item_aggr_variance_field::val_decimal(dec_buf);
-  if (dec == nullptr) return error_decimal(dec_buf);
+  if (dec == nullptr) {
+    return nullptr;
+  }
   double nr;
   my_decimal2double(E_DEC_FATAL_ERROR, dec, &nr);
   assert(nr >= 0.0);
@@ -5453,13 +5457,11 @@ bool Item_first_last_value::val_json(Json_wrapper *jw) {
 
 my_decimal *Item_first_last_value::val_decimal(my_decimal *decimal_buffer) {
   if (wf_common_init()) {
-    return error_decimal(decimal_buffer);
+    return nullptr;
   }
-
   if (compute()) {
-    return error_decimal(decimal_buffer);
+    return nullptr;
   }
-
   my_decimal *retval = m_value->val_decimal(decimal_buffer);
   null_value = m_value->null_value;
   return retval;
@@ -5636,13 +5638,11 @@ double Item_nth_value::val_real() {
 
 my_decimal *Item_nth_value::val_decimal(my_decimal *decimal_buffer) {
   if (wf_common_init()) {
-    return error_decimal(decimal_buffer);
+    return nullptr;
   }
-
   if (compute()) {
-    return error_decimal(decimal_buffer);
+    return nullptr;
   }
-
   my_decimal *retval = m_value->val_decimal(decimal_buffer);
   null_value = m_value->null_value;
   return retval;
@@ -5877,13 +5877,11 @@ double Item_lead_lag::val_real() {
 
 my_decimal *Item_lead_lag::val_decimal(my_decimal *decimal_buffer) {
   if (wf_common_init()) {
-    return error_decimal(decimal_buffer);
+    return nullptr;
   }
-
   if (compute()) {
-    return error_decimal(decimal_buffer);
+    return nullptr;
   }
-
   return m_use_default ? m_default->val_decimal(decimal_buffer)
                        : m_value->val_decimal(decimal_buffer);
 }
@@ -6160,10 +6158,10 @@ my_decimal *Item_sum_json::val_decimal(my_decimal *decimal_value) {
       for window functions, which does not use Aggregator, it has to be called
       here.
     */
-    if (add()) return error_decimal(decimal_value);
+    if (add()) return nullptr;
   }
   if (null_value || m_wrapper->empty()) {
-    return error_decimal(decimal_value);
+    return nullptr;
   }
 
   return m_wrapper->coerce_decimal(JsonCoercionWarnHandler{func_name()},
@@ -6681,7 +6679,7 @@ String *Item_rollup_sum_switcher::val_str(String *str) {
 my_decimal *Item_rollup_sum_switcher::val_decimal(my_decimal *dec) {
   assert(fixed);
   my_decimal *res = current_arg()->val_decimal(dec);
-  if ((null_value = current_arg()->null_value)) return nullptr;
+  null_value = current_arg()->null_value;
   return res;
 }
 

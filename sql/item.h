@@ -2045,23 +2045,58 @@ class Item : public Parse_tree_node {
   */
   virtual String *val_str_ascii(String *str);
 
-  /*
-    Return decimal representation of item with fixed point.
+  /**
+    Evaluate item and return result as a decimal value.
 
-    SYNOPSIS
-      val_decimal()
-      decimal_buffer  buffer which can be used by Item for returning value
-                      (but can be not)
+    @param decimal_buffer buffer which can be used by Item for returning value
+                          (but need not be)
 
-    NOTE
-      Returned value should not be changed if it is not the same which was
+    @note
+      Returned value should not be changed if it is not the same as the one
       passed via argument.
 
-    RETURN
-      Return pointer on my_decimal (it can be other then passed via argument)
-        if value is not NULL (null_value flag will be reset to false).
-      In case of NULL value it return 0 pointer and set null_value flag
-        to true.
+    @note Example implementation for Item with two arguments:
+
+      my_decimal *Item_func_<x>::decimal_op(my_decimal *decimal_value) {
+        assert(fixed);
+        my_decimal value1, value2;
+        null_value = false;  // Initialize null_value
+        // First, process the first argument completely
+        my_decimal *val1 = args[0]->val_decimal(&value1);
+        if (val1 == nullptr) {  // Handle error or NULL value
+          null_value = args[0]->null_value;  // Propagate NULL value
+          return nullptr;
+        }
+        // Next, process the second argument completely
+        my_decimal *val2 = args[1]->val_decimal(&value2);
+        if (val2 == nullptr) {  // Handle error or NULL value
+          null_value = args[1]->null_value;  // Propagate NULL value
+          return nullptr;
+        }
+        // Evaluate result into decimal_value, possibly set nullptr or error
+        if (evaluate(val1, val2) {
+          return nullptr;
+        }
+        return decimal_value;  // Return non-NULL result
+      }
+
+    @note Example implementation that converts from other data type
+
+      my_decimal *Item::val_decimal_from_date(my_decimal *decimal_value) {
+        Date_val date;
+        if (val_date(&date, 0)) {  // Evaluate date, possibly with error or NULL
+          return nullptr;  // No NULL value propagation necessary here
+        }
+        if (date_to_decimal(date, decimal_value) == nullptr) {
+          return nullptr;  // In case conversion caused an error
+        }
+        return decimal_value;
+      }
+
+    @returns pointer to my_decimal value if evaluation was successful
+             nullptr is returned if evaluation ended in error, or a NULL value
+             was generated. Unless error is returned, null_value indicates
+             whether NULL value is returned or not.
   */
   virtual my_decimal *val_decimal(my_decimal *decimal_buffer) = 0;
   /*
@@ -2244,21 +2279,7 @@ class Item : public Parse_tree_node {
 
  public:
   /**
-    Get the value to return from val_decimal() in case of errors.
-
-    @see Item::error_decimal
-
-    @return The value val_decimal() should return.
-  */
-  my_decimal *error_decimal(my_decimal *decimal_value) {
-    null_value = m_nullable;
-    if (null_value) return nullptr;
-    my_decimal_set_zero(decimal_value);
-    return decimal_value;
-  }
-
-  /**
-    Get the value to return from val_str() in case of errors.
+    Get the value to return from val_str() in case of error or NULL value.
 
     @see Item::error_bool
 
