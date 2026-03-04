@@ -103,7 +103,7 @@ int ha_innobase::check_foreign_constraints(THD *thd, size_t n_threads) const {
   Parallel_reader::Config config(FULL_SCAN, index);
 
   reader.set_finish_callback(
-      [&](Parallel_reader::Thread_ctx *thread_ctx) { return DB_SUCCESS; });
+      [&](Parallel_reader::Thread_ctx *) { return DB_SUCCESS; });
 
   auto err = reader.add_scan(m_prebuilt->trx, config, fkcheck);
 
