@@ -293,8 +293,7 @@ SELECT * FROM t2;
 
 --echo # Insert another record into t1 which ALSO references
 --echo # the one record in t2. This forces an update t2c2 from 1 -> 4
---echo # breaking the exising association.
-#--error ER_JDV_JOIN_CONDITION_VIOLATION
+--echo # breaking the existing association.
 INSERT INTO dv1 VALUES ('{"_id": 4, "kt1c2": 4,
 "Multi Child": [{"kt2c1": 1, "kt2c2": 4 }] }');
 
@@ -304,7 +303,6 @@ SELECT * FROM t2;
 
 --echo # This is now allowed regardless of the value for kt1c2 which is not
 --echo # part of the join condition
-#--error ER_JDV_JOIN_CONDITION_VIOLATION
 INSERT INTO dv1 VALUES ('{"_id": 5, "kt1c2": 3456,
 "Multi Child": [{"kt2c1": 1, "kt2c2": 5 }] }');
 
@@ -1011,5 +1009,3 @@ SELECT * FROM t1;
 --remove_file $file
 DROP VIEW v1;
 DROP TABLE t1;
-
-

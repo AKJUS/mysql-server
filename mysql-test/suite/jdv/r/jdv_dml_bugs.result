@@ -298,7 +298,7 @@ t2c1	t2c2	t2c3
 1	1	3000
 # Insert another record into t1 which ALSO references
 # the one record in t2. This forces an update t2c2 from 1 -> 4
-# breaking the exising association.
+# breaking the existing association.
 INSERT INTO dv1 VALUES ('{"_id": 4, "kt1c2": 4,
 "Multi Child": [{"kt2c1": 1, "kt2c2": 4 }] }');
 SELECT data FROM dv1;

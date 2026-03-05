@@ -251,6 +251,7 @@ SET(SERVER_TESTS
   item_like
   item_param
   item_timefunc
+  jdv
   join_syntax
   join_tab_sort
   json_binary

@@ -430,6 +430,7 @@ SET(SQL_SHARED_SOURCES
   json_duality_view/dml.cc
   json_duality_view/i_s.cc
   json_duality_view/option_usage.cc
+  json_duality_view/ostream_utils.cc
   json_duality_view/utils.cc
   join_optimizer/access_path.cc
   join_optimizer/build_interesting_orders.cc

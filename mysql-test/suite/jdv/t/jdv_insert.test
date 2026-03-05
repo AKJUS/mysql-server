@@ -84,7 +84,7 @@ DROP TABLE p_t2;
 
 
 --echo ################################################################################
---echo # Inserting new Root object. (No Subject for view)
+--echo # Inserting new Root object. (No Sub-object for view)
 --echo # Root object - Primary key   Table annotations: READ_ONLY
 --echo ################################################################################
 CREATE TABLE p_t1 (f1 INT PRIMARY KEY, f2 INT);
@@ -102,7 +102,7 @@ DROP TABLE p_t1;
 
 
 --echo ################################################################################
---echo # Inserting new Root object. No Subject.
+--echo # Inserting new Root object. No Sub-object.
 --echo # Root object - Primary key   Table annotations: INSERT, UPDATE, DELETE
 --echo ################################################################################
 CREATE TABLE p_t1 (f1 INT PRIMARY KEY, f2 INT DEFAULT 24);
@@ -756,7 +756,6 @@ SELECT JSON_DUALITY_OBJECT(WITH (INSERT, UPDATE, DELETE)
 
 SELECT * FROM p_dv1;
 
---error ER_JDV_PRIMARY_KEY_MUST_BE_PROVIDED
 INSERT INTO p_dv1 VALUES (
 ' {
      "f4" : 400,
@@ -832,8 +831,8 @@ SELECT JSON_DUALITY_OBJECT(WITH (INSERT, UPDATE, DELETE)
 
 SELECT * FROM p_dv1;
 
-# Inserting generated value for AI column is not supported in V1.  When allowed,
-# should instead fail with ER_BAD_NULL_ERROR (1048)
+# Insertion in singleton child happens first and generates value for f1
+# But this valus is NOT substituted for f3(_id) as its value is provided explicitly as null
 --error ER_JDV_PRIMARY_KEY_MUST_BE_PROVIDED
 INSERT INTO p_dv1 VALUES (
 ' {
@@ -1322,7 +1321,6 @@ CREATE OR REPLACE JSON DUALITY VIEW p_dv1 AS SELECT
 
 SELECT * FROM p_dv1;
 
---error ER_JDV_PRIMARY_KEY_MUST_BE_PROVIDED
 INSERT INTO p_dv1 VALUES (
 ' {
      "f2" : 400,
@@ -1362,7 +1360,6 @@ CREATE OR REPLACE JSON DUALITY VIEW p_dv1 AS SELECT
 
 SELECT * FROM p_dv1;
 
---error ER_JDV_PRIMARY_KEY_MUST_BE_PROVIDED
 INSERT INTO p_dv1 VALUES (
 ' {
      "f2" : 400,
@@ -1442,7 +1439,10 @@ SELECT * FROM p_dv1;
 
 # Inserting generated value for AI column is not supported in V1.  When allowed,
 # should instead fail with ER_BAD_NULL_ERROR (1048)
---error ER_JDV_PRIMARY_KEY_MUST_BE_PROVIDED
+# This works because both f1 and f3 are auto-generated and happen to end up with the same value.
+# It would not work if the base tables had different number of rows, or if we attempted to
+# insert multiple objects into ChildNode array.
+#--error ER_JDV_PRIMARY_KEY_MUST_BE_PROVIDED
 INSERT INTO p_dv1 VALUES (
 ' {
      "_id" : null,
@@ -1483,8 +1483,8 @@ CREATE OR REPLACE JSON DUALITY VIEW p_dv1 AS SELECT
 
 SELECT * FROM p_dv1;
 
-# Inserting generated value for AI column is not supported in V1.  When allowed,
-# should instead fail with ER_BAD_NULL_ERROR (1048)
+# Insertion in root table happens first and generates value for f1 (_id).
+# But this valus is NOT substituted for f3 as its value is provided explicitly as null
 --error ER_JDV_PRIMARY_KEY_MUST_BE_PROVIDED
 INSERT INTO p_dv1 VALUES (
 ' {
@@ -3024,7 +3024,6 @@ INSERT INTO customers_orders_dv VALUES (
 }');
 SELECT * FROM orders;
 
---error ER_JDV_PK_DUPLICATES_NOT_IDENTICAL
 INSERT INTO customers_orders_dv VALUES (
 '{  "customer_name": "Alice",
     "_id": 1,
@@ -3037,25 +3036,25 @@ SELECT * FROM orders;
 
 --echo # The use of 0 here must be rejected as it is transformed
 --echo # to a different value. If that value is 1 the check for non-identical
---echo # PK duplicates is lost and the result is that the first recordr
+--echo # PK duplicates are lost and the result is that the first record
 --echo # inserted gets updated.
---error ER_JDV_EXPLICIT_AUTO_INCREMENT_NOT_ALLOWED
+--error ER_JDV_GENERATED_AND_EXPLICIT_PKS_NOT_ALLOWED
 INSERT INTO customers_orders_dv VALUES (
-'{  "customer_name": "Alice",
-    "_id": 1,
+'{  "customer_name": "Bob",
+    "_id": 2,
     "orders": [
       {"order_id": 0, "product": "Laptop", "amount": 1299.99},
-      {"order_id": 1, "product": "Mouse", "amount": 19.99}
+      {"order_id": 3, "product": "Mouse", "amount": 19.99}
     ]
 }');
 
 --echo # Explicitly providing non-0 values for AUTO_INCREMENT column is ok
 INSERT INTO customers_orders_dv VALUES (
-'{  "customer_name": "Alice",
-    "_id": 1,
+'{  "customer_name": "Candace",
+    "_id": 3,
     "orders": [
-      {"order_id": 1, "product": "Laptop", "amount": 1299.99},
-      {"order_id": 2, "product": "Mouse", "amount": 19.99}
+      {"order_id": 4, "product": "Laptop", "amount": 1299.99},
+      {"order_id": 5, "product": "Mouse", "amount": 19.99}
     ]
 }');
 
@@ -3066,10 +3065,9 @@ DROP TABLE orders;
 DROP TABLE customers;
 
 
---echo # Allowing the use of 0 for and AUTO_INCREMENT column that is part of
---echo # the join-condition could lead to a broken join-condition (one side
---echo # gets the value 0 and the other the next generated value). Verify that
---echo # this is rejected.
+--echo # With wl#17056 we now allow AUTO_INCREMENT values to be generated
+--echo # explicitly by passing 0. But this 0 will not match an explicit 0 for
+--echo # a non-AUTO_INCREMENT column.
 CREATE TABLE t1 (t1c1 INT PRIMARY KEY, t1c2 INT);
 CREATE TABLE t2 (t2c1 INT PRIMARY KEY, t2c2 INT UNIQUE AUTO_INCREMENT);
 CREATE JSON DUALITY VIEW dv1 AS
@@ -3082,12 +3080,17 @@ SELECT JSON_DUALITY_OBJECT(WITH (INSERT, UPDATE, DELETE)
                                           ) FROM t1  WHERE t1.t1c1 = t2.t2c2)
             ) FROM t2;
 
---error ER_JDV_EXPLICIT_AUTO_INCREMENT_NOT_ALLOWED
+--echo # Note that the two 0s appearing in the join condition here have different
+--echo # meanings: k_t2c2 being an AUTO_INCREMENT column is an explicit generation
+--echo # request, which will result in the value 1, while k_t1c1 is an ordinary INT
+--echo # column with the value 0. Consequently the join condition is not satisfied.
+--error ER_JDV_JOIN_CONDITION_NOT_SATISFIED
 INSERT INTO dv1 VALUES (
 ' {
      "_id" : 2,
      "k_t2c2": 0,
      "k_singleton_t1" : {
+                      "k_t1c1" : 0,
                       "k_t1c2" : 4
                     }
   } ');
@@ -3095,7 +3098,7 @@ INSERT INTO dv1 VALUES (
 DELETE FROM t1;
 DELETE FROM t2;
 
---error ER_JDV_EXPLICIT_AUTO_INCREMENT_NOT_ALLOWED
+--error ER_JDV_JOIN_CONDITION_NOT_SATISFIED
 INSERT INTO dv1 VALUES (
 ' {
      "_id" : 3,

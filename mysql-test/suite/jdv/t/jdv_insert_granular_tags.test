@@ -848,7 +848,6 @@ SELECT JSON_DUALITY_OBJECT(WITH INSERT
 
 SELECT * FROM p_dv1;
 
---error ER_JDV_PRIMARY_KEY_MUST_BE_PROVIDED
 INSERT INTO p_dv1 VALUES (
 ' {
      "f4" : 400,
@@ -926,8 +925,8 @@ SELECT JSON_DUALITY_OBJECT(WITH INSERT
 
 SELECT * FROM p_dv1;
 
-# Inserting generated value for AI column is not supported in V1.  When allowed,
-# should instead fail with ER_BAD_NULL_ERROR (1048)
+# Insertion in singleton child happens first and generates value for f1
+# But this valus is NOT substituted for f3(_id) as its value is provided explicitly as null
 --error ER_JDV_PRIMARY_KEY_MUST_BE_PROVIDED
 INSERT INTO p_dv1 VALUES (
 ' {
@@ -1425,7 +1424,6 @@ CREATE OR REPLACE JSON DUALITY VIEW p_dv1 AS SELECT
 
 SELECT * FROM p_dv1;
 
---error ER_JDV_PRIMARY_KEY_MUST_BE_PROVIDED
 INSERT INTO p_dv1 VALUES (
 ' {
      "f2" : 400,
@@ -1462,7 +1460,6 @@ CREATE OR REPLACE JSON DUALITY VIEW p_dv1 AS SELECT
 
 SELECT * FROM p_dv1;
 
---error ER_JDV_PRIMARY_KEY_MUST_BE_PROVIDED
 INSERT INTO p_dv1 VALUES (
 ' {
      "f2" : 400,
@@ -1542,7 +1539,10 @@ SELECT * FROM p_dv1;
 
 # Inserting generated value for AI column is not supported in V1.  When allowed,
 # should instead fail with ER_BAD_NULL_ERROR (1048)
---error ER_JDV_PRIMARY_KEY_MUST_BE_PROVIDED
+# This works because both f1 and f3 are auto-generated and happen to end up with the same value.
+# It would not work if the base tables had different number of rows, or if we attempted to
+# insert multiple objects into ChildNode array.
+#--error ER_JDV_PRIMARY_KEY_MUST_BE_PROVIDED
 INSERT INTO p_dv1 VALUES (
 ' {
      "_id" : null,
@@ -1581,8 +1581,8 @@ CREATE OR REPLACE JSON DUALITY VIEW p_dv1 AS SELECT
 
 SELECT * FROM p_dv1;
 
-# Inserting generated value for AI column is not supported in V1.  When allowed,
-# should instead fail with ER_BAD_NULL_ERROR (1048)
+# Insertion in root table happens first and generates value for f1 (_id).
+# But this valus is NOT substituted for f3 as its value is provided explicitly as null
 --error ER_JDV_PRIMARY_KEY_MUST_BE_PROVIDED
 INSERT INTO p_dv1 VALUES (
 ' {

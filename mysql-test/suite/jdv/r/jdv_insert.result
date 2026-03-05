@@ -60,7 +60,7 @@ data
 DROP TABLE p_t1;
 DROP TABLE p_t2;
 ################################################################################
-# Inserting new Root object. (No Subject for view)
+# Inserting new Root object. (No Sub-object for view)
 # Root object - Primary key   Table annotations: READ_ONLY
 ################################################################################
 CREATE TABLE p_t1 (f1 INT PRIMARY KEY, f2 INT);
@@ -73,7 +73,7 @@ INSERT INTO p_dv1 VALUES (' { "_id" : 1, "f2" : 1 } ');
 ERROR HY000: Missing INSERT tag on table `test`.`p_t1`, path '$'.
 DROP TABLE p_t1;
 ################################################################################
-# Inserting new Root object. No Subject.
+# Inserting new Root object. No Sub-object.
 # Root object - Primary key   Table annotations: INSERT, UPDATE, DELETE
 ################################################################################
 CREATE TABLE p_t1 (f1 INT PRIMARY KEY, f2 INT DEFAULT 24);
@@ -83,7 +83,7 @@ SELECT JSON_DUALITY_OBJECT(WITH (INSERT, UPDATE, DELETE)
 "f2" : f2
 ) FROM p_t1;
 INSERT INTO p_dv1 VALUES (' {} ');
-ERROR HY000: Primary key column `test`.`p_t1`.f1 must be provided as path '$._id' (this also applies to auto-generated columns).
+ERROR HY000: Primary key column `test`.`p_t1`.f1 must be provided as path '$._id'.
 INSERT INTO p_dv1 VALUES (NULL);
 ERROR HY000: NULL is not allowed when inserting into a JSON DUALITY VIEW.
 SELECT * FROM p_dv1;
@@ -274,7 +274,7 @@ INSERT INTO p_dv1 VALUES (
                       "f2" : 4
                     }
   } ');
-ERROR HY000: Primary key column `test`.`p_t2`.f3 must be provided as path '$._id' (this also applies to auto-generated columns).
+ERROR HY000: Primary key column `test`.`p_t2`.f3 must be provided as path '$._id'.
 SELECT * FROM p_dv1;
 data
 {"f4": 200, "_id": 1, "ChildNode": {"f1": 1, "f2": 2}, "_metadata": {"etag": "e9d2f1303ad59a8dadaf7429103fbf56"}}
@@ -413,7 +413,7 @@ INSERT INTO p_dv1 VALUES (
                       "f2" : 4
                     }
   } ');
-ERROR HY000: Primary key column `test`.`p_t2`.f3 must be provided as path '$._id' (this also applies to auto-generated columns).
+ERROR HY000: Primary key column `test`.`p_t2`.f3 must be provided as path '$._id'.
 SELECT * FROM p_dv1;
 data
 {"f4": 200, "_id": 1, "ChildNode": {"f1": 1, "f2": 2}, "_metadata": {"etag": "e9d2f1303ad59a8dadaf7429103fbf56"}}
@@ -485,7 +485,7 @@ INSERT INTO p_dv1 VALUES (
                       "f2" : 4
                     }
   } ');
-ERROR HY000: Primary key column `test`.`p_t2`.f3 must be provided as path '$._id' (this also applies to auto-generated columns).
+ERROR HY000: Primary key column `test`.`p_t2`.f3 must be provided as path '$._id'.
 SELECT * FROM p_dv1;
 data
 {"f4": 200, "_id": 1, "ChildNode": {"f1": 1, "f2": 2}, "_metadata": {"etag": "e9d2f1303ad59a8dadaf7429103fbf56"}}
@@ -523,7 +523,7 @@ INSERT INTO p_dv1 VALUES (
                       "f2" : 4
                     }
   } ');
-ERROR HY000: Primary key column `test`.`p_t2`.f3 must be provided as path '$._id' (this also applies to auto-generated columns).
+ERROR HY000: Primary key column `test`.`p_t2`.f3 must be provided as path '$._id'.
 SELECT * FROM p_dv1;
 data
 {"f4": 200, "_id": 1, "ChildNode": {"f1": 1, "f2": 2}, "_metadata": {"etag": "e9d2f1303ad59a8dadaf7429103fbf56"}}
@@ -669,10 +669,10 @@ INSERT INTO p_dv1 VALUES (
                       "f2" : 4
                     }
   } ');
-ERROR HY000: Primary key column `test`.`p_t2`.f3 must be provided as path '$._id' (this also applies to auto-generated columns).
 SELECT * FROM p_dv1;
 data
 {"f4": 200, "_id": 1, "ChildNode": {"f1": 1, "f2": 2}, "_metadata": {"etag": "e9d2f1303ad59a8dadaf7429103fbf56"}}
+{"f4": 400, "_id": 2, "ChildNode": {"f1": 2, "f2": 4}, "_metadata": {"etag": "829899ef41334ff729c21427d1be11fe"}}
 DROP TABLE p_t2;
 DROP TABLE p_t1;
 ################################################################################
@@ -703,7 +703,7 @@ INSERT INTO p_dv1 VALUES (
                       "f2" : 4
                     }
   } ');
-ERROR HY000: Primary key column `test`.`p_t2`.f3 must be provided as path '$._id' (this also applies to auto-generated columns).
+ERROR HY000: Primary key column `test`.`p_t1`.f1 must be provided as path '$.ChildNode.f1'.
 SELECT * FROM p_dv1;
 data
 {"f4": 200, "_id": 1, "ChildNode": {"f1": 1, "f2": 2}, "_metadata": {"etag": "e9d2f1303ad59a8dadaf7429103fbf56"}}
@@ -739,7 +739,7 @@ INSERT INTO p_dv1 VALUES (
                       "f2" : 4
                     }
   } ');
-ERROR HY000: Primary key column `test`.`p_t2`.f3 must be provided as path '$._id' (this also applies to auto-generated columns).
+ERROR HY000: Primary key column `test`.`p_t2`.f3 must be provided as path '$._id'.
 SELECT * FROM p_dv1;
 data
 {"f4": 200, "_id": 1, "ChildNode": {"f1": 1, "f2": 2}, "_metadata": {"etag": "e9d2f1303ad59a8dadaf7429103fbf56"}}
@@ -775,7 +775,7 @@ INSERT INTO p_dv1 VALUES (
                       "f2" : 4
                     }
   } ');
-ERROR HY000: Primary key column `test`.`p_t2`.f3 must be provided as path '$._id' (this also applies to auto-generated columns).
+ERROR HY000: Primary key column `test`.`p_t1`.f1 must be provided as path '$.ChildNode.f1'.
 SELECT * FROM p_dv1;
 data
 {"f4": 200, "_id": 1, "ChildNode": {"f1": 1, "f2": 2}, "_metadata": {"etag": "e9d2f1303ad59a8dadaf7429103fbf56"}}
@@ -1048,7 +1048,7 @@ INSERT INTO p_dv1 VALUES (
                       "f4" : 4
                     }]
   } ');
-ERROR HY000: Primary key column `test`.`p_t1`.f1 must be provided as path '$._id' (this also applies to auto-generated columns).
+ERROR HY000: Primary key column `test`.`p_t1`.f1 must be provided as path '$._id'.
 SELECT * FROM p_dv1;
 data
 {"f2": 2, "_id": 1, "ChildNode": [{"f3": 1, "f4": 200}], "_metadata": {"etag": "a322c1d9af1ef5327e524c487c46f224"}}
@@ -1190,10 +1190,10 @@ INSERT INTO p_dv1 VALUES (
                       "f4" : 4
                     } ]
   } ');
-ERROR HY000: Primary key column `test`.`p_t1`.f1 must be provided as path '$._id' (this also applies to auto-generated columns).
 SELECT * FROM p_dv1;
 data
 {"f2": 2, "_id": 1, "ChildNode": [{"f3": 1, "f4": 200}], "_metadata": {"etag": "a322c1d9af1ef5327e524c487c46f224"}}
+{"f2": 400, "_id": 2, "ChildNode": [{"f3": 2, "f4": 4}], "_metadata": {"etag": "ca7a6e660485d09d1315ffbfee3417b9"}}
 DROP TABLE p_t2;
 DROP TABLE p_t1;
 ################################################################################
@@ -1225,10 +1225,10 @@ INSERT INTO p_dv1 VALUES (
                       "f4" : 4
                     }]
   } ');
-ERROR HY000: Primary key column `test`.`p_t1`.f1 must be provided as path '$._id' (this also applies to auto-generated columns).
 SELECT * FROM p_dv1;
 data
 {"f2": 2, "_id": 1, "ChildNode": [{"f3": 1, "f4": 200}], "_metadata": {"etag": "a322c1d9af1ef5327e524c487c46f224"}}
+{"f2": 400, "_id": 2, "ChildNode": [{"f3": 2, "f4": 4}], "_metadata": {"etag": "ca7a6e660485d09d1315ffbfee3417b9"}}
 DROP TABLE p_t2;
 DROP TABLE p_t1;
 ################################################################################
@@ -1260,7 +1260,7 @@ INSERT INTO p_dv1 VALUES (
                       "f4" : 4
                     }]
   } ');
-ERROR HY000: Primary key column `test`.`p_t1`.f1 must be provided as path '$._id' (this also applies to auto-generated columns).
+ERROR HY000: Primary key column `test`.`p_t1`.f1 must be provided as path '$._id'.
 SELECT * FROM p_dv1;
 data
 {"f2": 2, "_id": 1, "ChildNode": [{"f3": 1, "f4": 200}], "_metadata": {"etag": "a322c1d9af1ef5327e524c487c46f224"}}
@@ -1297,10 +1297,10 @@ INSERT INTO p_dv1 VALUES (
                       "f4" : 4
                     }]
   } ');
-ERROR HY000: Primary key column `test`.`p_t1`.f1 must be provided as path '$._id' (this also applies to auto-generated columns).
 SELECT * FROM p_dv1;
 data
 {"f2": 2, "_id": 1, "ChildNode": [{"f3": 1, "f4": 200}], "_metadata": {"etag": "a322c1d9af1ef5327e524c487c46f224"}}
+{"f2": 400, "_id": 2, "ChildNode": [{"f3": 2, "f4": 4}], "_metadata": {"etag": "ca7a6e660485d09d1315ffbfee3417b9"}}
 DROP TABLE p_t2;
 DROP TABLE p_t1;
 ################################################################################
@@ -1334,7 +1334,7 @@ INSERT INTO p_dv1 VALUES (
                       "f4" : 4
                     }]
   } ');
-ERROR HY000: Primary key column `test`.`p_t1`.f1 must be provided as path '$._id' (this also applies to auto-generated columns).
+ERROR HY000: Primary key column `test`.`p_t2`.f3 must be provided as path '$.ChildNode[0].f3'.
 SELECT * FROM p_dv1;
 data
 {"f2": 2, "_id": 1, "ChildNode": [{"f3": 1, "f4": 200}], "_metadata": {"etag": "a322c1d9af1ef5327e524c487c46f224"}}
@@ -1371,7 +1371,7 @@ INSERT INTO p_dv1 VALUES (
                       "f4" : 4
                     }]
   } ');
-ERROR HY000: Primary key column `test`.`p_t1`.f1 must be provided as path '$._id' (this also applies to auto-generated columns).
+ERROR HY000: Primary key column `test`.`p_t1`.f1 must be provided as path '$._id'.
 SELECT * FROM p_dv1;
 data
 {"f2": 2, "_id": 1, "ChildNode": [{"f3": 1, "f4": 200}], "_metadata": {"etag": "a322c1d9af1ef5327e524c487c46f224"}}
@@ -1850,7 +1850,7 @@ INSERT INTO p_dv1 VALUES (
      "f4" : 300,
      "ChildNode" : [{"f2" : 2}]
   } ');
-ERROR HY000: Primary key column `test`.`p_t1`.f1 must be provided as path '$.ChildNode[0].f1' (this also applies to auto-generated columns).
+ERROR HY000: Primary key column `test`.`p_t1`.f1 must be provided as path '$.ChildNode[0].f1'.
 # PK value is not substituted from the "_id" as it is not part of
 # join condition.
 INSERT INTO p_dv1 VALUES (
@@ -1859,7 +1859,7 @@ INSERT INTO p_dv1 VALUES (
      "f4" : 300,
      "ChildNode" : [{"f2" : 2}]
   } ');
-ERROR HY000: Primary key column `test`.`p_t1`.f1 must be provided as path '$.ChildNode[0].f1' (this also applies to auto-generated columns).
+ERROR HY000: Primary key column `test`.`p_t1`.f1 must be provided as path '$.ChildNode[0].f1'.
 # "_id" value is substituted from the p_t1.f2 as it is part of
 # join condition.
 INSERT INTO p_dv1 VALUES (
@@ -2515,7 +2515,7 @@ INSERT INTO p_dv1 VALUES (
      "f4" :  2,
      "ChildNode" : {"f2" : 300}
   } ');
-ERROR HY000: Primary key column `test`.`p_t2`.f3 must be provided as path '$._id' (this also applies to auto-generated columns).
+ERROR HY000: Primary key column `test`.`p_t2`.f3 must be provided as path '$._id'.
 INSERT INTO p_dv1 VALUES (
 ' {
      "_id" : 2,
@@ -2722,42 +2722,44 @@ INSERT INTO customers_orders_dv VALUES (
       {"order_id": 0, "product": "Mouse", "amount": 19.99}
     ]
 }');
-ERROR HY000: Path '$.orders[1]' is a duplicate for primary key column `test`.`orders`.order_id but has conflicting values for column product: path '$.orders[1].product' vs path '$.orders[0].product'
 SELECT * FROM orders;
 order_id	customer_id	product	amount
+1	1	Laptop	1299.99
+2	1	Mouse	19.99
 # The use of 0 here must be rejected as it is transformed
 # to a different value. If that value is 1 the check for non-identical
-# PK duplicates is lost and the result is that the first recordr
+# PK duplicates are lost and the result is that the first record
 # inserted gets updated.
 INSERT INTO customers_orders_dv VALUES (
-'{  "customer_name": "Alice",
-    "_id": 1,
+'{  "customer_name": "Bob",
+    "_id": 2,
     "orders": [
       {"order_id": 0, "product": "Laptop", "amount": 1299.99},
-      {"order_id": 1, "product": "Mouse", "amount": 19.99}
+      {"order_id": 3, "product": "Mouse", "amount": 19.99}
     ]
 }');
-ERROR HY000: Using 0 to request the next value of an AUTO_INCREMENT column is not allowed in JDVs, column `test`.`orders`.order_id, referenced by path '$.orders[0]', key 'order_id'.
+ERROR HY000: Paths $.orders[0] and $.orders[1] use generated and explicit values for the same primary key, which is not allowed.
 # Explicitly providing non-0 values for AUTO_INCREMENT column is ok
 INSERT INTO customers_orders_dv VALUES (
-'{  "customer_name": "Alice",
-    "_id": 1,
+'{  "customer_name": "Candace",
+    "_id": 3,
     "orders": [
-      {"order_id": 1, "product": "Laptop", "amount": 1299.99},
-      {"order_id": 2, "product": "Mouse", "amount": 19.99}
+      {"order_id": 4, "product": "Laptop", "amount": 1299.99},
+      {"order_id": 5, "product": "Mouse", "amount": 19.99}
     ]
 }');
 SELECT * FROM orders;
 order_id	customer_id	product	amount
 1	1	Laptop	1299.99
 2	1	Mouse	19.99
+4	3	Laptop	1299.99
+5	3	Mouse	19.99
 DROP VIEW customers_orders_dv;
 DROP TABLE orders;
 DROP TABLE customers;
-# Allowing the use of 0 for and AUTO_INCREMENT column that is part of
-# the join-condition could lead to a broken join-condition (one side
-# gets the value 0 and the other the next generated value). Verify that
-# this is rejected.
+# With wl#17056 we now allow AUTO_INCREMENT values to be generated
+# explicitly by passing 0. But this 0 will not match an explicit 0 for
+# a non-AUTO_INCREMENT column.
 CREATE TABLE t1 (t1c1 INT PRIMARY KEY, t1c2 INT);
 CREATE TABLE t2 (t2c1 INT PRIMARY KEY, t2c2 INT UNIQUE AUTO_INCREMENT);
 CREATE JSON DUALITY VIEW dv1 AS
@@ -2769,15 +2771,20 @@ SELECT JSON_DUALITY_OBJECT(WITH (INSERT, UPDATE, DELETE)
 "k_t1c2" : t1c2
 ) FROM t1  WHERE t1.t1c1 = t2.t2c2)
 ) FROM t2;
+# Note that the two 0s appearing in the join condition here have different
+# meanings: k_t2c2 being an AUTO_INCREMENT column is an explicit generation
+# request, which will result in the value 1, while k_t1c1 is an ordinary INT
+# column with the value 0. Consequently the join condition is not satisfied.
 INSERT INTO dv1 VALUES (
 ' {
      "_id" : 2,
      "k_t2c2": 0,
      "k_singleton_t1" : {
+                      "k_t1c1" : 0,
                       "k_t1c2" : 4
                     }
   } ');
-ERROR HY000: Using 0 to request the next value of an AUTO_INCREMENT column is not allowed in JDVs, column `test`.`t2`.t2c2, referenced by path '$', key 'k_t2c2'.
+ERROR HY000: Join condition is not satisfied as path '$.k_singleton_t1.k_t1c1' for child column `test`.`t1`.t1c1 is not equal to path '$' for parent column `test`.`t2`.t2c2.
 DELETE FROM t1;
 DELETE FROM t2;
 INSERT INTO dv1 VALUES (
@@ -2788,7 +2795,7 @@ INSERT INTO dv1 VALUES (
                       "k_t1c2" : 5
                     }
   } ');
-ERROR HY000: Using 0 to request the next value of an AUTO_INCREMENT column is not allowed in JDVs, column `test`.`t2`.t2c2, referenced by path '$', key 'k_t2c2'.
+ERROR HY000: Join condition is not satisfied as path '$.k_singleton_t1.k_t1c1' for child column `test`.`t1`.t1c1 is not equal to path '$' for parent column `test`.`t2`.t2c2.
 DROP VIEW dv1;
 DROP TABLE t2;
 DROP TABLE t1;
@@ -2832,7 +2839,7 @@ INSERT INTO dv1 VALUES (
                       "k_t1c2" : 4
                     }
   } ');
-ERROR HY000: Primary key column `test`.`t1`.t1c1 must be provided as path '$.k_singleton_t1.k_t1c1' (this also applies to auto-generated columns).
+ERROR HY000: Primary key column `test`.`t1`.t1c1 must be provided as path '$.k_singleton_t1.k_t1c1'.
 DROP VIEW dv1;
 DROP TABLE t2;
 DROP TABLE t1;
@@ -2870,7 +2877,7 @@ INSERT INTO dv1 VALUES (
                       "k_t1c1" : 42
                     }]
   } ');
-ERROR HY000: Primary key column `test`.`t2`.t2c1 must be provided as path '$._id' (this also applies to auto-generated columns).
+ERROR HY000: Primary key column `test`.`t2`.t2c1 must be provided as path '$._id'.
 DROP VIEW dv1;
 DROP TABLE t2;
 DROP TABLE t1;

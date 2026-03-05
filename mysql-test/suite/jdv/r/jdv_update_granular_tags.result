@@ -62,7 +62,7 @@ SELECT JSON_DUALITY_OBJECT(WITH UPDATE
 "f2" : f2
 ) FROM p_t1 ;
 UPDATE p_dv1 SET data = '{}';
-ERROR HY000: Primary key column `test`.`p_t1`.f1 must be provided as path '$._id' (this also applies to auto-generated columns).
+ERROR HY000: Primary key column `test`.`p_t1`.f1 must be provided as path '$._id'.
 SELECT * FROM p_dv1;
 data
 {"f2": 2, "_id": 1, "_metadata": {"etag": "c05bfee044e2572d142725a5bf6e8bf4"}}

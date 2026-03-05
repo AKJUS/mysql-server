@@ -10715,7 +10715,7 @@ ER_JDV_UNEXPECTED_JSON_TYPE
   eng "Path '%s' is not of type '%s'."
 
 ER_JDV_PRIMARY_KEY_MUST_BE_PROVIDED
-  eng "Primary key column %s.%s must be provided as path '%s.%s' (this also applies to auto-generated columns)."
+  eng "Primary key column %s.%s must be provided as path '%s.%s'."
 
 ER_JDV_JOIN_CONDITION_NOT_SATISFIED
   eng "Join condition is not satisfied as path '%s' for child column %s.%s is not equal to path '%s' for parent column %s.%s."
@@ -10936,6 +10936,9 @@ ER_AUDIT_LOG_COMPONENT_JSON_INVALID_FILTER_CANNOT_BE_USED
 
 ER_WARN_AUDIT_LOG_FILTERS_INVALID
  eng "Some filters are invalid. Details have been logged in the error log."
+
+ER_JDV_GENERATED_AND_EXPLICIT_PKS_NOT_ALLOWED
+  eng "Paths %s and %s use generated and explicit values for the same primary key, which is not allowed."
 
 #
 #  End of 9.x error messages (server-to-client).

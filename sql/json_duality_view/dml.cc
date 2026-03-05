@@ -1,23 +1,38 @@
-/* Copyright (c) 2024, 2026, Oracle and/or its affiliates. */
+/* Copyright (c) 2024, 2026, Oracle and/or its affiliates.
+
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License, version 2.0,
+   as published by the Free Software Foundation.
+
+   This program is designed to work with certain software (including
+   but not limited to OpenSSL) that is licensed under separate terms,
+   as designated in a particular file or component or in included license
+   documentation.  The authors of MySQL hereby grant you an additional
+   permission to link the program and your derivative works with the
+   separately licensed software that they have either included with
+   the program or referenced in the documentation.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License, version 2.0, for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 #include "sql/json_duality_view/dml.h"
 
 #include <algorithm>
 #include <cstddef>
 #include <cstdlib>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <ostream>
 #include "scope_guard.h"
 #include "sql/sql_error.h"
 
-#include <version>
-#ifdef __cpp_lib_source_location
-#include <source_location>
-#define SOURCE_LOCATION_CUR_FUNC std::source_location::current().function_name()
-#else
-#define SOURCE_LOCATION_CUR_FUNC ""
-#endif /* __cpp_lib_source_location */
 #include <concepts>
 #include <ranges>
 #include <type_traits>
@@ -32,6 +47,7 @@
 #include "sql/derror.h"
 #include "sql/item_json_func.h"  //  get_json_wrapper()
 #include "sql/json_duality_view/content_tree.h"
+#include "sql/json_duality_view/ostream_utils.h"
 #include "sql/json_duality_view/utils.h"
 #include "sql/parse_tree_nodes.h"
 #include "sql/sql_class.h"
@@ -44,14 +60,11 @@
 
 namespace jdv {
 
-/**
-  Identity wrapper for types that does not require wrapping.
-
-  @param arg error message argument to use as is
-
-  @return arg passed in
-*/
-static decltype(auto) em_wrap(auto arg) { return arg; }
+// We provide explicit overloads for those builtin types that we actually use,
+// rather than a single generic function which accepts all types. This allows us
+// to detect incorrectly passing pointer instead of ref/value.
+static const char *em_wrap(const char *arg) { return arg; }
+static int em_wrap(int arg) { return arg; }
 
 /**
   Overload which wraps string_views in strings which are
@@ -226,14 +239,14 @@ static std::string json_dom_to_string(Json_dom *jdom) {
 }
 
 /**
-  Predicate to determine if a dom represents a void value i.e.
-  that either the pointer itself is nullptr, or that the dom has
-  enum_json_type::J_NULL.
+  Predicate to determine if a dom does not represent a valid value i.e.
+  that either the pointer itself is nullptr, or that the dom is a Json_null
+  (has type enum_json_type::J_NULL).
 
   @param jdom dom to check
   @return true if represents a void value
  */
-static bool represents_NULL(Json_dom *jdom) {
+static bool is_nil_dom(Json_dom *jdom) {
   return jdom == nullptr || jdom->json_type() == enum_json_type::J_NULL;
 }
 
@@ -558,17 +571,95 @@ static Json_dom *get_val(const Json_object *jo, std::string_view k) {
   return jo == nullptr ? nullptr : jo->get(k);
 }
 
+/** Reusable object to simplify comparisons against uint 0 (explicit
+    generation request) */
+static Json_uint ZERO{0};
+
+/** Reusable Json_wrapper around ZERO object to simplify comparisons
+    against uint 0 (explicit generation request) */
+static const Json_wrapper ZEROW{&ZERO, true};
+
+/** Convenience function for comparing a Json document to unsigned 0.
+  @param doc Json document to test
+
+  @return true if doc compares equal to unsigned 0
+*/
+static bool is_zero(Json_dom *doc) {
+  return Json_wrapper{doc, true}.compare(ZEROW) == 0;
+}
+
+/** Convenience function for checking if the connection supports using 0
+    to request explicit generation of AUTO_INCREMENT values.
+    @param thd THD
+
+    @return true if supported
+*/
+static bool auto_generate_on_zero(THD *thd) {
+  return (thd->variables.sql_mode & MODE_NO_AUTO_VALUE_ON_ZERO) == 0;
+}
+
+/** Convenience function which checks if a Json document value inserted in
+    a field will result in a generated AUTO_INCREMENT value.
+
+    @param thd THD
+    @param fld Field object describing column
+    @param doc Json_dom value to insert
+
+    @return true if a generated value will be inserted
+*/
+static bool field_will_be_auto_generated(THD *thd, const Field &fld,
+                                         Json_dom *doc) {
+  return is_auto_increment(fld) &&
+         (is_nil_dom(doc) || (auto_generate_on_zero(thd) && is_zero(doc)));
+}
+
+/**
+ Represents columns in the base table which will be populated based on the Json
+ document passed in.
+*/
+struct Resolve_column {
+  const Key_column_info *kci = nullptr;
+  Json_dom *value = nullptr;
+  bool deferred_resolve = false;
+};
+
+[[maybe_unused]] static std::ostream &operator<<(std::ostream &os,
+                                                 const Resolve_column &rc) {
+  os << "{" << *rc.kci << ", " << path_str(rc.value) << ":"
+     << json_dom_to_string(rc.value)
+     << ", dr: " << (rc.deferred_resolve ? "yes}" : "no}");
+  return os;
+}
+
+using Resolve_column_vec = std::vector<Resolve_column>;
+
 /**
   Holds the resolved values for a row of a base table. Index in vector
   corresponds to index of columns in content tree node.
  */
 struct Resolve_row {
   Resolve_row *parent = nullptr;
-  std::vector<std::pair<std::string_view, Json_dom *>> columns;
+  Json_uint autoinc_value = Json_uint{0ULL};
+  Resolve_column *unresolved_autoinc_column = nullptr;
+  Resolve_column_vec columns;
 };
+
+[[maybe_unused]] static std::ostream &operator<<(std::ostream &os,
+                                                 const Resolve_row &rr) {
+  os << "Resolve_row{autoincval:" << rr.autoinc_value.value()
+     << ", unresolved aicol:";
+  if (rr.unresolved_autoinc_column == nullptr) {
+    os << "nullptr";
+  } else {
+    os << *rr.unresolved_autoinc_column;
+  }
+  os << "}[" << rr.columns.size() << "]";
+  return os;
+}
 
 template <typename BIN>
 static int compare_bindings(const BIN &a, const BIN &b);
+
 /**
   Binds a single Json_object and a jdv::Content_tree_node.
   Single_object_binding is used for INSERT and DELETE operations
@@ -592,12 +683,11 @@ struct Single_object_binding {
   // from having a customized operator==() since equality-comparison often can
   // be done cheaper than relying on operator<=>().
   bool operator==(const Single_object_binding &that) const {
-    bool eq =
-        (ct_node == that.ct_node &&
-         compare_doms(
-             resolve_row->columns[ct_node->primary_key_column_index()].second,
-             that.resolve_row->columns[that.ct_node->primary_key_column_index()]
-                 .second) == 0);
+    const Resolve_column_vec &rcols = that.resolve_row->columns;
+    bool eq = (ct_node == that.ct_node &&
+               compare_doms(
+                   rcols[ct_node->primary_key_column_index()].value,
+                   rcols[that.ct_node->primary_key_column_index()].value) == 0);
     assert(operator<=>(that) != 0 || eq);
     return eq;
   }
@@ -605,6 +695,25 @@ struct Single_object_binding {
   void set_empty() { bound_object = nullptr; }
 };
 static_assert(std::totally_ordered<Single_object_binding>);
+
+[[maybe_unused]] static std::ostream &operator<<(
+    std::ostream &os, const Single_object_binding &bin) {
+  os << "Single{" << *bin.ct_node;
+  if (bin.is_empty()) {
+    os << ":EMPTY}";
+    return os;
+  }
+
+  os << ", " << JX_(path_str(bin.bound_object));
+  if (bin.resolve_row->columns.empty()) {
+    os << ":UNRESOLVED}";
+    return os;
+  }
+  const Resolve_column &pkrc =
+      bin.resolve_row->columns[bin.ct_node->primary_key_column_index()];
+  os << JX_(pkrc) << "}";
+  return os;
+}
 
 struct Two_object_binding;
 static Json_dom *get_pk_dom(const Two_object_binding &);
@@ -649,8 +758,54 @@ struct Two_object_binding {
 };
 static_assert(std::totally_ordered<Two_object_binding>);
 
+[[maybe_unused]] static std::ostream &operator<<(
+    std::ostream &os, const Two_object_binding &bin) {
+  os << "Two{" << *bin.ct_node;
+  if (bin.is_empty()) {
+    os << ":EMPTY}";
+    return os;
+  }
+  os << " bo:" << path_str(bin.bound_object)
+     << " eo:" << path_str(bin.existing_object) << " ";
+  if (bin.resolve_row->columns.empty()) {
+    os << ":UNRESOLVED}";
+    return os;
+  }
+  const Resolve_column &pkrc =
+      bin.resolve_row->columns[bin.ct_node->primary_key_column_index()];
+  os << JX_(pkrc) << "}";
+  os << "}";
+  return os;
+}
+
+/** Convenience alias */
+template <typename T>
+using Index_entry = std::reference_wrapper<T>;
+
+/** Convenience alias */
+template <typename T>
+using Index = std::span<Index_entry<T>>;
+
+/** Spaceship operator which forwards to the indexed type. */
+template <typename T>
+static int operator<=>(const Index_entry<T> &a, const Index_entry<T> &b) {
+  return a.get() <=> b.get();
+}
+
+/** Equality operator which forwards to the indexed type. */
+template <typename T>
+static bool operator==(const Index_entry<T> &a, const Index_entry<T> &b) {
+  return a.get() == b.get();
+}
+
+/** Lambda object to unwrap an index entry. Useful to create transform_views
+or use as projection in algorithms. */
+template <typename T>
+static auto unwrap_index_entry =
+    [](const Index_entry<T> &ie) -> T & { return ie.get(); };
+
 /**
-  Convenince function which returns the TABLE_SHARE* for the binding.
+  Convenience function which returns the TABLE_SHARE* for the binding.
 
   @param bin binding
   @return TABLE_SHARE* for the binding
@@ -660,48 +815,55 @@ static_assert(std::totally_ordered<Two_object_binding>);
 }
 
 /**
-  Convenince function which returns a reference to the
-  Resolve_row's column vector.
+  Convenience function which returns the table_cache_key of the binding
+  as a std::string_view.
 
   @param bin binding
-  @return reference to vector of resolved columns
+  @return std::string_view over the table_cache_key for the binding
  */
-[[nodiscard]] static const decltype(Resolve_row::columns) &get_resolve_columns(
-    const auto &bin) {
-  return bin.resolve_row->columns;
+[[nodiscard]] static std::string_view get_table_cache_key(const auto &bin) {
+  return {bin.ct_node->table_ref()->table->s->table_cache_key.str,
+          bin.ct_node->table_ref()->table->s->table_cache_key.length};
+}
+
+/**
+  Create an index over the bindings vector which is allocated on THD::mem_root.
+  The index is a span over the memory buffer allocated on the mem_root.
+
+  @param thd THD
+  @param bindings vector of bindings
+
+  @return Index
+*/
+template <typename RT, typename BIN>
+[[nodiscard]] static Index<RT> make_mr_index(THD *thd, BIN &bindings) {
+  static_assert(sizeof(Index_entry<RT>) == sizeof(RT *));
+  static_assert(std::is_trivially_destructible_v<Index_entry<RT>>);
+  auto *index_buf = pointer_cast<Index_entry<RT> *>(
+      thd->mem_root->Alloc(bindings.size() * sizeof(Index_entry<RT>)));
+
+  assert((reinterpret_cast<std::size_t>(index_buf) &
+          (alignof(Index_entry<RT>) - 1)) == 0);
+
+  auto ip = index_buf;
+  for (auto &rt : bindings) {
+    new (ip) Index_entry<RT>{rt};
+    ++ip;
+  }
+  return {index_buf, bindings.size()};
 }
 
 /**
   Goes through the input json (bound_object) and uses the join condition to
   infer column values which are not provided explicitly. Reports error if the
-  values provided in the input does not match what is expressed by the join
+  values provided in the input do not match what is expressed by the join
   condition.
 
-  @param bindings vector of bindings
+  @param bindings range of bindings
   @return true if error
-  */
-[[nodiscard]] static bool resolve_columns(const auto &bindings) {
-  // Populate Resolve_row with values provided directly by json document
-  DBUG_LOG("jdv_dml", "DML-RESOLVE: " << SOURCE_LOCATION_CUR_FUNC);
-  for (const auto &bin : bindings) {
-    DBUG_LOG("jdv_dml", "Node '" << bin.ct_node->name() << "': "
-                                 << bin.ct_node->quoted_qualified_table_name()
-                                 << "(");
-    for ([[maybe_unused]] auto &col : bin.ct_node->key_column_info_list()) {
-      DBUG_LOG("jdv_dml", col.column_name() << ",");
-    }
-    if (bin.bound_object == nullptr) {
-      continue;
-    }
-
-    auto &columns = bin.resolve_row->columns;
-    for (auto &col : bin.ct_node->key_column_info_list()) {
-      // For non-projected columns an empty string_view is stored for the key
-      columns.emplace_back(col.column_name(),
-                           get_val(bin.bound_object, col.key()));
-    }
-  }
-
+ */
+[[nodiscard]] static bool resolve_column_range(
+    const std::ranges::random_access_range auto &bindings) {
   // Look for resolving opportunities in join conditions
   // Outer loop ensures that resolving opportunities in earlier bindings
   // which are made possible by the current iteration can also be discovered
@@ -718,45 +880,88 @@ static_assert(std::totally_ordered<Two_object_binding>);
       if (bin.bound_object == nullptr) {
         continue;
       }
-      assert(bin.resolve_row->columns.size() ==
-             bin.ct_node->key_column_info_list().size());
+      auto &resolved_columns = bin.resolve_row->columns;
       DBUG_LOG("jdv_dml",
-               "bin.bound_object: " << bin.bound_object
-                                    << " bin->resolve_row->columns.empty():"
-                                    << bin.resolve_row->columns.empty());
-      if (bin.ct_node->has_join_condition()) {
-        auto cix = bin.ct_node->join_column_index();
-        auto pix = bin.ct_node->parent_join_column_index();
-        auto &[child_col, child_val] = bin.resolve_row->columns[cix];
-        auto &[parent_col, parent_val] = bin.resolve_row->parent->columns[pix];
+               "Show sizes before assert: "
+                   << JX_(resolved_columns.size())
+                   << JX_(bin.ct_node->key_column_info_list().size()));
+      assert(resolved_columns.size() ==
+             bin.ct_node->key_column_info_list().size());
+      DBUG_LOG("jdv_dml", "bin.bound_object: " << bin.bound_object
+                                               << " resolved_columns.empty():"
+                                               << resolved_columns.empty());
+      if (!bin.ct_node->has_join_condition()) {
+        continue;
+      }
 
-        if (child_val != nullptr && parent_val == nullptr) {
-          // resolve parent column from our column
-          parent_val = child_val;
-          restart = true;
-          DBUG_LOG("jdv_dml", "DML-RESOLVE: Resolved "
-                                  << parent_col << "(" << pix << ") in "
-                                  << bin.ct_node->parent()->name() << " from "
-                                  << child_col << "(" << cix << ") in "
-                                  << bin.ct_node->name());
-          continue;
+      std::size_t cix = bin.ct_node->join_column_index();
+      std::size_t pix = bin.ct_node->parent_join_column_index();
+      auto &[child_kci, child_val, cdef] = resolved_columns[cix];
+      auto &[parent_kci, parent_val, pdef] =
+          bin.resolve_row->parent->columns[pix];
+
+      bool child_auto_generated = field_will_be_auto_generated(
+          current_thd, *child_kci->field(), child_val);
+      bool parent_auto_generated = field_will_be_auto_generated(
+          current_thd, *parent_kci->field(), parent_val);
+
+      if (bin.ct_node->is_singleton_child()) {
+        if (parent_val == nullptr) {
+          DBUG_LOG("dml_resolve", "DR: " << bin.ct_node->parent()->name()
+                                         << " <- " << bin.ct_node->name());
+          pdef |= cdef;
         }
-        if (child_val == nullptr && parent_val != nullptr) {
-          // resolve our column from parent column
-          child_val = parent_val;
-          restart = true;
-          DBUG_LOG("jdv_dml", "DML-RESOLVE: Resolved "
-                                  << child_col << "(" << cix << ") in "
-                                  << bin.ct_node->name() << " from "
-                                  << parent_col << "(" << pix << ") in "
-                                  << bin.ct_node->parent()->name());
+        if ((child_val == nullptr || is_nil_dom(child_val)) &&
+            child_auto_generated) {
+          cdef = true;
         }
+      }
+
+      if (bin.ct_node->is_nested_child()) {
+        if (child_val == nullptr) {
+          DBUG_LOG("dml_resolve", "DR: " << bin.ct_node->name() << " <- "
+                                         << bin.ct_node->parent()->name());
+          cdef |= pdef;
+        }
+        if ((parent_val == nullptr || is_nil_dom(parent_val)) &&
+            parent_auto_generated) {
+          pdef = true;
+        }
+      }
+
+      if (!child_auto_generated &&
+          // Note that we do not use is_nil_dom(parent_val), as an explicit null
+          // value should not trigger deduction via the join condition.
+          !is_nil_dom(child_val) && parent_val == nullptr) {
+        // resolve parent column from our column
+        parent_val = child_val;
+        restart = true;
+        DBUG_LOG("jdv_dml", "DML-RESOLVE: Resolved "
+                                << parent_kci->column_name() << "(" << pix
+                                << ") in " << *bin.ct_node->parent() << " from "
+                                << child_kci->column_name() << "(" << cix
+                                << ") in " << *bin.ct_node);
+        continue;
+      }
+
+      // Same check here, but for the parent.
+      if (!parent_auto_generated && !is_nil_dom(parent_val) &&
+          child_val == nullptr) {
+        // resolve our column from parent column
+        child_val = parent_val;
+        restart = true;
+        DBUG_LOG("jdv_dml", "DML-RESOLVE: Resolved "
+                                << child_kci->column_name() << "(" << cix
+                                << ") in " << *bin.ct_node << " from "
+                                << parent_kci->column_name() << "(" << pix
+                                << ") in " << *bin.ct_node->parent());
       }
     }
   }
 
   // Check that resolved values are valid and consistent
-  // (no PK values are missing and values used in join conditions match)
+  // (no PK values are missing (unless they can be resolved later)
+  // and values used in join conditions match)
   for (const auto &bin : bindings) {
     if (bin.bound_object == nullptr) {
       continue;
@@ -764,40 +969,96 @@ static_assert(std::totally_ordered<Two_object_binding>);
     assert(bin.resolve_row->columns.size() ==
            bin.ct_node->key_column_info_list().size());
 
-    auto &columns = bin.resolve_row->columns;
-    const auto &pkc = bin.ct_node->primary_key_column();
-    if (bin.bound_object != nullptr &&
-        represents_NULL(
-            columns[bin.ct_node->primary_key_column_index()].second)) {
-      my_jdv_error<ER_JDV_PRIMARY_KEY_MUST_BE_PROVIDED>(
-          bin.ct_node->quoted_qualified_table_name(), pkc.column_name(),
-          bin.bound_object->get_location(), pkc.key());
-      return true;
-    }
+    const auto &columns = bin.resolve_row->columns;
+    const Resolve_column &pkrc =
+        columns[bin.ct_node->primary_key_column_index()];
 
-    if (bin.ct_node->has_join_condition()) {
-      auto cix = bin.ct_node->join_column_index();
-      auto pix = bin.ct_node->parent_join_column_index();
-
-      auto &[child_col, child_val] = bin.resolve_row->columns[cix];
-      auto &[parent_col, parent_val] = bin.resolve_row->parent->columns[pix];
-
-      if (represents_NULL(child_val) || represents_NULL(parent_val) ||
-          compare_doms(child_val, parent_val) != 0) {
-        DBUG_LOG("jdv_dml", "bin.bound_object:" << bin.bound_object);
-        const auto &jci = bin.ct_node->join_column_info();
-        const auto &pjci = bin.ct_node->parent_join_column_info();
-        my_jdv_error<ER_JDV_JOIN_CONDITION_NOT_SATISFIED>(
-            child_val->get_location(),
-            bin.ct_node->quoted_qualified_table_name(), jci.column_name(),
-            parent_val->get_location(),
-            bin.ct_node->parent()->quoted_qualified_table_name(),
-            pjci.column_name());
+    if (!pkrc.deferred_resolve) {
+      if (bin.bound_object != nullptr && is_nil_dom(pkrc.value)) {
+        my_jdv_error<ER_JDV_PRIMARY_KEY_MUST_BE_PROVIDED>(
+            bin.ct_node->quoted_qualified_table_name(), pkrc.kci->column_name(),
+            bin.bound_object->get_location(), pkrc.kci->key());
         return true;
       }
     }
+
+    if (!bin.ct_node->has_join_condition()) {
+      continue;
+    }
+
+    std::size_t cix = bin.ct_node->join_column_index();
+    std::size_t pix = bin.ct_node->parent_join_column_index();
+
+    auto &[child_kci, child_val, cdef] = bin.resolve_row->columns[cix];
+    auto &[parent_kci, parent_val, pdef] =
+        bin.resolve_row->parent->columns[pix];
+
+    bool child_auto_generated = field_will_be_auto_generated(
+        current_thd, *child_kci->field(), child_val);
+    bool parent_auto_generated = field_will_be_auto_generated(
+        current_thd, *parent_kci->field(), parent_val);
+
+    bool child_missing = is_nil_dom(child_val) || child_auto_generated;
+    bool parent_missing = is_nil_dom(parent_val) || parent_auto_generated;
+
+    // Report error if
+    // 1. join condition column values have been provided, but are not equal, or
+    // 2. child_val is nil, and does not have deferred resolve, or
+    // 3. parent_val is nil, and does not have deferred resolve
+    if ((!child_missing && !parent_missing &&
+         compare_doms(child_val, parent_val) != 0) ||
+        (child_missing && !cdef) || (parent_missing && !pdef)) {
+      DBUG_LOG("jdv_dml",
+               "DML-RESOLVE-CHECK: Invalid join condition on "
+                   << JX_(*bin.ct_node) << JX_(child_kci->column_name())
+                   << JX_(*bin.ct_node->parent())
+                   << JX_(parent_kci->column_name()) << JX_(cdef) << JX_(pdef));
+      const Key_column_info &jci = bin.ct_node->join_column_info();
+      const Key_column_info &pjci = bin.ct_node->parent_join_column_info();
+      my_jdv_error<ER_JDV_JOIN_CONDITION_NOT_SATISFIED>(
+          child_val == nullptr ? Json_path{0} : child_val->get_location(),
+          bin.ct_node->quoted_qualified_table_name(), jci.column_name(),
+          parent_val == nullptr ? Json_path{0} : parent_val->get_location(),
+          bin.ct_node->parent()->quoted_qualified_table_name(),
+          pjci.column_name());
+      return true;
+    }
   }
   return false;
+}
+
+/**
+  Iterates over a range of bindings and initializes the resolve_columns vector.
+  Then calls resolve_range to do the actual resolving.
+
+  @param bindings vector of bindings
+  @return true if error
+  */
+[[nodiscard]] static bool resolve_columns(
+    const std::ranges::random_access_range auto &bindings) {
+  // Populate Resolve_row with values provided directly by json document
+  DBUG_LOG("jdv_dml", "DML-RESOLVE: ");
+  for (const auto &bin : bindings) {
+    DBUG_LOG("jdv_dml", JX_(*bin.ct_node));
+
+    for ([[maybe_unused]] auto &col : bin.ct_node->key_column_info_list()) {
+      DBUG_LOG("jdv_dml", col.column_name() << ",");
+    }
+    if (bin.bound_object == nullptr) {
+      continue;
+    }
+
+    auto &resolved_columns = bin.resolve_row->columns;
+    for (auto &col : bin.ct_node->key_column_info_list()) {
+      // For non-projected columns an empty string_view is stored for the key
+      Json_dom *val = get_val(bin.bound_object, col.key());
+      resolved_columns.emplace_back(
+          &col, val,
+          field_will_be_auto_generated(current_thd, *col.field(), val));
+    }
+  }
+
+  return resolve_column_range(bindings);
 }
 
 /**
@@ -808,7 +1069,7 @@ static_assert(std::totally_ordered<Two_object_binding>);
  */
 static Json_dom *get_pk_dom(const Single_object_binding &bin) {
   auto pk_col_idx = bin.ct_node->primary_key_column_index();
-  return bin.resolve_row->columns[pk_col_idx].second;
+  return bin.resolve_row->columns[pk_col_idx].value;
 }
 
 /**
@@ -823,20 +1084,33 @@ static Json_dom *get_pk_dom(const Two_object_binding &bin) {
   }
 
   return bin.resolve_row->columns[bin.ct_node->primary_key_column_index()]
-      .second;
+      .value;
 }
 
 /**
-  Returns the resolved pk value for a binding (even if bound_object
-  is nullptr).
-  @param bin binding to get resolved pk dom for
-  @return dom representing resolved PK
+  Returns a const ref to the Resolve_row of the primary key column.
+
+  @param bin Binding
+  @return Resolve_row for primary key column.
  */
-static Json_dom *get_resolved_pk_dom(const auto &bin) {
+static const Resolve_column &get_pk_rc(const auto &bin) {
   assert(bin.resolve_row);
   assert(!bin.resolve_row->columns.empty());
-  return bin.resolve_row->columns[bin.ct_node->primary_key_column_index()]
-      .second;
+  return bin.resolve_row->columns[bin.ct_node->primary_key_column_index()];
+}
+
+/**
+  Returns an integer weight which allows sorting bindings with
+  deferred_resolve for the primary key after non-generated values.
+
+  @param bin Binding
+  @return 1 if primary key has deferred resolve, 0 otherwise
+ */
+static int get_deferred_resolve_weight(const auto &bin) {
+  if (bin.resolve_row->columns.empty()) {
+    return 0;
+  }
+  return get_pk_rc(bin).deferred_resolve ? 1 : 0;
 }
 
 /**
@@ -869,21 +1143,24 @@ static int compare_bindings(const BIN &abin, const BIN &bbin) {
   assert(abin.ct_node->dependency_weight() ==
          bbin.ct_node->dependency_weight());
 
-  // Need a predictable order of ct nodes which have the same weight
-  if (abin.ct_node < bbin.ct_node) {
-    return -1;
-  }
-  if (abin.ct_node > bbin.ct_node) {
-    return 1;
+  if (abin.ct_node->id() != bbin.ct_node->id()) {
+    assert(abin.ct_node != bbin.ct_node);
+    return abin.ct_node->id() - bbin.ct_node->id();
   }
   // Multiple bindings can reference the same ct_node for nested, for singleton
-  // decendants of nested
+  // descendants of nested
   assert(abin.ct_node == bbin.ct_node);
 
+  int drw = get_deferred_resolve_weight(abin);
+  drw -= get_deferred_resolve_weight(bbin);
+  if (drw != 0) {
+    return drw;
+  }
+
   Json_dom *apk = get_pk_dom(abin);
-  assert(apk != nullptr);
+  assert(apk != nullptr || get_pk_rc(abin).deferred_resolve);
   Json_dom *bpk = get_pk_dom(bbin);
-  assert(bpk != nullptr);
+  assert(bpk != nullptr || get_pk_rc(bbin).deferred_resolve);
   int cd = compare_doms(apk, bpk);
   if (cd != 0) {
     return cd;
@@ -902,115 +1179,209 @@ static int compare_bindings(const BIN &abin, const BIN &bbin) {
   return 0;
 }
 
-#define RFL(x) #x << ":" << (em_wrap(x)) << " "
+/**
+  Less comparator which compares Index_entry objects based on their TABLE_SHARE
+  and primary key column value.
+*/
+static auto share_pk_less = [](const auto &iea, const auto &ieb) {
+  const auto &abin = iea.get();
+  const auto &bbin = ieb.get();
+  if (get_share(abin) != get_share(bbin)) {
+    return get_table_cache_key(abin) < get_table_cache_key(bbin);
+  }
+  // If they, in fact reference the same table, these should be the same
+  assert(abin.ct_node->primary_key_column_index() ==
+         bbin.ct_node->primary_key_column_index());
+  return compare_doms(get_pk_rc(abin).value, get_pk_rc(bbin).value) < 0;
+};
+
 /**
   Creates an index over the bindings sorted on
   TABLE_SHARE* and pk-dom value. Verifies that duplicates
   are identical for all columns and marks it as empty.
   Otherwise reports error.
 
+  @param thd THD
   @param bindings bindings vector
   @return true if error
 */
 template <typename BV>
-[[nodiscard]] static bool check_for_share_pk_duplicates(BV &bindings) {
+[[nodiscard]] static bool check_for_share_pk_duplicates(THD *thd,
+                                                        BV &bindings) {
+  DBUG_LOG("jdv_dml", "DML-DUP-CHECK: Enter");
+
   // Need to create an index over the bindings which is sorted just on share and
   // pk to find all duplicates even if they reference different
   // Content_tree_nodes.
-  std::vector<typename BV::pointer> bound_index;
-  bound_index.reserve(bindings.size());
-  for (auto &b : bindings) {
-    if (b.bound_object == nullptr) {
+  using BT = typename BV::value_type;
+
+  auto share_pk_index = make_mr_index<BT>(thd, bindings);
+  auto pks_with_explicit_vals = std::ranges::remove_if(
+      share_pk_index,
+      [](const BT &bin) {
+        // By dropping both delete half bindings and also bindings for which
+        // the primary key is generated, we limit the check to only those
+        // pk which are explicitly provided. This is ok as we sort all bindings
+        // with generated PK later in insertion order.
+        return bin.bound_object == nullptr;
+      },
+      unwrap_index_entry<BT>);
+
+  // Create a range of those index entries which have a valid bound object
+  // Note that all bindings in this range will have a valid resolve_row.
+  std::ranges::subrange valid_share_pk_index{share_pk_index.begin(),
+                                             pks_with_explicit_vals.begin()};
+
+  std::ranges::stable_sort(valid_share_pk_index, share_pk_less);
+  DBUG_LOG("jdv_dml", "DML-DUP-CHECK: " << JX_(valid_share_pk_index.size()));
+
+#ifndef NDEBUG
+  for (Index_entry<BT> &ie : valid_share_pk_index) {
+    BT &bin = ie.get();
+    const Resolve_column &pkrc = get_pk_rc(bin);
+    DBUG_LOG("jdv_dml", "__DML-DUP-CHECK: "
+                            << JX_(pkrc.kci->column_name())
+                            << JX_(json_dom_to_string(pkrc.value))
+                            << JX_(pkrc.deferred_resolve) << JX_(*bin.ct_node));
+  }
+#endif /* NDEBUG */
+
+  // Loop over the index - examining entries belonging to the same table
+  for (auto index_it = valid_share_pk_index.begin();
+       index_it != valid_share_pk_index.end();) {
+    std::ranges::subrange remaining{index_it, valid_share_pk_index.end()};
+    auto same_table = std::ranges::equal_range(
+        remaining, *index_it,
+        [](const Index_entry<BT> &a, const Index_entry<BT> &b) {
+          return get_table_cache_key(a.get()) < get_table_cache_key(b.get());
+        });
+
+#ifndef NDEBUG
+    for (const Index_entry<BT> &ie : same_table) {
+      DBUG_LOG("jdv_dml", JX_(em_wrap(ie.get().bound_object->get_location())));
+    }
+#endif /* NDEBUG */
+
+    // FUT.dt: Could limit this check to cases when there are more than one
+    // binding referencing the table?
+
+    // We need to check that deferred_resolve is consistent
+    // for all tables, since that can be set also for tables which don't
+    // themselves have an AUTO_INCREMENT PK. We need to make sure all the
+    // 'pkrc's for this table either all have deferred_resolve, or that none of
+    // them do. If all 'pkrc's have deferred_resolve we can skip to the next
+    // table. If none of them do we need to check each one for duplicates.
+    bool first_deferred_resolve = get_pk_rc(index_it->get()).deferred_resolve;
+
+    //  Look for a pkval which does not have the same deferred_resolve value
+    //  as the first
+    auto badit = std::ranges::find_if(
+        same_table | std::ranges::views::drop(1),
+        [&](const Index_entry<BT> &ie) {
+          return get_pk_rc(ie.get()).deferred_resolve != first_deferred_resolve;
+        });
+    if (badit != same_table.end()) {
+      my_jdv_error<ER_JDV_GENERATED_AND_EXPLICIT_PKS_NOT_ALLOWED>(
+          index_it->get().bound_object->get_location(),
+          badit->get().bound_object->get_location());
+      return true;
+    }
+    if (first_deferred_resolve) {
+      // All bindings in same_table have generated primary key, so we can
+      // continue with the next table.
+      index_it += same_table.size();
       continue;
     }
-    bound_index.push_back(&b);
-  }
+    // fallthrough to normal duplicate check
 
-  auto cmp_share_pk = [](const auto *a, const auto *b) {
-    const TABLE_SHARE *a_s = get_share(*a);
-    const TABLE_SHARE *b_s = get_share(*b);
-    if (a_s != b_s) {
-      return a_s < b_s ? -1 : 1;
-    }
+    DBUG_LOG("jdv_dml", "DML-DUP-CHECK: " << JX_(same_table.size()));
 
-    // If they, in fact reference the same table, these should be the same
-    assert(a->ct_node->primary_key_column_index() ==
-           b->ct_node->primary_key_column_index());
-    assert(get_resolved_pk_dom(*a) != nullptr);
-    assert(get_resolved_pk_dom(*b) != nullptr);
-    return compare_doms(get_resolved_pk_dom(*a), get_resolved_pk_dom(*b));
-  };
-  std::ranges::sort(bound_index, [&](const auto *a, const auto *b) {
-    int c = cmp_share_pk(a, b);
-    return c != 0 ? c < 0
-                  : em_wrap(get_resolved_pk_dom(*a)->get_location()) <
-                        em_wrap(get_resolved_pk_dom(*b)->get_location());
-  });
-  // Loop over the index - examining each range of share-pk duplicates in turn
-  for (auto eqit = bound_index.begin(); eqit != bound_index.end();) {
-    auto eqr = std::ranges::equal_range(
-        bound_index, *eqit,
-        [&](const auto *a, const auto *b) { return cmp_share_pk(a, b) < 0; });
-    const auto &cur = *eqr.front();
-    const auto &cur_cols = get_resolve_columns(cur);
+    // None of the pkrc's have deferred_resolve, so we need to check them for
+    // duplicates
+    for (auto same_tbl_it = same_table.begin();
+         same_tbl_it != same_table.end();) {
+      DBUG_LOG("jdv_dml", "DML-DUP-CHECK: same_table loop");
+      std::ranges::subrange same_table_remaining{same_tbl_it, same_table.end()};
+      const BT &first_pk_bin = same_tbl_it->get();
+      const Resolve_column &first_pk_pkrc = get_pk_rc(first_pk_bin);
 
-    DBUG_LOG("jdv_dml", "DML-DUP-CHECK2: On share@"
-                            << get_share(cur)
-                            << ", pk:" << json_dom_to_string(get_pk_dom(cur))
-                            << " " << RFL(get_pk_dom(cur)->get_location()));
+      DBUG_LOG("jdv_dml", "DML-DUP-CHECK2: On share@"
+                              << get_share(first_pk_bin) << ", pk:"
+                              << json_dom_to_string(first_pk_pkrc.value) << " "
+                              << RFL(first_pk_pkrc.value->get_location())
+                              << JX_(*first_pk_bin.ct_node));
 
-    // Loop over all those that have the same share-pk as the first,
-    // and verify that all column values are identical
-    for (auto *np : eqr | std::ranges::views::drop(1)) {
-      auto &nxt = *np;
-      const auto &nxt_cols = get_resolve_columns(nxt);
+      auto same_pk = std::ranges::equal_range(same_table_remaining,
+                                              *same_tbl_it, share_pk_less);
 
-      DBUG_LOG("jdv_dml", "DML-DUP-CHECK2: Duplicate from: "
-                              << nxt.ct_node->name() << ", "
-                              << nxt.ct_node->table_ref()->table_name << ", "
-                              << nxt.ct_node->table_ref()->alias << " "
-                              << RFL(get_pk_dom(*np)->get_location()));
+      DBUG_LOG("jdv_dml", "DML-DUP-CHECK: " << JX_(same_pk.size()));
 
-      // run mismatch to see if any columns have a different value
-      auto mmr = std::ranges::mismatch(
-          cur_cols, nxt_cols, [](const auto &a, const auto &b) {
-            return compare_doms(a.second, b.second) == 0;
-          });
-
-      if (mmr.in1 != cur_cols.end()) {
+      for ([[maybe_unused]] const Index_entry<BT> &ie : same_pk) {
         DBUG_LOG("jdv_dml",
-                 "DML-DUP-CHECK2: Invalid duplicate from: "
-                     << nxt.ct_node->name() << ", "
-                     << nxt.ct_node->table_ref()->table_name << ", "
-                     << nxt.ct_node->table_ref()->alias
-                     << ", offending column: " << mmr.in1->first << ", values ("
-                     << json_dom_to_string(mmr.in1->second) << " vs. "
-                     << json_dom_to_string(mmr.in2->second) << ")");
-
-        my_jdv_error<ER_JDV_PK_DUPLICATES_NOT_IDENTICAL>(
-            nxt.bound_object->get_location(),
-            cur.ct_node->quoted_qualified_table_name(),
-            nxt_cols[nxt.ct_node->primary_key_column_index()].first,
-            mmr.in1->first, mmr.in2->second->get_location(),
-            mmr.in1->second->get_location());
-        return true;
+                 "Eqr: " << em_wrap(ie.get().bound_object->get_location()));
       }
-      nxt.set_empty();
-    }
-    eqit = eqr.end();
-  }
+
+      const Resolve_column_vec &first_pk_cols =
+          first_pk_bin.resolve_row->columns;
+
+      // Loop over all those that have the same share-pk as the first,
+      // and verify that all column values are identical
+      for (Index_entry<BT> &ie : same_pk | std::ranges::views::drop(1)) {
+        BT &same_pk_bin = ie.get();
+        const Content_tree_node &ct_node = *same_pk_bin.ct_node;
+
+        DBUG_LOG("jdv_dml",
+                 "DML-DUP-CHECK: Duplicate from: "
+                     << ct_node << " "
+                     << RFL(get_pk_rc(same_pk_bin).value->get_location()));
+
+        const Resolve_column_vec &same_pk_cols =
+            same_pk_bin.resolve_row->columns;
+        // run mismatch to see if any columns have a different value
+        auto mmr = std::ranges::mismatch(
+            first_pk_cols, same_pk_cols,
+            [](const Resolve_column &a, const Resolve_column &b) {
+              return compare_doms(a.value, b.value) == 0;
+            });
+
+        if (mmr.in1 != first_pk_cols.end()) {
+          DBUG_LOG("jdv_dml",
+                   "DML-DUP-CHECK: Invalid duplicate from: "
+                       << ct_node
+                       << ", offending column: " << mmr.in1->kci->column_name()
+                       << ", values (" << json_dom_to_string(mmr.in1->value)
+                       << " vs. " << json_dom_to_string(mmr.in2->value) << ")");
+
+          my_jdv_error<ER_JDV_PK_DUPLICATES_NOT_IDENTICAL>(
+              same_pk_bin.bound_object->get_location(),
+              ct_node.quoted_qualified_table_name(),
+              first_pk_pkrc.kci->column_name(), mmr.in1->kci->column_name(),
+              mmr.in2->value->get_location(), mmr.in1->value->get_location());
+          return true;
+        }
+        // If same_pk_bin is actually identical, mark it as empty so that no
+        // statement is generated for it.
+        same_pk_bin.set_empty();
+      }
+      // Advance table loop iterator past the end of the duplicate range
+      same_tbl_it += same_pk.size();
+    }  // for (auto same_tbl_it = same_table.begin();
+
+    // Advance index loop iterator past the end of the same table range
+    index_it += same_table.size();
+  }  // for (auto index_it = valid_share_pk_index.begin();
+
   return false;
 }
 
 /**
   Merges bindings for existing and input rows when doing UPDATE. This cannot
-  be done when binding as the pk value for the input row may not known until
+  be done when binding as the pk value for the input row may not be known until
   after resolving.
 
-  @param bindings vector of binding to merge
+  @param bindings Binding index to merge
  */
-static void merge_bindings_for_update(
-    std::vector<Two_object_binding> &bindings) {
+static void merge_bindings_for_update(Index<Two_object_binding> &bindings) {
   assert(std::ranges::is_sorted(bindings));
 
   // Look for adjacent same-pk bindings.
@@ -1019,18 +1390,14 @@ static void merge_bindings_for_update(
   for (auto adjit = std::ranges::adjacent_find(bindings);
        adjit != bindings.end();
        adjit = std::ranges::adjacent_find(adjit + 1, bindings.end())) {
-    Two_object_binding &cur = *adjit;
-    Two_object_binding &nxt = *(adjit + 1);
-    DBUG_LOG(
-        "jdv_dml",
-        "cur.(bound_object:"
-            << cur.bound_object << " .existing_object:" << cur.existing_object
-            << " .ct_node->type:" << (int)cur.ct_node->type()
-            << " .qtn:" << cur.ct_node->quoted_qualified_table_name()
-            << "), nxt.(bound_object:" << nxt.bound_object
-            << " .existing_object:" << nxt.existing_object
-            << " .ct_node->type:" << (int)nxt.ct_node->type()
-            << " .qtn:" << nxt.ct_node->quoted_qualified_table_name() << ")");
+    Two_object_binding &cur = adjit->get();
+    Two_object_binding &nxt = (adjit + 1)->get();
+    DBUG_LOG("jdv_dml",
+             "cur.(bound_object:" << cur.bound_object << " .existing_object:"
+                                  << cur.existing_object << JX_(*cur.ct_node)
+                                  << ", nxt.(bound_object:" << nxt.bound_object
+                                  << " .existing_object:" << nxt.existing_object
+                                  << JX_(*nxt.ct_node));
 
     if (cur.existing_object == nullptr) {
       // Nothing to merge
@@ -1053,7 +1420,7 @@ static void merge_bindings_for_update(
     nxt.existing_object = cur.existing_object;
 
     DBUG_LOG("jdv_dml", "DML-UPDATE-MERGE: Merging bindings for "
-                            << cur.ct_node->quoted_qualified_table_name() << "."
+                            << *cur.ct_node << " pkcol:"
                             << cur.ct_node->primary_key_column().column_name()
                             << " = "
                             << json_dom_to_string(cur.existing_object->get(
@@ -1070,7 +1437,7 @@ static void merge_bindings_for_update(
   JDV definition (including _metadata for the root object), and report error
   if that is the case.
 
-  @param thd THD
+  @param thd       Thread handle.
   @param input_obj input object
   @param ct_node jdv definition
 
@@ -1152,7 +1519,7 @@ static bool is_equal(Json_dom *ajd, Json_dom *bjd) {
   @return resolve_row
  */
 
-[[maybe_unused]] [[nodiscard]] static std::unique_ptr<Resolve_row> make_rr_up(
+[[nodiscard]] static std::unique_ptr<Resolve_row> make_rr_up(
     Resolve_row *parent) {
   auto rrptr = std::make_unique<Resolve_row>();
   rrptr->parent = parent;
@@ -1278,9 +1645,7 @@ static bool is_equal(Json_dom *ajd, Json_dom *bjd) {
 [[nodiscard]] static bool push_array_child_bindings(
     std::size_t pbx, const Content_tree_node *child_ct_node,
     std::vector<Two_object_binding> *stack) {
-  DBUG_LOG("jdv_dml", "DML-BIND: Enter " << SOURCE_LOCATION_CUR_FUNC
-                                         << " on child "
-                                         << child_ct_node->name());
+  DBUG_LOG("jdv_dml", "DML-BIND: On child " << *child_ct_node);
   auto &stk = *stack;
   Resolve_row *prr = stk[pbx].resolve_row.get();
   const std::string_view &child_name = child_ct_node->name();
@@ -1380,30 +1745,25 @@ template <typename BIN>
   assert((thd->in_sub_stmt & SUB_STMT_DUALITY_VIEW) != 0);
   const auto &ct_node = *binding.ct_node;
 
-  const auto &[pkcol, pkval] =
+  const Resolve_column &pkrc =
       binding.resolve_row->columns[ct_node.primary_key_column_index()];
-  if (pkval == nullptr) {
+  if (pkrc.value == nullptr) {
     assert(false);
     return std::nullopt;
   }
 
   std::string query = "SELECT ";
-  const auto &kcilst = ct_node.key_column_info_list();
-
-  for (std::size_t rci = 0; const auto &[c, v] : binding.resolve_row->columns) {
-    const Key_column_info &kci = kcilst[rci];
-    std::size_t cur_rci = rci;
-    ++rci;
-    if (cur_rci == ct_node.primary_key_column_index() || v == nullptr) {
+  for (const Resolve_column &rc : binding.resolve_row->columns) {
+    if (&rc == &pkrc || rc.value == nullptr) {
       // If we are not going to modify the value, we don't care what it
       // currently is
       query.append("0, ");
       continue;
     }
 
-    append_identifier(&query, c);
+    append_identifier(&query, rc.kci->column_name());
     query.append(" <> ");
-    if (append_json_dom(&query, v, col_expects_b64(kci))) {
+    if (append_json_dom(&query, rc.value, col_expects_b64(*rc.kci))) {
       return std::nullopt;
     }
 
@@ -1412,19 +1772,19 @@ template <typename BIN>
   query.replace(query.size() - 2, 2, " FROM ");
   query.append(ct_node.quoted_qualified_table_name());
   query.append(" WHERE ");
-  append_identifier(&query, pkcol);
+  append_identifier(&query, pkrc.kci->column_name());
   query.append(" = ");
-  assert(!col_expects_b64(ct_node.primary_key_column()));
-  if (append_json_dom(&query, pkval)) {
+  assert(!col_expects_b64(*pkrc.kci));
+  if (append_json_dom(&query, pkrc.value)) {
     return std::nullopt;
   }
   query.append(" FOR UPDATE");
 
   DBUG_LOG("jdv_dml", "DML-DIFF: query:" << query);
   Regular_statement_handle stmt_handle(thd, query.data(), query.length());
-  stmt_handle.set_capacity(binding.resolve_row->columns.size() *
-                               sizeof(std::int64_t) +
-                           std::size_t{1});
+  stmt_handle.set_capacity(
+      (binding.resolve_row->columns.size() * sizeof(std::int64_t)) +
+      std::size_t{1});
   bool ret_val = stmt_handle.execute();
   if (ret_val) {
     DBUG_LOG("jdv_dml", "DML-DIFF: SELECT query '" << query << "' failed");
@@ -1500,12 +1860,9 @@ constexpr std::size_t BINDINGS_RESERVE_SIZE = 48;
 
 enum class Stmt_state { EXECUTE = 0, SKIP = 1, ERROR = 2 };
 
-static Json_uint ZERO{0};
-static const Json_wrapper ZEROW{&ZERO, true};
-
 /**
   Produces an INSERT statement from a binding. For INSERT this is
-  a Single_object_binding, but when an update decays into and INSERT,
+  a Single_object_binding, but when an update decays into an INSERT,
   this function is also invoked with a Two_object_binding.
 
   @param thd THD
@@ -1519,51 +1876,49 @@ static const Json_wrapper ZEROW{&ZERO, true};
   assert(binding.bound_object != nullptr);
   assert(binding.ct_node != nullptr);
 
-  const Content_tree_node &ct_noder = *binding.ct_node;
-  assert(!ct_noder.key_column_info_list().empty());
+  const Content_tree_node &ct_node = *binding.ct_node;
+  assert(!ct_node.key_column_info_list().empty());
   assert(binding.resolve_row);
-  const auto &resolved_columns = binding.resolve_row->columns;
-  assert(resolved_columns.size() == ct_noder.key_column_info_list().size());
+  const auto &c_resolved_columns =
+      binding.resolve_row->columns;  // get_resolved_columns(binding);
+  assert(c_resolved_columns.size() == ct_node.key_column_info_list().size());
 
-  // Report error if an AUTO_INCREMENT value
-  // is the value 0 (explicit request to generate value) and
-  // NO_AUTO_VALUE_ON_ZERO is off
-  for (std::size_t rix = 0; rix < resolved_columns.size(); ++rix) {
-    const auto &kci = ct_noder.key_column_info_list()[rix];
-    const auto &[col, val] = resolved_columns[rix];
+  for (Resolve_column &rc : binding.resolve_row->columns) {
+    if (field_will_be_auto_generated(thd, *rc.kci->field(), rc.value)) {
+      DBUG_LOG("jdv_dml", "Found unresolved AICOL for " << JX_(ct_node));
 
-    if (is_auto_increment(*kci.field()) && !represents_NULL(val) &&
-        Json_wrapper{val, true}.compare(ZEROW) == 0 &&
-        (thd->variables.sql_mode & MODE_NO_AUTO_VALUE_ON_ZERO) == 0) {
-      my_jdv_error<ER_JDV_EXPLICIT_AUTO_INCREMENT_NOT_ALLOWED>(
-          ct_noder.quoted_qualified_table_name(), col,
-          binding.bound_object->get_location(), kci.key());
-      return Stmt_state::ERROR;
+      // We only need to do this if we actually need
+      // last_insert_id propagated through join conditions (or some other
+      // purpose), but it is easier to do it always.
+      binding.resolve_row->unresolved_autoinc_column = &rc;
     }
   }
   assert(!thd->is_error());
 
-  bool is_with_insert = ct_noder.allows_insert();
-  bool is_with_update = ct_noder.allows_update();
+  bool is_with_insert = ct_node.allows_insert();
+  bool is_with_update = ct_node.allows_update();
+
+  auto &sbuf = *sbufp;
+  sbuf.reserve(STMT_RESERVE_SIZE);
+
   constexpr bool is_insert_for_update =
       std::is_same_v<decltype(binding), const Two_object_binding &>;
   bool is_root_or_nested_insert_update =
-      ct_noder.is_root_object() ||
-      (ct_noder.is_nested_child() && is_insert_for_update);
+      ct_node.is_root_object() ||
+      (ct_node.is_nested_child() && is_insert_for_update);
   DBUG_LOG("jdv_dml",
            "DML-INSERT: is_insert_for_update:" << is_insert_for_update);
 
   if (is_root_or_nested_insert_update && !is_with_insert) {
     my_jdv_error<ER_JDV_MISSING_INSERT_TAG>(
-        ct_noder.quoted_qualified_table_name(),
+        ct_node.quoted_qualified_table_name(),
         binding.bound_object->get_location());
     return Stmt_state::ERROR;
   }
 
-  if (!is_root_or_nested_insert_update) {
-    const auto &[pkcol, pkval] =
-        binding.resolve_row->columns[ct_noder.primary_key_column_index()];
-    assert(pkval != nullptr);
+  const Resolve_column &pkrc = get_pk_rc(binding);
+  if (!is_root_or_nested_insert_update && pkrc.value != nullptr) {
+    assert(pkrc.value != nullptr);
 
     auto dr = select_diff_vector(thd, binding);
     if (thd->is_error()) {
@@ -1574,28 +1929,28 @@ static const Json_wrapper ZEROW{&ZERO, true};
     if (!row_exists) {
       if (!is_with_insert) {
         DBUG_LOG("jdv_dml", "Diff check returned no rows");
-        if (ct_noder.is_singleton_child() && is_insert_for_update) {
+        if (ct_node.is_singleton_child() && is_insert_for_update) {
           my_jdv_error<ER_JDV_MISSING_INSERT_TAG>(
-              ct_noder.quoted_qualified_table_name(),
+              ct_node.quoted_qualified_table_name(),
               binding.bound_object->get_location());
           return Stmt_state::ERROR;
         }
         my_jdv_error<ER_JDV_MISSING_READONLY_SUBOBJECT>(
             binding.bound_object->get_location(),
-            ct_noder.quoted_qualified_table_name(), pkcol,
-            json_dom_to_string(pkval));
+            ct_node.quoted_qualified_table_name(), pkrc.kci->column_name(),
+            json_dom_to_string(pkrc.value));
         return Stmt_state::ERROR;
       }
     } else {
       if (!is_with_update) {
         auto cs = dr.value();
-        if (cs[ct_noder.join_column_index()]) {
-          // The existing value of the join condtion does not match what is
+        if (cs[ct_node.join_column_index()]) {
+          // The existing value of the join condition does not match what is
           // being inserted.
           my_jdv_error<ER_JDV_JOIN_CONDITION_VIOLATION>(
               binding.bound_object->get_location(),
-              ct_noder.quoted_qualified_table_name(),
-              ct_noder.key_column_info_list()[ct_noder.join_column_index()]
+              ct_node.quoted_qualified_table_name(),
+              ct_node.key_column_info_list()[ct_node.join_column_index()]
                   .column_name());
           return Stmt_state::ERROR;
         }
@@ -1604,14 +1959,13 @@ static const Json_wrapper ZEROW{&ZERO, true};
     }
   }
 
-  auto &sbuf = *sbufp;
   sbuf.reserve(STMT_RESERVE_SIZE);
   sbuf.append("INSERT INTO ");
-  sbuf.append(ct_noder.quoted_qualified_table_name());
+  sbuf.append(ct_node.quoted_qualified_table_name());
   sbuf.append(" (");
 
   DBUG_LOG("jdv_dml", "DML-INSERT: Listing columns to be populated");
-  const auto &kcilst = ct_noder.key_column_info_list();
+  const auto &kcilst = ct_node.key_column_info_list();
   for ([[maybe_unused]] const auto &kc : kcilst) {
     DBUG_LOG("jdv_dml", kc.column_name() << " => \"" << kc.key() << "\":, ");
   }
@@ -1623,9 +1977,12 @@ static const Json_wrapper ZEROW{&ZERO, true};
   sbuf.replace(sbuf.size() - 2, 2, ") VALUES (");
 
   if (is_root_or_nested_insert_update) {
-    for (std::size_t rci = 0; auto &[col, rdom] : resolved_columns) {
-      if (append_json_dom(&sbuf, rdom, col_expects_b64(kcilst[rci++]))) {
-        return Stmt_state::ERROR;
+    for (const Resolve_column &rc : c_resolved_columns) {
+      if (rc.value == nullptr && is_auto_increment(*rc.kci->field())) {
+        sbuf.append("NULL");
+      } else {
+        if (append_json_dom(&sbuf, rc.value, col_expects_b64(*rc.kci)))
+          return Stmt_state::ERROR;
       }
       sbuf.append(", ");
     }
@@ -1635,21 +1992,26 @@ static const Json_wrapper ZEROW{&ZERO, true};
 
   // Updatable sub-nodes can have existing row, so need ON DUPLICATE KEY UPDATE
   auto values_pos = sbuf.size();
-  for (std::size_t rci = 0; const auto &[col, val] : resolved_columns) {
-    const Key_column_info &kci = kcilst[rci++];
-    DBUG_LOG("jdv_dml", "DML-INSERT: Considering " << col << " <- " << val);
-    if (val == nullptr) {
+  for (const Resolve_column &rc : c_resolved_columns) {
+    DBUG_LOG("jdv_dml", "DML-INSERT: Considering " << rc.kci->column_name()
+                                                   << " <- " << rc.value);
+    if (rc.value == nullptr) {
+      if (is_auto_increment(*rc.kci->field())) {
+        sbuf.insert(values_pos, "NULL, ");
+        values_pos += 6;
+        continue;
+      }
       // If we could not deduce a value for the column, we add DEFAULT to the
       // values list, and omit the column from the ON DUPLICATE assignment list.
       sbuf.insert(values_pos, "DEFAULT, ");
       values_pos += 9;
       continue;
     }
-    append_identifier(&sbuf, col);
+    append_identifier(&sbuf, rc.kci->column_name());
     sbuf.append(" = ");
     auto vstart = sbuf.size();
 
-    if (append_json_dom(&sbuf, val, col_expects_b64(kci))) {
+    if (append_json_dom(&sbuf, rc.value, col_expects_b64(*rc.kci))) {
       return Stmt_state::ERROR;
     }
 
@@ -1663,7 +2025,10 @@ static const Json_wrapper ZEROW{&ZERO, true};
 
   // Replace trailing ", " in values list with the start of the ON DUPLICATE
   // section
-  sbuf.replace(values_pos - 2, 2, ") ON DUPLICATE KEY UPDATE ");
+  // Only append ON DUP... if UPDATE assignments have been added.
+  sbuf.replace(
+      values_pos - 2, 2,
+      (sbuf.size() > values_pos ? ") ON DUPLICATE KEY UPDATE " : ")  "));
   sbuf.resize(sbuf.size() - 2);
 
   return Stmt_state::EXECUTE;
@@ -1734,19 +2099,16 @@ static bool check_etag(const Two_object_binding &binding) {
 
   if (binding.existing_object == nullptr) {
     DBUG_LOG("jdv_dml",
-             "DML-UPDATE: b.existing_object == nullptr for UPDATE of ("
-                 << ct_node.name() << " -> "
-                 << ct_node.quoted_qualified_table_name()
-                 << "), generating INSERT of bound object instead.");
+             "DML-UPDATE: b.existing_object == nullptr for UPDATE of "
+                 << ct_node << ", generating INSERT of bound object instead.");
     return make_insert(thd, binding, sbufp);
   }
   assert(binding.existing_object != nullptr);
   if (binding.bound_object == nullptr) {
     DBUG_LOG("jdv_dml",
-             "DML-UPDATE: b.bound_object == nullptr for UPDATE of ("
-                 << ct_node.name() << " -> "
-                 << ct_node.quoted_qualified_table_name()
-                 << "), generating DELETE of existing object instead.");
+             "DML-UPDATE: b.bound_object == nullptr for UPDATE of "
+                 << ct_node.name()
+                 << ", generating DELETE of existing object instead.");
     return make_delete(thd,
                        {.bound_object = binding.existing_object,
                         .ct_node = binding.ct_node,
@@ -1759,8 +2121,8 @@ static bool check_etag(const Two_object_binding &binding) {
     if (!c->is_singleton_child()) {
       continue;
     }
-    if (!represents_NULL(binding.existing_object->get(c->name())) &&
-        represents_NULL(binding.bound_object->get(c->name()))) {
+    if (!is_nil_dom(binding.existing_object->get(c->name())) &&
+        is_nil_dom(binding.bound_object->get(c->name()))) {
       my_jdv_error<ER_JDV_MISSING_DELETE_TAG>(
           c->quoted_qualified_table_name(),
           binding.existing_object->get(c->name())->get_location());
@@ -1781,11 +2143,11 @@ static bool check_etag(const Two_object_binding &binding) {
 
   // On update all columns must be resolved in order the perform
   // etag check.
-  if (std::ranges::any_of(resolved_columns, [&](const auto &p) {
-        if (p.second == nullptr) {
+  if (std::ranges::any_of(resolved_columns, [&](const auto &rc) {
+        if (rc.value == nullptr) {
           my_jdv_error<ER_JDV_MISSING_VALUE>(
               binding.bound_object->get_location(),
-              ct_node.quoted_qualified_table_name(), p.first);
+              ct_node.quoted_qualified_table_name(), rc.kci->column_name());
           return true;
         }
         return false;
@@ -1797,7 +2159,7 @@ static bool check_etag(const Two_object_binding &binding) {
   Json_dom *pk_edom = binding.existing_object->get(pk_col_info.key());
   assert(pk_edom != nullptr);
   Json_dom *pk_rdom =
-      binding.resolve_row->columns[ct_node.primary_key_column_index()].second;
+      resolved_columns[ct_node.primary_key_column_index()].value;
   assert(pk_rdom != nullptr);
   if (!is_equal(pk_edom, pk_rdom)) {
     // This is a PK update.
@@ -1829,8 +2191,7 @@ static bool check_etag(const Two_object_binding &binding) {
     // A row with this pk already exists in the base table
     DBUG_LOG("jdv_dml",
              "DML-UPDATE: pk value of "
-                 << ct_node.name() << ", "
-                 << ct_node.quoted_qualified_table_name()
+                 << ct_node
                  << " is changed, but a row with the new pk value exists");
 
     if (ct_node.read_only()) {
@@ -1848,7 +2209,7 @@ static bool check_etag(const Two_object_binding &binding) {
       if ((*dr)[i]) {
         append_identifier(&sbuf, kcis[i].column_name());
         sbuf.append(" = ");
-        if (append_json_dom(&sbuf, binding.resolve_row->columns[i].second,
+        if (append_json_dom(&sbuf, resolved_columns[i].value,
                             col_expects_b64(kcis[i]))) {
           return Stmt_state::ERROR;
         }
@@ -1861,45 +2222,42 @@ static bool check_etag(const Two_object_binding &binding) {
     // resolved column values. Presumably resolving is not actually necessary
     // for true UPDATEs (only when UPDATE performs INSERT), but since we have
     // already resolved the columns, it is cheaper to get them from resolve_row,
-    // even if they must also exist in binding.bound_object.
-    for (std::size_t rci_ = 0;
-         const auto &col : ct_node.key_column_info_list()) {
-      auto rci = rci_++;
-      Json_dom *existing_col_dom = binding.existing_object->get(col.key());
-      Json_dom *updated_col_dom = binding.resolve_row->columns[rci].second;
-
-      if (updated_col_dom == nullptr) {
-        DBUG_LOG(
-            "jdv_dml",
-            "DML-UPDATE: " << col.key() << " not found in new value. Skipping");
+    // even if they must also exist in binding.bound_object
+    for (const Resolve_column &rc : resolved_columns) {
+      Json_dom *existing_val = binding.existing_object->get(rc.kci->key());
+      Json_dom *updated_val = rc.value;
+      if (updated_val == nullptr) {
+        DBUG_LOG("jdv_dml",
+                 "DML-UPDATE: " << rc.kci->key()
+                                << " not found in new value. Skipping");
         continue;
       }
 
-      if (existing_col_dom != nullptr && updated_col_dom != nullptr &&
-          is_equal(updated_col_dom, existing_col_dom)) {
+      if (existing_val != nullptr && updated_val != nullptr &&
+          is_equal(updated_val, existing_val)) {
         std::string before_value;
-        if (append_json_dom(&before_value, existing_col_dom,
-                            col_expects_b64(col))) {
+        if (append_json_dom(&before_value, existing_val,
+                            col_expects_b64(*rc.kci))) {
           return Stmt_state::ERROR;
         }
         DBUG_LOG("jdv_dml", "DML-UPDATE: Key: '"
-                                << col.key() << "', col: '" << col.column_name()
-                                << "' is unchanged, ('" << before_value
-                                << "'). Skipping.");
+                                << rc.kci->key() << "', col: '"
+                                << rc.kci->column_name() << "' is unchanged, ('"
+                                << before_value << "'). Skipping.");
         continue;
       }
-      assert(rci != ct_node.primary_key_column_index());
+      assert(rc.kci != &ct_node.primary_key_column());
 
-      if (!col.allows_update()) {
+      if (!rc.kci->allows_update()) {
         my_jdv_error<ER_JDV_MISSING_UPDATE_TAG>(
-            ct_node.quoted_qualified_table_name(), col.column_name(),
-            updated_col_dom->get_location());
+            ct_node.quoted_qualified_table_name(), rc.kci->column_name(),
+            updated_val->get_location());
         return Stmt_state::ERROR;
       }
 
-      append_identifier(&sbuf, col.column_name());
+      append_identifier(&sbuf, rc.kci->column_name());
       sbuf.append(" = ");
-      if (append_json_dom(&sbuf, updated_col_dom, col_expects_b64(col))) {
+      if (append_json_dom(&sbuf, updated_val, col_expects_b64(*rc.kci))) {
         return Stmt_state::ERROR;
       }
       sbuf.append(", ");
@@ -1947,7 +2305,7 @@ static bool check_etag(const Two_object_binding &binding) {
     ) {
       return Stmt_state::SKIP;
     }
-    DBUG_LOG("jdv_dml", "DELETE on " << binding.ct_node->name()
+    DBUG_LOG("jdv_dml", "DELETE on " << *binding.ct_node
                                      << " rejected due to missing TAG");
     my_jdv_error<ER_JDV_MISSING_DELETE_TAG>(
         binding.ct_node->quoted_qualified_table_name(),
@@ -2009,6 +2367,13 @@ static bool check_etag(const Two_object_binding &binding) {
     return true;
   }
 
+#ifndef NDEBUG
+  for ([[maybe_unused]] const auto &bin : bindings) {
+    assert(bin.ct_node->is_root_object() || bin.ct_node->id() != 0);
+    DBUG_LOG("jdv_dml", "DML-INSERT: Flattened order: " << *bin.ct_node);
+  }
+#endif
+
   if (std::ranges::any_of(bindings, [&](const auto &bin) {
         return check_for_unmatched_input_keys(thd, bin.bound_object,
                                               *bin.ct_node);
@@ -2020,41 +2385,82 @@ static bool check_etag(const Two_object_binding &binding) {
     return true;
   }
 
-  // Sort the binding so that
+  auto rank_index = make_mr_index<const Single_object_binding>(thd, bindings);
+
+  // Sort the binding index so that
   // - statements are executed in the correct order (so that FK relationships
   // are satisfied)
   // - It becomes possible to use algorithms such as unique and adjacent_find
   // (which operate on sorted ranges)
-  std::ranges::sort(bindings);
+  std::ranges::sort(rank_index);
 
-  DBUG_LOG("jdv_dml", "\nDML-INSERT: Rank-sorted order: ");
-  for ([[maybe_unused]] const auto &bin : bindings) {
-    DBUG_LOG("jdv_dml", bin.ct_node->name()
-                            << " ("
-                            << bin.ct_node->quoted_qualified_table_name()
-                            << "), ");
+  DBUG_LOG("jdv_dml", "DML-INSERT: Rank-sorted order on INDEX: ");
+#ifndef NDEBUG
+  for (const Index_entry<const Single_object_binding> &ie : rank_index) {
+    const Single_object_binding &bin = ie.get();
+    DBUG_LOG("jdv_dml", "Path:" << em_wrap(bin.bound_object->get_location())
+                                << " node:" << *bin.ct_node);
   }
+#endif /* NDEBUG */
 
-  if (check_for_share_pk_duplicates(bindings)) {
+  if (check_for_share_pk_duplicates(thd, bindings)) {
     return true;
   }
 
   return do_in_substatement_context(thd, [&](Diagnostics_area *caller_da) {
     std::string stmt;
-    return std::ranges::any_of(bindings, [&](const Single_object_binding &bin) {
-      if (bin.is_empty()) {
-        return false;
-      }
-      stmt.resize(0);
-      auto res = make_insert(thd, bin, &stmt);
-      DBUG_LOG("jdv_dml", "DML-INSERT: Insert from node '"
-                              << bin.ct_node->name() << "'"
-                              << " using '" << stmt << "'");
+    return std::ranges::any_of(
+        rank_index, [&](const Index_entry<const Single_object_binding> &ie) {
+          const Single_object_binding &bin = ie.get();
+          if (bin.is_empty()) {
+            return false;
+          }
+          stmt.resize(0);
+          auto res = make_insert(thd, bin, &stmt);
+          DBUG_LOG("jdv_dml", "DML-INSERT: Insert from node "
+                                  << *bin.ct_node << " using '" << stmt << "'");
 
-      return res == Stmt_state::ERROR ||
-             (res != Stmt_state::SKIP &&
-              run_substmt(thd, caller_da, stmt, affected_rows));
-    });
+          if (res == Stmt_state::ERROR) {
+            return true;
+          }
+          if (res == Stmt_state::SKIP) {
+            return false;
+          }
+
+          bool do_fetch_last_insert_id =
+              (bin.resolve_row->unresolved_autoinc_column != nullptr);
+
+#ifndef NDEBUG
+          const auto &tr = *bin.ct_node->table_ref();
+
+          if (do_fetch_last_insert_id) {
+            DBUG_LOG("jdv_dml",
+                     "AINC: (pre-insert) "
+                         << JX_(tr.table_name)
+                         << JX_(thd->first_successful_insert_id_in_prev_stmt));
+          }
+#endif /* NDEBUG */
+          if (run_substmt(thd, caller_da, stmt, affected_rows)) return true;
+
+          if (do_fetch_last_insert_id) {
+            ::new (&bin.resolve_row->autoinc_value)
+                Json_uint{thd->first_successful_insert_id_in_prev_stmt};
+            Json_uint &last_insert_id = bin.resolve_row->autoinc_value;
+            bin.resolve_row->unresolved_autoinc_column->value = &last_insert_id;
+
+            DBUG_LOG("jdv_dml",
+                     "AINC: (post-insert) Unresolved autoinc value for "
+                         << JX_(tr.table_name) << "resolved to "
+                         << JX_(bin.resolve_row->autoinc_value.value())
+                         << "(thd->first_successful_insert_id_in_prev_stmt) "
+                         << JX_(json_dom_to_string(&last_insert_id)));
+            if (resolve_column_range(bindings)) {
+              return true;
+            }
+          }
+
+          return false;
+        });
   });
 }
 
@@ -2097,6 +2503,13 @@ static bool check_etag(const Two_object_binding &binding) {
     return true;
   }
 
+#ifndef NDEBUG
+  for ([[maybe_unused]] const auto &bin : bindings) {
+    assert(bin.ct_node->is_root_object() || bin.ct_node->id() != 0);
+    DBUG_LOG("jdv_dml", "DML-UPDATE: Flattened order: " << *bin.ct_node);
+  }
+#endif
+
   if (std::ranges::any_of(bindings, [&](const auto &bin) {
         return (bin.bound_object != nullptr &&
                 check_for_unmatched_input_keys(thd, bin.bound_object,
@@ -2109,62 +2522,50 @@ static bool check_etag(const Two_object_binding &binding) {
     return true;
   }
 
-  for ([[maybe_unused]] const auto &bin : bindings) {
-    DBUG_LOG("jdv_dml", "DML-UPDATE: Flattened order: " << bin.ct_node->name());
-  }
+  // Need a non-const index here, as we will need to modify bindings during
+  // merging
+  auto rank_index = make_mr_index<Two_object_binding>(thd, bindings);
 
-  // Sort the binding so that
+  // Sort the index so that
   // - statements are executed in the correct order (so that FK relationships
   // are satisfied)
   // - It becomes possible to use algorithms such as unique and adjacent_find
   // (which operate on sorted ranges)
   // - We can correctly merge together bindings that represent a single update.
-  std::ranges::sort(bindings);
+  std::ranges::sort(rank_index);
 
-  for ([[maybe_unused]] const auto &bin : bindings) {
-    if (bin.bound_object == nullptr) {
-      DBUG_LOG("jdv_dml", "DML-UPDATE: Rank-sorted order (EX): "
-                              << bin.ct_node->name() << "@" << &bin
-                              << " bin.existing_object:" << bin.existing_object
-                              << " bin.bound_object:" << bin.bound_object);
-      continue;
-    }
-    DBUG_LOG(
-        "jdv_dml",
-        "DML-UPDATE: Rank-sorted order: "
-            << bin.ct_node->name() << "@" << &bin
-            << " Table_ref:" << bin.ct_node->table_ref()->table_name << "("
-            << bin.ct_node->table_ref()->alias << "): @"
-            << bin.ct_node->table_ref() << " share: @"
-            << bin.ct_node->table_ref()->table->s
-            << " bin.existing_object:" << bin.existing_object
-            << " bin.resolve_row->columns[pk_index].second:"
-            << bin.resolve_row->columns[bin.ct_node->primary_key_column_index()]
-                   .second);
-  }
+  DBUG_LOG(
+      "jdv_dml", "__DML-UPDATE: Rank-sorted order:" << [&]() {
+        for (const auto &ie : rank_index) {
+          sout << "\n" << ie.get();
+        }
+        return "";
+      }());
 
-  merge_bindings_for_update(bindings);
+  merge_bindings_for_update(rank_index);
 
-  if (check_for_share_pk_duplicates(bindings)) {
+  if (check_for_share_pk_duplicates(thd, bindings)) {
     return true;
   }
 
   return do_in_substatement_context(thd, [&](Diagnostics_area *caller_da) {
     std::string stmt;
-    return std::ranges::any_of(bindings, [&](const Two_object_binding &bin) {
-      if (bin.is_empty()) {
-        return false;
-      }
-      stmt.resize(0);
-      auto res = make_update(thd, bin, &stmt);
-      DBUG_LOG("jdv_dml", "DML-UPDATE: Update from node '"
-                              << bin.ct_node->name() << "'"
-                              << " using '" << stmt << "'");
+    return std::ranges::any_of(
+        rank_index, [&](const Index_entry<Two_object_binding> &ie) {
+          const Two_object_binding &bin = ie.get();
+          if (bin.is_empty()) {
+            return false;
+          }
+          stmt.resize(0);
+          auto res = make_update(thd, bin, &stmt);
+          DBUG_LOG("jdv_dml", "DML-UPDATE: Update from node '"
+                                  << *bin.ct_node << "'"
+                                  << " using '" << stmt << "'");
 
-      return res == Stmt_state::ERROR ||
-             (res != Stmt_state::SKIP &&
-              run_substmt(thd, caller_da, stmt, affected_rows));
-    });
+          return res == Stmt_state::ERROR ||
+                 (res != Stmt_state::SKIP &&
+                  run_substmt(thd, caller_da, stmt, affected_rows));
+        });
   });
 }
 
@@ -2203,7 +2604,7 @@ static bool check_etag(const Two_object_binding &binding) {
           stmt.resize(0);
           auto res = make_delete(thd, bin, &stmt);
           DBUG_LOG("jdv_dml", "DML-DELETE: Delete from node '"
-                                  << bin.ct_node->name() << "'"
+                                  << *bin.ct_node << "'"
                                   << " using '" << stmt << "'");
 
           return res == Stmt_state::ERROR ||
@@ -2429,9 +2830,10 @@ static bool write_binlog(THD *thd) {
   Entry point called from sql_insert.cc,
   bool Sql_cmd_insert_values::execute_inner(THD *thd);
 
-  @param thd THD
-  @param dvtr Duality view content tree
-  @param values clause
+  @param thd    Thread handle.
+  @param dvtr   Table_ref instance of a duality view.
+  @param values Values.
+
   @return true if error
  */
 bool jdv_insert(THD *thd, const Table_ref *dvtr,
@@ -2445,8 +2847,7 @@ bool jdv_insert(THD *thd, const Table_ref *dvtr,
   assert(dvtr->jdv_content_tree != nullptr);
   auto &content_tree = *(dvtr->jdv_content_tree);
 
-  DBUG_LOG("jdv_dml", "DML-INSERT: " << SOURCE_LOCATION_CUR_FUNC << ": stmt:'"
-                                     << thd->query().str << "'");
+  DBUG_LOG("jdv_dml", "DML-INSERT: stmt:'" << thd->query().str << "'");
 
   ulonglong affected_rows = 0;
   for (List_item *li : values) {
@@ -2488,11 +2889,12 @@ bool jdv_insert(THD *thd, const Table_ref *dvtr,
   if (write_binlog(thd)) return true;
 
   char buff[MYSQL_ERRMSG_SIZE];
-  snprintf(
+  std::ignore = snprintf(
       buff, sizeof(buff), ER_THD(thd, ER_JDV_DML_INFO),
       static_cast<long>(affected_rows),
       static_cast<long>(thd->get_stmt_da()->current_statement_cond_count()));
   my_ok(thd, affected_rows, 0, buff);
+
   return false;
 }
 
@@ -2511,18 +2913,12 @@ bool jdv_update(THD *thd, const Table_ref *dvtr,
                 const mem_root_deque<Item *> *seldq,
                 const mem_root_deque<Item *> *upddq, ulonglong *affected_rows) {
   auto scg = create_sctx_guard(thd, dvtr);
-  DBUG_LOG("jdv_dml", "DML-UPDATE: " << SOURCE_LOCATION_CUR_FUNC
-                                     << " for query:'" << thd->query().str
-                                     << "'");
+  DBUG_LOG("jdv_dml", "DML-UPDATE: for query:'" << thd->query().str << "'");
 
   assert(dvtr != nullptr && dvtr->is_json_duality_view() &&
          dvtr->jdv_content_tree != nullptr);
   auto *content_tree = dvtr->jdv_content_tree;
 
-  // The following code is not currently necessary, as the Item can be
-  // obtained directly from dvtr->field_translation->item.
-  // It is kept for now since it is expected to come in handy when the
-  // review of the execution layer changes starts.
   assert(seldq != nullptr && seldq->size() == 1);
   Item *sel_itm = seldq->front();
   assert(sel_itm->data_type() == enum_field_types::MYSQL_TYPE_JSON);
@@ -2589,8 +2985,7 @@ bool jdv_update(THD *thd, const Table_ref *dvtr,
 */
 bool jdv_delete(THD *thd, const Table_ref *dvtr, ulonglong *affected_rows) {
   auto scg = create_sctx_guard(thd, dvtr);
-  DBUG_LOG("jdv_dml", "DML-DELETE: " << SOURCE_LOCATION_CUR_FUNC
-                                     << " for query:'" << thd->query().str);
+  DBUG_LOG("jdv_dml", "DML-DELETE:  for query:'" << thd->query().str);
   Item *field_xlation = dvtr->field_translation->item;
 
   Json_wrapper fldx_jw;
@@ -2617,3 +3012,57 @@ bool jdv_delete(THD *thd, const Table_ref *dvtr, ulonglong *affected_rows) {
 }
 
 }  // namespace jdv
+
+// Functions to allow unit testing of static functions
+namespace jdv_unit {
+
+/**
+  Uses debug ostream operators to generate a string which can be checked in unit
+  tests. This is primarily to get coverage of code only used in debugging which
+  is not triggered during normal testing.
+
+  @return a string containing the result of applying ostream operators.
+ */
+std::string test_ostream_operators() {
+  jdv::Key_column_info kci;
+  jdv::Resolve_column rc;
+  rc.kci = &kci;
+  jdv::Resolve_row rr;
+
+  jdv::Content_tree_node node;
+  node.set_primary_key_column_index(0);
+  auto jo = Json_object{};
+
+  std::stringstream ss;
+  ss << "empty:"
+     << jdv::Single_object_binding{.bound_object = nullptr,
+                                   .ct_node = &node,
+                                   .resolve_row = {}}
+     << "\n";
+
+  jdv::Single_object_binding sbin = {
+      .bound_object = &jo,
+      .ct_node = &node,
+      .resolve_row = std::make_unique<jdv::Resolve_row>()};
+  ss << "unresolved:" << sbin << "\n";
+  sbin.resolve_row->columns.push_back(rc);
+  ss << "resolved:" << sbin << "\n";
+
+  // Two_object_binding
+  ss << "empty:"
+     << jdv::Two_object_binding{.bound_object = nullptr,
+                                .ct_node = &node,
+                                .resolve_row = {}}
+     << "\n";
+  jdv::Two_object_binding tbin = {
+      .bound_object = &jo,
+      .ct_node = &node,
+      .resolve_row = std::make_unique<jdv::Resolve_row>()};
+
+  ss << "unresolved:" << tbin << "\n";
+  tbin.resolve_row->columns.push_back(rc);
+  ss << "resolved:" << tbin;
+
+  return ss.str();
+}
+}  // namespace jdv_unit
