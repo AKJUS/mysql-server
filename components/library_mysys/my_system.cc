@@ -176,25 +176,9 @@ uint64_t my_physical_memory() noexcept {
 
 uint32_t my_num_vcpus() noexcept {
   assert(should_use_container_config);
-  try {
-    uint32_t n_vcpus = 0;
-
-#ifndef _WIN32
-    if (should_use_container_config && *should_use_container_config) {
-      n_vcpus = my_cgroup_vcpu_limit();
-      if (n_vcpus != 0) {
-        return n_vcpus;
-      }
-    }
-#endif
-
-    n_vcpus = my_system_num_vcpus();
-    if (n_vcpus != 0) {
-      return n_vcpus;
-    }
-
-    return std::thread::hardware_concurrency();
-  } catch (...) {
-    return 0;
+  if (const uint32_t n_vcpus = my_system_num_vcpus(); n_vcpus != 0) {
+    return n_vcpus;
   }
+
+  return std::thread::hardware_concurrency();
 }
