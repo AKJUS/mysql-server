@@ -3744,6 +3744,13 @@ class Lex_input_stream {
   const int grammar_selector_token;
 
   bool text_string_is_7bit() const { return !(tok_bitmap & 0x80); }
+
+  /**
+    Next parse position at which to check for client disconnect.
+    Used by my_sql_parser_lex() to periodically call is_connected()
+    for large queries, without incurring syscall overhead on every token.
+  */
+  size_t m_next_connected_check_pos{0};
 };
 
 class LEX_COLUMN {
