@@ -25,7 +25,6 @@
 #include <cassert>
 #include <climits>
 #include <cstdint>
-#include <filesystem>
 #include <fstream>
 #include <functional>
 #include <optional>
@@ -145,6 +144,29 @@ std::optional<std::string> get_cgroup_path(std::string_view pattern) {
   return std::nullopt;
 }
 
+static inline bool is_valid_path(const std::string_view &path) {
+  if (path.empty() || path.front() != '/' || path.back() == '/') {
+    return false;
+  }
+
+  /* check if any directory in path is empty or not absolute */
+  size_t i = 1;
+  while (i < path.size()) {
+    size_t j = path.find('/', i);
+    if (j == std::string_view::npos) {
+      j = path.size();
+    }
+
+    const std::string_view dir = path.substr(i, j - i);
+    if (dir.empty() || dir == "." || dir == "..") {
+      return false;
+    }
+    i = j + 1;
+  }
+
+  return true;
+}
+
 /**
   Read memory limits from cgroups. This wrapper is common for both cgroup v1, v2
 
@@ -179,22 +201,13 @@ std::optional<uint64_t> cgroup_memory(
     cgroup_path = mem_prefix + mem_suffix;
   }
 
-  std::filesystem::path mem_path;
-  try {
-    /* Ignore malformed paths */
-    mem_path = std::filesystem::canonical(cgroup_path);
-  } catch (...) {
-    return std::nullopt;
-  }
-
-  /* Security check to prevent reading relative or symlink paths */
-  if (cgroup_path != mem_path.string()) {
+  if (!is_valid_path(cgroup_path)) {
     return std::nullopt;
   }
 
   uint64_t memory;
-  if (!read_line_from_file(mem_path.string(), memory)) {
-    if (v2_default_handler && v2_default_handler(mem_path.string())) {
+  if (!read_line_from_file(cgroup_path, memory)) {
+    if (v2_default_handler && v2_default_handler(cgroup_path)) {
       return 0;
     }
     return std::nullopt;
