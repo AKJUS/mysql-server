@@ -27,6 +27,9 @@
 #include "backup_page_tracker.h"
 
 #include <algorithm>
+#include <cerrno>
+#include <string>
+
 #if defined _MSC_VER
 #include <direct.h>
 #endif
