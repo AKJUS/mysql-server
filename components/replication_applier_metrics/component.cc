@@ -44,7 +44,7 @@ namespace applier_metrics {
 ///  @returns status of initialization
 ///    @retval 1 Error
 ///    @retval 0 Success
-static mysql_service_status_t init() try {
+static mysql_service_status_t applier_metrics_init() try {
   SERVICE_TYPE(replication_applier_metrics) *applier_metrics =
       SERVICE_PLACEHOLDER(replication_applier_metrics);
   if (applier_metrics->enable_metric_collection()) return 1;
@@ -61,7 +61,7 @@ static mysql_service_status_t init() try {
 ///  @returns status
 ///    @retval 1 Error
 ///    @retval 0 Success
-static mysql_service_status_t deinit() try {
+static mysql_service_status_t applier_metrics_deinit() try {
   if (unregister_pfs_tables()) return 1;
   SERVICE_TYPE(replication_applier_metrics) *applier_metrics =
       SERVICE_PLACEHOLDER(replication_applier_metrics);
@@ -96,7 +96,8 @@ METADATA("mysql.author", "Oracle Corporation"),
 /// Component declaration
 DECLARE_COMPONENT(replication_applier_metrics,
                   "mysql::replication_applier_metrics")
-applier_metrics::init, applier_metrics::deinit END_DECLARE_COMPONENT();
+applier_metrics::applier_metrics_init,
+    applier_metrics::applier_metrics_deinit END_DECLARE_COMPONENT();
 
 /// Component contained in this library
 DECLARE_LIBRARY_COMPONENTS &COMPONENT_REF(replication_applier_metrics)

@@ -85,7 +85,7 @@ void stop_the_component(bool status_vars, bool system_vars, bool thread_stop) {
     @retval 1 Error
     @retval 0 Success
 */
-static mysql_service_status_t init() {
+static mysql_service_status_t gr_resource_manager_init() {
   stats_collector =
       std::make_unique<gr_resource_manager::Resource_manager_stats_collector>();
   if (stats_collector == nullptr) return 1;
@@ -115,7 +115,7 @@ static mysql_service_status_t init() {
   @returns status
     @retval 0 Success
 */
-static mysql_service_status_t deinit() {
+static mysql_service_status_t gr_resource_manager_deinit() {
   stop_the_component(true, true, true);
   return 0;
 }
@@ -166,7 +166,8 @@ METADATA("mysql.author", "Oracle Corporation"),
 
 DECLARE_COMPONENT(GROUP_REPLICATION_RESOURCE_MANAGER,
                   STRINGIFY(GROUP_REPLICATION_RESOURCE_MANAGER))
-gr_resource_manager::init, gr_resource_manager::deinit END_DECLARE_COMPONENT();
+gr_resource_manager::gr_resource_manager_init,
+    gr_resource_manager::gr_resource_manager_deinit END_DECLARE_COMPONENT();
 
 /** Component contained in this library */
 DECLARE_LIBRARY_COMPONENTS
