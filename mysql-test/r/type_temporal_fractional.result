@@ -16072,9 +16072,6 @@ AND STR_TO_DATE(DATE_FORMAT(col_datetime_6_not_null,
 CONCAT_WS('-', '%I', '%S', '%v' )),
 CONCAT_WS('-', '%V', '%H' ));
 c1
-Warnings:
-Warning	1411	Incorrect datetime value: 'May:Mon:2009:00:124' for function str_to_date
-Warning	1411	Incorrect datetime value: 'May:Mon:2009:00:124' for function str_to_date
 DROP TABLE t1;
 SET @@timestamp=DEFAULT;
 SET @@timestamp= UNIX_TIMESTAMP('2011-09-21 08:20:30.123456');
