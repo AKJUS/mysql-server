@@ -23,8 +23,8 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#ifndef ROUTER_SRC_ROUTER_INCLUDE_HELPER_CONTAINER_GENERIC_H_
-#define ROUTER_SRC_ROUTER_INCLUDE_HELPER_CONTAINER_GENERIC_H_
+#ifndef MYSQL_HARNESS_UTILITY_CONTAINER_GENERIC_H_
+#define MYSQL_HARNESS_UTILITY_CONTAINER_GENERIC_H_
 
 #include <algorithm>
 #include <cstdint>
@@ -32,7 +32,8 @@
 #include <utility>
 #include <vector>
 
-namespace helper {
+namespace mysql_harness {
+namespace utility {
 namespace container {
 
 template <typename Container, typename Value = typename Container::value_type>
@@ -72,15 +73,6 @@ bool get_ptr_if(const Container &c, Find_if &&find_if,
   auto it = std::find_if(c.begin(), c.end(), std::forward<Find_if>(find_if));
   if (c.end() == it) return false;
   *out = &(*it);
-  return true;
-}
-
-template <typename Container, typename Find_if>
-bool get_if(const Container &c, Find_if &&find_if,
-            const typename Container::value_type *out) {
-  auto it = std::find_if(c.begin(), c.end(), std::forward<Find_if>(find_if));
-  if (c.end() == it) return false;
-  if (out) *out = (*it);
   return true;
 }
 
@@ -144,6 +136,7 @@ std::set<Value> as_set_t(const Container &v) {
 }
 
 }  // namespace container
-}  // namespace helper
+}  // namespace utility
+}  // namespace mysql_harness
 
-#endif  // ROUTER_SRC_ROUTER_INCLUDE_HELPER_CONTAINER_GENERIC_H_
+#endif  // MYSQL_HARNESS_UTILITY_CONTAINER_GENERIC_H_

@@ -297,6 +297,9 @@ SET(harness_source
   secure_string.cc
   regex_matcher.cc
   auto_cleaner.cc
+  resolver/resolver.cc
+  resolver/registry.cc
+  resolver/error_code.cc
   )
 
 IF(NOT SOLARIS)

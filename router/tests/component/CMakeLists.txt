@@ -59,6 +59,8 @@ FOREACH(test_file
     test_config_overwrites.cc
     test_connection_pool.cc
     test_gr_notifications.cc
+    test_host_cache.cc
+    test_host_cache_config.cc
     test_http_server.cc
     test_logging.cc
     test_logging_eventlog.cc
@@ -104,6 +106,8 @@ add_test_file(${CMAKE_CURRENT_SOURCE_DIR}/${test_file}
   MODULE "component"
   INCLUDE_DIRS
     ${PROJECT_SOURCE_DIR}/src/mock_server/include/mysqlrouter/
+    ${PROJECT_SOURCE_DIR}/src/host_cache/include/
+    ${PROJECT_SOURCE_DIR}/tests/
   SYSTEM_INCLUDE_DIRS ${GMOCK_INCLUDE_DIRS}
                       ${PROTOBUF_INCLUDE_DIR}
   LIB_DEPENDS

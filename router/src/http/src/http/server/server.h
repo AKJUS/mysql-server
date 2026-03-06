@@ -31,7 +31,7 @@
 #include <mutex>  // NOLINT(build/c++11)
 #include <vector>
 
-#include "helper/wait_variable.h"
+#include "mysql/harness/utility/wait_variable.h"
 #include "mysqlrouter/http_server_lib_export.h"
 
 #include "http/base/connection.h"
@@ -107,7 +107,8 @@ class HTTP_SERVER_LIB_EXPORT Server : public ConnectionStatusCallbacksRaw,
   std::mutex mutex_connection_;
   std::vector<std::shared_ptr<ServerConnectionRaw>> connections_;
   std::vector<std::shared_ptr<ServerConnectionTls>> connections_ssl_;
-  WaitableVariable<State> sync_state_{State::kInitializing};
+  mysql_harness::utility::WaitableVariable<State> sync_state_{
+      State::kInitializing};
 };
 
 }  // namespace server

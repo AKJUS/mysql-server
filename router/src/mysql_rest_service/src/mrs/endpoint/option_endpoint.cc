@@ -25,7 +25,8 @@
 
 #include "mrs/endpoint/option_endpoint.h"
 
-#include "helper/container/generic.h"
+#include "mysql/harness/utility/container/generic.h"
+
 #include "helper/json/text_to.h"
 #include "mrs/json/parse_file_sharing_options.h"
 
@@ -94,7 +95,8 @@ void OptionEndpoint::update() {
     }
 
     for (const auto &[k, v] : fs.default_static_content_) {
-      const bool is_index = helper::container::has(directory_indexes, k);
+      const bool is_index =
+          mysql_harness::utility::container::has(directory_indexes, k);
       // When the url path is empty, its root path, which
       // http plugin processes as "", instead "/".
       // In case of root path and index, we do not need

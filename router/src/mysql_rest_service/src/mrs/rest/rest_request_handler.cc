@@ -31,11 +31,12 @@
 
 #include "mysqld_error.h"
 
-#include "helper/container/generic.h"
 #include "mrs/authentication/www_authentication_handler.h"
 #include "mrs/router_observation_entities.h"
+
 #include "mysql/harness/logging/logger.h"
 #include "mysql/harness/logging/logging.h"
+#include "mysql/harness/utility/container/generic.h"
 #include "mysqlrouter/component/http_server_component.h"
 #include "mysqlrouter/log_filter.h"
 
@@ -442,7 +443,7 @@ Handler::HttpResult RestRequestHandler::handle_request_impl(
         oh.add("Access-Control-Allow-Origin", origin);
         break;
       case AO::AllowSpecified:
-        if (helper::container::has(ao.allowed_origins, origin))
+        if (mysql_harness::utility::container::has(ao.allowed_origins, origin))
           oh.add("Access-Control-Allow-Origin", origin);
         break;
       case AO::AllowNone:

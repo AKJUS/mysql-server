@@ -29,13 +29,13 @@
 #include <map>
 #include <vector>
 
-#include "helper/container/generic.h"
 #include "helper/json/error.h"
 #include "helper/json/rapid_json_to_struct.h"
 #include "helper/json/serializer_to_text.h"
 #include "helper/json/text_to.h"
 #include "helper/string/contains.h"
 #include "mrs/authentication/helper/http_result.h"
+#include "mysql/harness/utility/container/generic.h"
 
 #include "mysql/harness/string_utils.h"
 #include "mysql/harness/utility/string.h"
@@ -144,8 +144,8 @@ ScramClientAuthContinue scram_unpack_continue(const std::string &auth_data) {
 
 std::string scram_remove_proof(const std::string &auth_data) {
   auto params = mysql_harness::split_string(auth_data, ',');
-  helper::container::remove_if(params,
-                               [](auto v) { return 0 == v.find("p="); });
+  mysql_harness::utility::container::remove_if(
+      params, [](auto v) { return 0 == v.find("p="); });
 
   return mysql_harness::join(params, ",");
 }

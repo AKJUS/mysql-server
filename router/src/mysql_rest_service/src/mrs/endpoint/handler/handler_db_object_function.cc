@@ -27,7 +27,6 @@
 
 #include <string>
 
-#include "helper/container/generic.h"
 #include "helper/json/jvalue.h"
 #include "helper/json/to_string.h"
 #include "helper/media_detector.h"
@@ -44,6 +43,7 @@
 #include "mrs/router_observation_entities.h"
 
 #include "mysql/harness/logging/logging.h"
+#include "mysql/harness/utility/container/generic.h"
 
 IMPORT_LOG_FUNCTIONS()
 

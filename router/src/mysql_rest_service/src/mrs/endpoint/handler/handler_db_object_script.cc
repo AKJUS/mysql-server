@@ -29,8 +29,8 @@
 #include <string>
 
 #include "mysql/harness/logging/logging.h"
+#include "mysql/harness/utility/container/generic.h"
 
-#include "helper/container/generic.h"
 #include "helper/http/url.h"
 #include "helper/json/jvalue.h"
 #include "helper/json/rapid_json_iterator.h"
@@ -155,7 +155,7 @@ class HandlerDbObjectScript::Impl {
       for (const auto &el : (*params_map)) {
         auto key = el.first;
         const database::entry::Field *param;
-        if (!helper::container::get_ptr_if(
+        if (!mysql_harness::utility::container::get_ptr_if(
                 fields, [key](auto &v) { return v.name == key; }, &param)) {
           invalid_params.push_back(key);
         }

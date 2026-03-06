@@ -32,10 +32,10 @@
 #include "keyring/keyring_manager.h"
 #include "mysql/harness/config_option.h"
 #include "mysql/harness/plugin_config.h"
+#include "mysql/harness/utility/container/generic.h"
 #include "mysqlrouter/component/http_server_component.h"
 #include "mysqlrouter/routing_component.h"
 
-#include "helper/container/generic.h"
 #include "mrs/configuration.h"
 
 class UserConfigurationInfo {

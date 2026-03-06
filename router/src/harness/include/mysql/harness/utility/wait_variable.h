@@ -21,14 +21,17 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#ifndef ROUTER_SRC_ROUTER_INCLUDE_HELPER_WAIT_VARIABLE_H_
-#define ROUTER_SRC_ROUTER_INCLUDE_HELPER_WAIT_VARIABLE_H_
+#ifndef MYSQL_HARNESS_UTILITY_WAIT_VARIABLE_H_
+#define MYSQL_HARNESS_UTILITY_WAIT_VARIABLE_H_
 
 #include <initializer_list>
 
-#include "container/generic.h"
 #include "mysql/harness/stdx/expected.h"
 #include "mysql/harness/stdx/monitor.h"
+#include "mysql/harness/utility/container/generic.h"
+
+namespace mysql_harness {
+namespace utility {
 
 template <typename ValueType>
 class WaitableVariable {
@@ -48,7 +51,7 @@ class WaitableVariable {
     bool result{false};
     monitor_with_value_.serialize_with_cv(
         [&expected, &v, &after_set_callback, &result](auto &value, auto &cv) {
-          if (helper::container::has(expected, value)) {
+          if (mysql_harness::utility::container::has(expected, value)) {
             value = v;
             result = true;
             after_set_callback();
@@ -77,7 +80,7 @@ class WaitableVariable {
   }
 
   template <typename Callback = DoNothing>
-  ValueType get(const Callback &after_get_callback = DoNothing()) {
+  ValueType get(const Callback &after_get_callback = DoNothing()) const {
     ValueType result;
     monitor_with_value_.serialize_with_cv(
         [&result, &after_get_callback](auto &current_value, auto &) {
@@ -115,7 +118,8 @@ class WaitableVariable {
     monitor_with_value_.serialize_with_cv(
         [&result, &expected_values, &after_is_callback](auto &current_value,
                                                         auto &) {
-          result = helper::container::has(expected_values, current_value);
+          result = mysql_harness::utility::container::has(expected_values,
+                                                          current_value);
           if (result) after_is_callback();
         });
     return result;
@@ -153,7 +157,8 @@ class WaitableVariable {
     ValueType result;
     monitor_with_value_.wait(
         [&expected_values, &callback, &result](const auto &current_value) {
-          if (helper::container::has(expected_values, current_value)) {
+          if (mysql_harness::utility::container::has(expected_values,
+                                                     current_value)) {
             result = current_value;
             callback();
             return true;
@@ -169,7 +174,7 @@ class WaitableVariable {
                 const ValueType &expected_value,
                 const Callback &callback = Callback()) {
     return monitor_with_value_.wait_for(
-        rel_time, [this, expected_value, &callback](auto &current_value) {
+        rel_time, [&expected_value, &callback](auto &current_value) {
           if (current_value == expected_value) {
             callback();
             return true;
@@ -187,7 +192,8 @@ class WaitableVariable {
     if (monitor_with_value_.wait_for(
             rel_time,
             [&expected_values, &result, &callback](const auto &current_value) {
-              if (helper::container::has(expected_values, current_value)) {
+              if (mysql_harness::utility::container::has(expected_values,
+                                                         current_value)) {
                 result = current_value;
                 callback();
                 return true;
@@ -204,4 +210,7 @@ class WaitableVariable {
   WaitableMonitor<ValueType> monitor_with_value_{};
 };
 
-#endif  // ROUTER_SRC_ROUTER_INCLUDE_HELPER_WAIT_VARIABLE_H_
+}  // namespace utility
+}  // namespace mysql_harness
+
+#endif  // MYSQL_HARNESS_UTILITY_WAIT_VARIABLE_H_

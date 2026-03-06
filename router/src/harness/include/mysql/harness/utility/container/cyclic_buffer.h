@@ -23,13 +23,15 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#ifndef ROUTER_SRC_REST_MRS_SRC_HELPER_CONTAINER_CYCLIC_BUFFER_H_
-#define ROUTER_SRC_REST_MRS_SRC_HELPER_CONTAINER_CYCLIC_BUFFER_H_
+#ifndef MYSQL_HARNESS_UTILITY_CONTAINER_CYCLE_BUFFER_H_
+#define MYSQL_HARNESS_UTILITY_CONTAINER_CYCLE_BUFFER_H_
 
 #include <array>
+#include <cstdint>
 #include <iterator>
 
-namespace helper {
+namespace mysql_harness {
+namespace utility {
 namespace container {
 
 template <uint32_t buffer_size, typename Container>
@@ -199,6 +201,7 @@ class CycleBufferArray
     : public CycleBuffer<buffer_size, std::array<Type, buffer_size>> {};
 
 }  // namespace container
-}  // namespace helper
+}  // namespace utility
+}  // namespace mysql_harness
 
-#endif  // ROUTER_SRC_REST_MRS_SRC_HELPER_CONTAINER_CYCLIC_BUFFER_H_
+#endif  // MYSQL_HARNESS_UTILITY_CONTAINER_CYCLE_BUFFER_H_

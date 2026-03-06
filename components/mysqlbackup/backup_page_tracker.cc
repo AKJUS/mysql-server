@@ -33,6 +33,7 @@
 #if defined _MSC_VER
 #include <direct.h>
 #endif
+#include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 

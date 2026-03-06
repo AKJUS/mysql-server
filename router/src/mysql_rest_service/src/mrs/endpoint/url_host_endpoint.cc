@@ -28,9 +28,10 @@
 #include <mutex>
 #include <string>
 
-#include "helper/container/generic.h"
 #include "mrs/endpoint/url_host_endpoint.h"
 #include "mrs/router_observation_entities.h"
+
+#include "mysql/harness/utility/container/generic.h"
 
 #ifdef HAVE_JIT_EXECUTOR_PLUGIN
 #include "mysqlrouter/jit_executor_component.h"

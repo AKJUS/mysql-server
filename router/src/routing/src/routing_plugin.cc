@@ -625,6 +625,7 @@ static const std::array required{
     "io",
     "connection_pool",
     "destination_status",
+    "host_cache",
 };
 
 static void expose_configuration(mysql_harness::PluginFuncEnv *env,

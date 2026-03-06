@@ -23,24 +23,27 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#ifndef ROUTER_SRC_REST_MRS_SRC_HELPER_CACHE_CACHE_H_
-#define ROUTER_SRC_REST_MRS_SRC_HELPER_CACHE_CACHE_H_
+#ifndef MYSQL_HARNESS_UTILITY_CACHE_CACHE_H_
+#define MYSQL_HARNESS_UTILITY_CACHE_CACHE_H_
 
 #include <map>
+#include <utility>
 
-#include "helper/cache/policy/lru.h"
+#include "mysql/harness/utility/cache/lru.h"
 
-namespace helper {
+namespace mysql_harness {
+namespace utility {
 namespace cache {
 
-template <typename Key, typename Value, uint32_t size,
-          typename Policy = policy::Lru>
+template <typename Key, typename Value, typename Algorithm>
 class Cache {
-  using Algorithm = typename Policy::template Algorithm<Key, Value, size>;
   using Container = std::map<Key, Value>;
 
  public:
-  void remove(const Key key) {
+  template <typename... Args>
+  explicit Cache(Args &&...args) : key_cache_(std::forward<Args>(args)...) {}
+
+  void remove(const Key &key) {
     auto it = container_.find(key);
 
     if (container_.end() != it) {
@@ -49,7 +52,7 @@ class Cache {
     }
   }
 
-  Value *get_cached_value(const Key key) {
+  Value *get_cached_value(const Key &key) {
     auto it = container_.find(key);
     if (container_.end() == it) {
       return nullptr;
@@ -60,13 +63,21 @@ class Cache {
     return &it->second;
   }
 
-  Value *set(const Key key, Value &&value) { return set_impl(key, value); }
-  Value *set(const Key key, const Value &value) { return set_impl(key, value); }
+  Value *set(const Key &key, Value &&value) {
+    return set_impl(key, std::move(value));
+  }
+
+  Value *set(const Key &key, const Value &value) {
+    return set_impl(key, value);
+  }
+
   Container &get_container() { return container_; }
+
+  bool is_full() const { return key_cache_.is_full(); }
 
  private:
   template <typename V>
-  Value *set_impl(const Key key, V &&value) {
+  Value *set_impl(const Key &key, V &&value) {
     auto cached_value = get_cached_value(key);
     if (cached_value) {
       *cached_value = std::forward<V>(value);
@@ -88,12 +99,23 @@ class Cache {
                 .first->second;
   }
 
-  // private:
   Algorithm key_cache_;
   Container container_;
 };
 
-}  // namespace cache
-}  // namespace helper
+template <typename Key, typename Value, uint32_t size>
+using FixedLruCache =
+    Cache<Key, Value,
+          typename mysql_harness::utility::cache::policy::Lru::AlgorithmFixed<
+              Key, size>>;
 
-#endif  // ROUTER_SRC_REST_MRS_SRC_HELPER_CACHE_CACHE_H_
+template <typename Key, typename Value>
+using DynamicLruCache = Cache<
+    Key, Value,
+    typename mysql_harness::utility::cache::policy::Lru::AlgorithmDynamic<Key>>;
+
+}  // namespace cache
+}  // namespace utility
+}  // namespace mysql_harness
+
+#endif  // MYSQL_HARNESS_UTILITY_CACHE_CACHE_H_

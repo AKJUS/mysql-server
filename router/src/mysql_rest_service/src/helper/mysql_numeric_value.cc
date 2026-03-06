@@ -27,12 +27,12 @@
 #define ROUTER_SRC_MYSQL_REST_SERVICE_SRC_HELPER_MYSQL_NUMERIC_VALUE_CC_
 
 #include "helper/mysql_numeric_value.h"
-#include "helper/container/generic.h"
+#include "mysql/harness/utility/container/generic.h"
 
 namespace helper {
 
 DataTypeInText get_type_inside_text(const std::string &value) {
-  using namespace helper::container;
+  using namespace mysql_harness::utility::container;
 
   auto it = value.begin();
 

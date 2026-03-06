@@ -26,7 +26,7 @@
 #ifndef ROUTER_SRC_MYSQL_REST_SERVICE_SRC_HELPER_TASK_CONTROL_H_
 #define ROUTER_SRC_MYSQL_REST_SERVICE_SRC_HELPER_TASK_CONTROL_H_
 
-#include "helper/wait_variable.h"
+#include "mysql/harness/utility/wait_variable.h"
 
 #include "mysql/harness/logging/logging.h"
 
@@ -97,6 +97,9 @@ class TaskControl : public T {
   }
 
  private:
+  template <typename StateType>
+  using WaitableVariable = mysql_harness::utility::WaitableVariable<StateType>;
+
   WaitableVariable<State> state_{k_stateInitialize};
 };
 

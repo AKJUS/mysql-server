@@ -28,8 +28,9 @@
 #include <string>
 #include <vector>
 
-#include "helper/container/generic.h"
 #include "mrs/gtid_manager.h"
+
+#include "mysql/harness/utility/container/generic.h"
 
 using UID = mrs::database::GTIDuuid;
 using Gtid = mrs::database::Gtid;

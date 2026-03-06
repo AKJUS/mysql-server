@@ -28,9 +28,10 @@
 #include <string>
 #include <thread>
 
-#include "helper/container/generic.h"
 #include "mrs/http/session_manager.h"
 #include "mrs/interface/universal_id.h"
+
+#include "mysql/harness/utility/container/generic.h"
 
 class SessionManagerTestSuite : public ::testing::Test {
  public:
@@ -57,7 +58,7 @@ MATCHER(IsTxtUuid, "") {
   if (arg.length() != 36) return false;
 
   for (size_t i = 0; i < 36; ++i) {
-    if (helper::container::has(positions, i)) {
+    if (mysql_harness::utility::container::has(positions, i)) {
       if (arg[i] != '-') {
         return false;
       }

@@ -44,7 +44,6 @@
 #include "mrs/http/error.h"
 #include "mrs/rest/request_context.h"
 
-#include "helper/container/generic.h"
 #include "helper/container/map.h"
 #include "helper/generate_uuid.h"
 #include "helper/json/error.h"
@@ -60,6 +59,7 @@
 #include "http/base/method.h"
 #include "mysql/harness/logging/logging.h"
 #include "mysql/harness/string_utils.h"
+#include "mysql/harness/utility/container/generic.h"
 
 IMPORT_LOG_FUNCTIONS()
 
@@ -317,7 +317,7 @@ AuthorizeManager::Container AuthorizeManager::get_handlers_by_service_id(
     const UniversalId service_id) {
   Container out_result;
 
-  helper::container::copy_if(
+  mysql_harness::utility::container::copy_if(
       container_,
       [service_id](auto &element) {
         return element->get_service_ids().contains(service_id);
@@ -556,11 +556,13 @@ SessionPtr AuthorizeManager::authorize_jwt(const UniversalId service_id,
   }
 
   auto claims = jwt.get_payload_claim_names();
-  if (!helper::container::has(claims, "user_id")) return nullptr;
-  if (!helper::container::has(claims, "exp")) return nullptr;
-  if (!helper::container::has(claims, "iss")) return nullptr;
-  if (!helper::container::has(claims, "jti")) return nullptr;
-  if (!helper::container::has(claims, "instance_id")) return nullptr;
+  if (!mysql_harness::utility::container::has(claims, "user_id"))
+    return nullptr;
+  if (!mysql_harness::utility::container::has(claims, "exp")) return nullptr;
+  if (!mysql_harness::utility::container::has(claims, "iss")) return nullptr;
+  if (!mysql_harness::utility::container::has(claims, "jti")) return nullptr;
+  if (!mysql_harness::utility::container::has(claims, "instance_id"))
+    return nullptr;
 
   auto json_uid = jwt.get_payload_claim_custom("user_id");
   auto json_exp = jwt.get_payload_claim_custom("exp");
@@ -584,7 +586,7 @@ SessionPtr AuthorizeManager::authorize_jwt(const UniversalId service_id,
 
   auto handlers = this->get_handlers_by_service_id(service_id);
 
-  if (!helper::container::get_if(
+  if (!mysql_harness::utility::container::get_if(
           handlers, [&aid](auto &h) { return h->get_id() == aid; }, nullptr)) {
     log_debug("Wrong service id.");
     return nullptr;
@@ -631,7 +633,7 @@ AuthorizeHandlerPtr AuthorizeManager::choose_authentication_handler(
 
   auto app_name_value = app_name.value_or("");
   AuthorizeHandlerPtr result;
-  if (!helper::container::get_if(
+  if (!mysql_harness::utility::container::get_if(
           handlers,
           [&app_name_value](const auto &handler) {
             return (app_name_value == handler->get_entry().app_name);

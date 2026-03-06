@@ -36,9 +36,9 @@
 
 #include "mysql/harness/logging/logging.h"
 #include "mysql/harness/string_utils.h"
+#include "mysql/harness/utility/container/generic.h"
 #include "mysqld_error.h"
 
-#include "helper/container/generic.h"
 #include "helper/container/to_string.h"
 #include "helper/http/url.h"
 #include "helper/json/rapid_json_to_text.h"

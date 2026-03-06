@@ -125,9 +125,10 @@ inline void check_input_parameters(
     const rapidjson::Document &doc) {
   for (auto el : helper::json::member_iterator(doc)) {
     auto key = el.first;
-    if (!helper::container::has_if(param_fields, [key](const auto &v) {
-          return v.mode != database::entry::Field::modeOut && v.name == key;
-        })) {
+    if (!mysql_harness::utility::container::has_if(
+            param_fields, [key](const auto &v) {
+              return v.mode != database::entry::Field::modeOut && v.name == key;
+            })) {
       throw http::Error(HttpStatusCode::BadRequest,
                         "Not allowed parameter:" + std::string{key});
     }
