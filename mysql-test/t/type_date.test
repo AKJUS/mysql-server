@@ -731,3 +731,18 @@ SELECT DATE_FORMAT(DATE '2014-02-31', '%Y%b%e');
 SELECT DATE_FORMAT(DATE '2014-01-31', '%Y%b%e');
 
 set sql_mode = DEFAULT;
+
+--echo #
+--echo # Bug#39053803: failing in Item_func_str_to_temporal::eval_datetime
+--echo #
+
+--error ER_DATA_OUT_OF_RANGE
+SELECT STR_TO_DATE(EXP(11463), '%S  %S   ');
+--error ER_DATA_OUT_OF_RANGE
+SELECT STR_TO_DATE(COT(IS_IPV6(UUID_TO_BIN(UUID()))), COMPRESS('_&?_[$'));
+SET @a = NULL;
+SELECT STR_TO_DATE(COT(IS_UUID(@a)), 0x85);
+--error ER_DATA_OUT_OF_RANGE
+SELECT STR_TO_DATE(COT(' ;D( c+%'), sleep(0));
+--error ER_DATA_OUT_OF_RANGE
+SELECT STR_TO_DATE(EXP(9223372036854775808), 1);

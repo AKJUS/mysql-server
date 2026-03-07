@@ -860,3 +860,18 @@ SELECT DATE_FORMAT(DATE '2014-01-31', '%Y%b%e');
 DATE_FORMAT(DATE '2014-01-31', '%Y%b%e')
 2014Jan31
 set sql_mode = DEFAULT;
+#
+# Bug#39053803: failing in Item_func_str_to_temporal::eval_datetime
+#
+SELECT STR_TO_DATE(EXP(11463), '%S  %S   ');
+ERROR 22003: DOUBLE value is out of range in 'exp(11463)'
+SELECT STR_TO_DATE(COT(IS_IPV6(UUID_TO_BIN(UUID()))), COMPRESS('_&?_[$'));
+ERROR 22003: DOUBLE value is out of range in 'cot(is_ipv6(uuid_to_bin(uuid())))'
+SET @a = NULL;
+SELECT STR_TO_DATE(COT(IS_UUID(@a)), 0x85);
+STR_TO_DATE(COT(IS_UUID(@a)), 0x85)
+NULL
+SELECT STR_TO_DATE(COT(' ;D( c+%'), sleep(0));
+ERROR 22003: DOUBLE value is out of range in 'cot(' ;D( c+%')'
+SELECT STR_TO_DATE(EXP(9223372036854775808), 1);
+ERROR 22003: DOUBLE value is out of range in 'exp(9223372036854775808)'

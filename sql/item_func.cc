@@ -882,7 +882,7 @@ String *Item_real_func::val_str(String *str) {
   assert(fixed);
   double nr = val_real();
   if (null_value || current_thd->is_error()) {
-    return nullptr;
+    return error_str();
   }
   str->set_real(nr, decimals, collation.collation);
   return str;
@@ -2064,7 +2064,7 @@ longlong Item_typecast_unsigned::val_int() {
 String *Item_typecast_decimal::val_str(String *str) {
   my_decimal tmp_buf;
   my_decimal *tmp = val_decimal(&tmp_buf);
-  if (tmp == nullptr) return nullptr;
+  if (tmp == nullptr) return error_str();
   my_decimal2string(E_DEC_FATAL_ERROR, tmp, str);
   return str;
 }
@@ -5433,7 +5433,7 @@ String *Item_func_udf_decimal::val_str(String *str) {
   assert(fixed);
   my_decimal dec_buf;
   my_decimal *dec = val_decimal(&dec_buf);
-  if (dec == nullptr) return nullptr;
+  if (dec == nullptr) return error_str();
 
   if (str->length() < DECIMAL_MAX_STR_LENGTH)
     str->length(DECIMAL_MAX_STR_LENGTH);

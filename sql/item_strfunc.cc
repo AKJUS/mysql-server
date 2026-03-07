@@ -2314,8 +2314,7 @@ String *Item_func_format::val_str_ascii(String *str) {
   // Number of decimal digits
   int dec = (int)args[1]->val_int();
   if (args[1]->null_value) {
-    null_value = true;
-    return nullptr;
+    return error_str();
   }
 
   MY_LOCALE *lc = locale ? locale : get_locale(args[2]);
@@ -2331,8 +2330,7 @@ String *Item_func_format::val_str_ascii(String *str) {
     my_decimal dec_val, rnd_dec;
     my_decimal *res = args[0]->val_decimal(&dec_val);
     if (res == nullptr) {
-      null_value = args[0]->null_value;
-      return nullptr;
+      return error_str();
     }
     my_decimal_round(E_DEC_FATAL_ERROR, res, dec, false, &rnd_dec);
     my_decimal2string(E_DEC_FATAL_ERROR, &rnd_dec, str);

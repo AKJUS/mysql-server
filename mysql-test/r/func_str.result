@@ -6173,3 +6173,19 @@ utf8mb4_0900_ai_ci
 select JSON_OBJECT('a', vector_to_string(string_to_vector('[1,2]')));
 JSON_OBJECT('a', vector_to_string(string_to_vector('[1,2]')))
 {"a": "[1.00000e+00,2.00000e+00]"}
+#
+# Bug39053808: failing in Item_func_conv::val_str
+#
+SELECT SUBSTRING(BIN(EXP(UUID_SHORT())), 13, 3);
+ERROR 22003: DOUBLE value is out of range in 'exp(uuid_short())'
+SELECT UNCOMPRESS(BIN(POW(-9223372036854775807, 0xa5)));
+ERROR 22003: DOUBLE value is out of range in 'pow(-(9223372036854775807),0xa5)'
+SELECT JSON_TYPE(BIN(EXP(0x5f022b6c81)));
+ERROR 22003: DOUBLE value is out of range in 'exp(0x5f022b6c81)'
+SELECT BIN(EXP(55415508248253877499791772201022128128.000000));
+ERROR 22003: DOUBLE value is out of range in 'exp(55415508248253877499791772201022128128.000000)'
+#
+# Bug39053812: failing in Item_func_soundex::val_str
+#
+SELECT st_x(35) SOUNDS LIKE 0x35;
+ERROR 22023: Invalid GIS data provided to function st_x.

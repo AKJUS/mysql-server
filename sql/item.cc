@@ -323,7 +323,7 @@ String *Item::val_string_from_decimal(String *str) {
   my_decimal dec_buf;
   my_decimal *dec = val_decimal(&dec_buf);
   if (dec == nullptr) {
-    return nullptr;
+    return error_str();
   }
   my_decimal_round(E_DEC_FATAL_ERROR, dec, decimals, false, &dec_buf);
   my_decimal2string(E_DEC_FATAL_ERROR, &dec_buf, str);
@@ -10859,11 +10859,19 @@ my_decimal *Item_cache_real::val_decimal(my_decimal *decimal_val) {
 }
 
 bool Item_cache_decimal::cache_value() {
-  if (!example) return false;
-  value_cached = true;
+  if (example == nullptr) return false;
   my_decimal *val = example->val_decimal(&decimal_value);
-  if (!(null_value = example->null_value) && val != &decimal_value)
-    my_decimal2decimal(val, &decimal_value);
+  if (val == nullptr) {
+    if (current_thd->is_error()) return false;
+    assert(example->null_value);
+    null_value = true;
+  } else {
+    null_value = false;
+    if (val != &decimal_value) {
+      my_decimal2decimal(val, &decimal_value);
+    }
+  }
+  value_cached = true;
   return true;
 }
 
