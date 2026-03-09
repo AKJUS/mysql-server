@@ -82,22 +82,6 @@ eval SET PASSWORD = '$TEST_PARAM_PASS';
 
 EOF
 
---let $query_simple_er_expired_file= $MYSQL_TMP_DIR/query_simple_er_expired_file.test
---write_file $query_simple_er_expired_file
-error ER_MUST_CHANGE_PASSWORD;
-SELECT 1;
-EOF
-
---let $query_simple_er_expired_change_pwd_file= $MYSQL_TMP_DIR/query_simple_er_expired_change_pwd_file.test
---write_file $query_simple_er_expired_change_pwd_file
-error ER_MUST_CHANGE_PASSWORD;
-SELECT 1;
-
-eval SET PASSWORD = '$TEST_PARAM_PASS';
-
-SELECT 1;
-EOF
-
 # -------------------------------------------------------------------
 # The test begins here
 
@@ -110,6 +94,8 @@ SET GLOBAL caching_sha2_password_storage_format="PBKDF2_SHA512";
 
 CREATE USER zaphod IDENTIFIED WITH caching_sha2_password BY 'ijkl';
 CREATE USER ford IDENTIFIED WITH caching_sha2_password BY 'mnop';
+
+GRANT SYSTEM_VARIABLES_ADMIN ON *.* TO arthur, marvin, zaphod, ford;
 
 SELECT user, SUBSTRING(authentication_string, 1, 7) as format FROM mysql.user WHERE user IN ('arthur', 'marvin', 'zaphod', 'ford') ORDER BY user ASC;
 
@@ -193,6 +179,8 @@ SET GLOBAL caching_sha2_password_storage_format="CRYPT5";
 ALTER USER zaphod IDENTIFIED BY 'mnop' RETAIN CURRENT PASSWORD;
 ALTER USER ford IDENTIFIED BY 'ijkl' RETAIN CURRENT PASSWORD;
 
+GRANT SYSTEM_VARIABLES_ADMIN ON *.* TO arthur, marvin, zaphod, ford;
+
 # Current state
 # User    CRYPT5        PBKDF2_SHA512
 # arthur   abcd(2nd)     efgh(1st)
@@ -251,10 +239,8 @@ SET GLOBAL caching_sha2_password_enforce_storage_format=1;
 if ($parameter_test_second_password)
 {
   # Try connecting with password stored in non-compliant format
-  exec $parameter_client_script
-    --host=localhost --ssl-mode=REQUIRED
-    -uarthur -pabcd
-    -x $query_simple_er_expired_file 2>&1;
+  --error 1
+  --exec $parameter_client --host=127.0.0.1 --ssl-mode=REQUIRED -uarthur -pabcd -e "SELECT CURRENT_USER()" 2>&1
 
   # Try using fast auth - Must fail
   --error 1
@@ -277,10 +263,8 @@ if ($parameter_test_second_password)
 if ($parameter_test_second_password)
 {
   # Try connecing with another password stored in non-compliant format
-  exec $parameter_client_script
-    --host=localhost --ssl-mode=REQUIRED
-    -umarvin -pefgh
-    -x $query_simple_er_expired_file 2>&1;
+  --error 1
+  --exec $parameter_client --host=127.0.0.1 --ssl-mode=REQUIRED -umarvin -pefgh -e "SELECT CURRENT_USER()" 2>&1
 
   # Try using fast auth - Must fail
   --error 1
@@ -290,11 +274,9 @@ if ($parameter_test_second_password)
 if ($parameter_test_second_password)
 {
   # Try connecting with password stored in non-compliant format and reset password
-  --let TEST_PARAM_PASS=abcd
-  exec $parameter_client_script
-    --host=localhost --ssl-mode=REQUIRED
-    -uarthur -pabcd
-    -x $query_simple_er_expired_change_pwd_file 2>&1;
+  --error 1
+  --exec $parameter_client --host=127.0.0.1 --ssl-mode=REQUIRED -uarthur -pabcd -e "SELECT CURRENT_USER()" 2>&1
+  --exec $parameter_client --host=127.0.0.1 --ssl-mode=REQUIRED -uarthur -pabcd -e "SET PASSWORD='abcd'" 2>&1
 
   # Try using fast auth - Must fail
   --error 1
@@ -307,11 +289,9 @@ if ($parameter_test_second_password)
   --exec $parameter_client --host=127.0.0.1 --ssl-mode=DISABLED -uarthur -pabcd -e "SELECT CURRENT_USER()" 2>&1
 
   # Try connecing with another password stored in non-compliant format and reset password
-  --let TEST_PARAM_PASS=efgh
-  exec $parameter_client_script
-    --host=localhost --ssl-mode=REQUIRED
-    -umarvin -pefgh
-    -x $query_simple_er_expired_change_pwd_file 2>&1;
+  --error 1
+  --exec $parameter_client --host=127.0.0.1 --ssl-mode=REQUIRED -umarvin -pefgh -e "SELECT CURRENT_USER()" 2>&1
+  --exec $parameter_client --host=127.0.0.1 --ssl-mode=REQUIRED -umarvin -pefgh -e "SET PASSWORD='efgh'" 2>&1
 
   # Try using fast auth - Must fail
   --error 1
@@ -330,10 +310,8 @@ SET GLOBAL caching_sha2_password_enforce_storage_format=1;
 if ($parameter_test_second_password)
 {
   # Try connecting with password stored in non-compliant format
-  exec $parameter_client_script
-    --host=localhost --ssl-mode=REQUIRED
-    -uzaphod -pijkl
-    -x $query_simple_er_expired_file 2>&1;
+  --error 1
+  --exec $parameter_client --host=127.0.0.1 --ssl-mode=REQUIRED -uzaphod -pijkl -e "SELECT CURRENT_USER()" 2>&1
 
   # Try using fast auth - Must fail
   --error 1
@@ -356,21 +334,17 @@ if ($parameter_test_second_password)
 if ($parameter_test_second_password)
 {
   # Try connecing with another password stored in non-compliant format
-  exec $parameter_client_script
-    --host=localhost --ssl-mode=REQUIRED
-    -uford -pmnop
-    -x $query_simple_er_expired_file 2>&1;
+  --error 1
+  --exec $parameter_client --host=127.0.0.1 --ssl-mode=REQUIRED -uford -pmnop -e "SELECT CURRENT_USER()" 2>&1
 
   # Try using fast auth - Must fail
   --error 1
   --exec $parameter_client --host=127.0.0.1 --ssl-mode=DISABLED -uford -pmnop -e "SELECT CURRENT_USER()" 2>&1
 
   # Try connecting with password stored in non-compliant format and reset password
-  let TEST_PARAM_PASS=ijkl;
-  exec $parameter_client_script
-    --host=localhost --ssl-mode=REQUIRED
-    -uzaphod -pijkl
-    -x $query_simple_er_expired_change_pwd_file 2>&1;
+  --error 1
+  --exec $parameter_client --host=127.0.0.1 --ssl-mode=REQUIRED -uzaphod -pijkl -e "SELECT CURRENT_USER()" 2>&1
+  --exec $parameter_client --host=127.0.0.1 --ssl-mode=REQUIRED -uzaphod -pijkl -e "SET PASSWORd='ijkl'" 2>&1
 
   # Try using fast auth - Must fail
   --error 1
@@ -383,11 +357,9 @@ if ($parameter_test_second_password)
   --exec $parameter_client --host=127.0.0.1 --ssl-mode=DISABLED -uzaphod -pijkl -e "SELECT CURRENT_USER()" 2>&1
 
   # Try connecing with another password stored in non-compliant format and reset password
-  let TEST_PARAM_PASS=mnop;
-  exec $parameter_client_script
-    --host=localhost --ssl-mode=REQUIRED
-    -uford -pmnop
-    -x $query_simple_er_expired_change_pwd_file 2>&1;
+  --error 1
+  --exec $parameter_client --host=127.0.0.1 --ssl-mode=REQUIRED -uford -pmnop -e "SELECT CURRENT_USER()" 2>&1
+  --exec $parameter_client --host=127.0.0.1 --ssl-mode=REQUIRED -uford -pmnop -e "SET PASSWORD='mnop'" 2>&1
 
 
   # Try using fast auth - Must fail
@@ -413,8 +385,6 @@ SET GLOBAL caching_sha2_password_storage_format=@saved_storage_format;
 --remove_file $query_account_and_change_pwd_file
 --remove_file $query_account_file
 --remove_file $query_simple_file
---remove_file $query_simple_er_expired_file
---remove_file $query_simple_er_expired_change_pwd_file
 
 --let $parameter_client_script=
 --let $parameter_client=
