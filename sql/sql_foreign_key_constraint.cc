@@ -1787,14 +1787,18 @@ static bool check_parent_fk_ref(THD *thd, const TABLE *table_c, TABLE *table_p,
     key_map = make_prev_keypart_map(fk->columns);
   }
 
-  auto close_index_guard =
-      create_scope_guard([&] { table_p->file->ha_index_end(); });
-
+  DBUG_EXECUTE_IF("check_parent_fk_index_init_failure",
+                  { DBUG_SET("+d,ha_index_init_fail"); });
   // Check if value exists.
   if ((error = table_p->file->ha_index_init(parent_key_idx, true))) {
     table_p->file->print_error(error, MYF(0));
+    DBUG_EXECUTE_IF("check_parent_fk_index_init_failure",
+                    { DBUG_SET("-d,ha_index_init_fail"); });
     return true;
   }
+
+  auto close_index_guard =
+      create_scope_guard([table_p] { table_p->file->ha_index_end(); });
 
   error = table_p->file->ha_index_read_map(table_p->record[0], key_value,
                                            key_map, HA_READ_KEY_EXACT);
