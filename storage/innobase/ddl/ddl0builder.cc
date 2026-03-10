@@ -1444,6 +1444,7 @@ dberr_t Builder::bulk_add_row(Cursor &cursor, Row &row, size_t thread_id,
         return err;
       }
       /* Need to make room, flush the current key buffer to disk and retry. */
+      ut_a(!key_buffer->empty());
     } else if (unlikely(thread_ctx->m_n_recs == 0 && key_buffer->empty())) {
       /* Table is empty. */
       return DB_END_OF_INDEX;
