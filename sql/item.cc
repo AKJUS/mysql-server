@@ -9385,6 +9385,30 @@ String *Item_view_ref::val_str(String *str) {
   return super::val_str(str);
 }
 
+bool Item_view_ref::val_date(Date_val *date, my_time_flags_t flags) {
+  if (has_null_row()) {
+    null_value = true;
+    return true;
+  }
+  return super::val_date(date, flags);
+}
+
+bool Item_view_ref::val_time(Time_val *time) {
+  if (has_null_row()) {
+    null_value = true;
+    return true;
+  }
+  return super::val_time(time);
+}
+
+bool Item_view_ref::val_datetime(Datetime_val *dt, my_time_flags_t flags) {
+  if (has_null_row()) {
+    null_value = true;
+    return true;
+  }
+  return super::val_datetime(dt, flags);
+}
+
 bool Item_view_ref::val_bool() {
   if (has_null_row()) {
     null_value = true;

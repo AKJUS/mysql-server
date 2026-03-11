@@ -6427,6 +6427,9 @@ class Item_view_ref final : public Item_ref {
   double val_real() override;
   my_decimal *val_decimal(my_decimal *dec) override;
   String *val_str(String *str) override;
+  bool val_date(Date_val *date, my_time_flags_t flags) override;
+  bool val_time(Time_val *time) override;
+  bool val_datetime(Datetime_val *dt, my_time_flags_t flags) override;
   bool val_bool() override;
   bool val_json(Json_wrapper *wr) override;
   bool is_null() override;
