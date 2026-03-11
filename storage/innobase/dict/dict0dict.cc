@@ -2068,37 +2068,7 @@ ulint dict_index_node_ptr_max_size(const dict_index_t *index) /*!< in: index */
   /* Compute the maximum possible record size. */
   for (i = 0; i < dict_index_get_n_unique_in_tree(index); i++) {
     const dict_field_t *field = index->get_field(i);
-    const dict_col_t *col = field->col;
-    ulint field_max_size;
-    ulint field_ext_max_size;
-
-    /* Determine the maximum length of the index field. */
-
-    field_max_size = col->get_fixed_size(comp);
-    if (field_max_size) {
-      /* dict_index_add_col() should guarantee this */
-      ut_ad(!field->prefix_len || field->fixed_len == field->prefix_len);
-      /* Fixed lengths are not encoded
-      in ROW_FORMAT=COMPACT. */
-      rec_max_size += field_max_size;
-      continue;
-    }
-
-    field_max_size = col->get_max_size();
-    field_ext_max_size = field_max_size < 256 ? 1 : 2;
-
-    if (field->prefix_len && field->prefix_len < field_max_size) {
-      field_max_size = field->prefix_len;
-    }
-
-    if (comp) {
-      /* Add the extra size for ROW_FORMAT=COMPACT.
-      For ROW_FORMAT=REDUNDANT, these bytes were
-      added to rec_max_size before this loop. */
-      rec_max_size += field_ext_max_size;
-    }
-
-    rec_max_size += field_max_size;
+    get_field_max_size(index->table, index, field, rec_max_size);
   }
 
   return (rec_max_size);
