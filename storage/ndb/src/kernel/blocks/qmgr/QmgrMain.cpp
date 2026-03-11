@@ -4449,7 +4449,7 @@ void Qmgr::sendApiRegConf(Signal *signal, Uint32 node) {
 
   ApiRegConf *const apiRegConf = (ApiRegConf *)&signal->theData[0];
   apiRegConf->qmgrRef = reference();
-  apiRegConf->apiHeartbeatFrequency = (chbApiDelay / 10);
+  apiRegConf->apiHeartbeatInterval = (chbApiDelay / 10);
   apiRegConf->version = NDB_VERSION;
   apiRegConf->mysql_version = NDB_MYSQL_VERSION_D;
   apiRegConf->nodeState = getNodeState();

@@ -126,7 +126,7 @@ class ClusterMgr : public trp_client {
   /**
    * The node state is protected for updates by ClusterMgrThreadMutex.
    * One can call hb_received and set hbMissed to 0 though without
-   * protection since this is safe. All other uses of hbFrequency,
+   * protection since this is safe. All other uses of hbCheckInterval,
    * hbCounter and hbMissed is internal to ClusterMgr and done with
    * protection of ClusterMgrThreadMutex.
    *
@@ -144,9 +144,9 @@ class ClusterMgr : public trp_client {
     /**
      * Heartbeat stuff
      */
-    Uint32 hbFrequency;  // Heartbeat frequence
-    Uint32 hbCounter;    // # milliseconds passed since last hb sent
-    Uint32 hbMissed;     // # missed heartbeats
+    Uint32 hbCheckInterval;  // Heartbeat interval
+    Uint32 hbCounter;        // # milliseconds passed since last hb sent
+    Uint32 hbMissed;         // # missed heartbeats
 
     bool processInfoSent;  // ProcessInfo Report has been sent to node
   };
@@ -190,7 +190,7 @@ class ClusterMgr : public trp_client {
     The rate (in milliseconds) at which this node expects to receive
     API_REGREQ heartbeat messages.
    */
-  Uint32 m_hbFrequency;
+  Uint32 m_hbCheckInterval;
 
   /**
    * The maximal time between connection attempts to data nodes.
