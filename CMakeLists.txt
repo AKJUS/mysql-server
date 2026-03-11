@@ -518,6 +518,7 @@ MESSAGE(STATUS "CMAKE_MODULE_PATH is ${CMAKE_MODULE_PATH}")
 INCLUDE(mysql_version)
 PROJECT(${MYSQL_PROJECT_NAME}
   VERSION ${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION})
+SET(CMAKE_CXX_STANDARD 23)
 
 # Various 3rd party libraries have this option.
 # Some have it ON, other OFF, by default.
