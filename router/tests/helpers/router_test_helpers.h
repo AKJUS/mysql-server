@@ -27,6 +27,7 @@
 #define ROUTER_TESTS_TEST_HELPERS_INCLUDED
 
 #include <chrono>
+#include <exception>  // IWYU pragma: keep std::exception_ptr
 #include <functional>
 #include <map>
 #include <stdexcept>
