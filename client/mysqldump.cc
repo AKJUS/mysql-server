@@ -6648,7 +6648,7 @@ static bool dump_masking_policies(FILE *sql_file) {
         }
         if (opt_drop_masking_policies) {
           // verbose_msg(" -- Dropping masking policy: %s...\n");
-          fprintf(sql_file, "DROP MASKING POLICY %s;\n", policy_name);
+          fprintf(sql_file, "DROP MASKING POLICY IF EXISTS %s;\n", policy_name);
         }
         fprintf(sql_file, "%s;\n", (const char *)show_policy_row[1]);
       }
