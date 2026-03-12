@@ -71,6 +71,8 @@ class Transaction_prepared_message : public Plugin_gcs_message {
 
   rpl_gno get_gno();
 
+  bool is_decode_error();
+
  protected:
   /*
    Implementation of the template methods
@@ -83,6 +85,7 @@ class Transaction_prepared_message : public Plugin_gcs_message {
   bool m_sid_specified;
   rpl_sid m_sid;
   rpl_gno m_gno;
+  bool m_decode_error{false};
 };
 
 #endif /* TRANSACTION_PREPARED_MESSAGE_INCLUDED */

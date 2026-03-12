@@ -76,6 +76,11 @@ void Transaction_prepared_message::decode_payload(const unsigned char *buffer,
     switch (payload_item_type) {
       case PIT_TRANSACTION_PREPARED_SID:
         if (slider + payload_item_length <= end) {
+          if (payload_item_length != m_sid.BYTE_LENGTH) {
+            m_sid_specified = false;
+            m_decode_error = true;
+            return;
+          }
           memcpy(m_sid.bytes, slider, payload_item_length);
           m_sid_specified = true;
           slider += payload_item_length;
@@ -90,3 +95,5 @@ const rpl_sid *Transaction_prepared_message::get_sid() {
 }
 
 rpl_gno Transaction_prepared_message::get_gno() { return m_gno; }
+
+bool Transaction_prepared_message::is_decode_error() { return m_decode_error; }
