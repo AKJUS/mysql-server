@@ -1057,6 +1057,7 @@ PROVIDES_SERVICE(mysql_server_path_filter, dynamic_loader_scheme_file),
     /* Obsolete: PROVIDES_SERVICE(performance_schema, psi_statement_v3), */
     /* Obsolete: PROVIDES_SERVICE(performance_schema, psi_statement_v4), */
     PROVIDES_SERVICE(performance_schema, psi_statement_v5),
+    PROVIDES_SERVICE(performance_schema, psi_statement_v6),
     PROVIDES_SERVICE(performance_schema, psi_system_v1),
     PROVIDES_SERVICE(performance_schema, psi_table_v1),
     /* Obsolete: PROVIDES_SERVICE(performance_schema, psi_thread_v1), */

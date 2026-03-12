@@ -2628,6 +2628,11 @@ deallocate:
           deallocate_or_drop PREPARE_SYM ident
           {
             THD *thd= YYTHD;
+            /*
+              Do not collect a regular digest,
+              DEALLOCATE PREPARE digests are special.
+            */
+            thd->m_parser_state->m_digest_psi = nullptr;
             LEX *lex= thd->lex;
             lex->sql_command= SQLCOM_DEALLOCATE_PREPARE;
             lex->prepared_stmt_name= to_lex_cstring($3);
@@ -2644,6 +2649,11 @@ prepare:
           {
             THD *thd= YYTHD;
             LEX *lex= thd->lex;
+            /*
+              Do not collect a regular digest,
+              PREPARE digests are special.
+            */
+            thd->m_parser_state->m_digest_psi = nullptr;
             lex->sql_command= SQLCOM_PREPARE;
             lex->prepared_stmt_name= to_lex_cstring($2);
             /*
@@ -2680,6 +2690,11 @@ execute:
           EXECUTE_SYM ident
           {
             THD *thd= YYTHD;
+            /*
+              Do not collect a regular digest,
+              EXECUTE digests are special.
+            */
+            thd->m_parser_state->m_digest_psi = nullptr;
             LEX *lex= thd->lex;
             lex->sql_command= SQLCOM_EXECUTE;
             lex->prepared_stmt_name= to_lex_cstring($2);
