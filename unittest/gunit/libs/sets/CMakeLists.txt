@@ -56,6 +56,13 @@ FOREACH(test ${TESTS})
     COMPILE_DEFINITIONS "${DISABLE_PSI_DEFINITIONS}")
 ENDFOREACH()
 
+# Set test properties.
+#
+# Disable this test in ctest runs to avoid overloading the machine when tests
+# are executed in parallel (e.g., `ctest -j N`). The test binary is still built
+# and can be executed manually (by invoking the executable directly).
+SET_TESTS_PROPERTIES(nested_sets_exhaustive PROPERTIES DISABLED True)
+
 # Tests that need to link with part of server
 SET(SRC_FILES
   # Tests the legacy Gtid_set data structure which is defined in the server.
