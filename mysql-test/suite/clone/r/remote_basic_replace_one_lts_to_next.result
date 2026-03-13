@@ -79,31 +79,23 @@ ALTER SCHEMA schema_read_only READ ONLY=1;
 # Install clone plugin
 INSTALL PLUGIN clone SONAME 'CLONE_PLUGIN';
 # In connection default - Cloning database
-SET DEBUG="+d,clone_across_lts_major_mismatch";
+# Cloning from one LTS to next LTS is not supported in Clone protocol version 3
+SET DEBUG="+d,clone_set_to_protocol_version_3";
+SET DEBUG="+d,clone_one_lts_to_next_lts";
 SET GLOBAL clone_autotune_concurrency = OFF;
 SET GLOBAL clone_max_concurrency = 8;
 SET GLOBAL clone_valid_donor_list = 'HOST:PORT';
 CLONE INSTANCE FROM USER@HOST:PORT IDENTIFIED BY '' ;
-ERROR HY000: Clone Donor MySQL version: 9.7.2 is different from Recipient MySQL version 8.4.0.
+ERROR HY000: Clone Donor MySQL version: 9.7.0 is different from Recipient MySQL version 10.7.0.
 select ID, STATE, ERROR_NO from performance_schema.clone_status;
 ID	STATE	ERROR_NO
 1	Failed	3864
 select ID, STAGE, STATE from performance_schema.clone_progress;
 ID	STAGE	STATE
-SET DEBUG="-d,clone_across_lts_major_mismatch";
-SET DEBUG="+d,clone_across_lts_minor_mismatch";
-SET GLOBAL clone_autotune_concurrency = OFF;
-SET GLOBAL clone_max_concurrency = 8;
-SET GLOBAL clone_valid_donor_list = 'HOST:PORT';
-CLONE INSTANCE FROM USER@HOST:PORT IDENTIFIED BY '' ;
-ERROR HY000: Clone Donor MySQL version: 8.3.2 is different from Recipient MySQL version 8.4.0.
-select ID, STATE, ERROR_NO from performance_schema.clone_status;
-ID	STATE	ERROR_NO
-1	Failed	3864
-select ID, STAGE, STATE from performance_schema.clone_progress;
-ID	STAGE	STATE
-SET DEBUG="-d,clone_across_lts_minor_mismatch";
-SET DEBUG="+d,clone_across_lts_version_match";
+SET DEBUG="-d,clone_one_lts_to_next_lts";
+SET DEBUG="-d,clone_set_to_protocol_version_3";
+# Cloning from one LTS to next LTS is supported in Clone protocol version > 3
+SET DEBUG="+d,clone_one_lts_to_next_lts";
 SET GLOBAL clone_autotune_concurrency = OFF;
 SET GLOBAL clone_max_concurrency = 8;
 SET GLOBAL clone_valid_donor_list = 'HOST:PORT';
@@ -120,7 +112,7 @@ ID	STAGE	STATE
 1	FILE SYNC	Completed
 1	RESTART	Completed
 1	RECOVERY	Completed
-SET DEBUG="-d,clone_across_lts_version_match";
+SET DEBUG="-d,clone_one_lts_to_next_lts";
 # In connection default - Finished Cloning
 # Validate the tables and cleanup the test
 SELECT * from t1 ORDER BY col1;

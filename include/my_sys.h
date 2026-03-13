@@ -956,9 +956,10 @@ extern MYSQL_PLUGIN_IMPORT PSI_tls_channel_bootstrap *psi_tls_channel_hook;
 extern void set_psi_tls_channel_service(void *psi);
 #endif /* HAVE_PSI_INTERFACE */
 
-/* Compares versions and determine if clone is allowed */
+/* Compare versions and determine if clone is allowed */
 [[nodiscard]] extern bool are_versions_clone_compatible(
-    const std::string &ver1, const std::string &ver2);
+    const std::string &recipient, const std::string &donor,
+    const bool is_recipient_lts = false, const bool is_donor_lts = false);
 
 /**
   @} (end of group MYSYS)

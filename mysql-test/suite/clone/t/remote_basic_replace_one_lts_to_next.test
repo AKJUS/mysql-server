@@ -12,17 +12,23 @@
 --eval INSTALL PLUGIN clone SONAME '$CLONE_PLUGIN'
 
 --echo # In connection default - Cloning database
+--echo # Cloning from one LTS to next LTS is not supported in Clone protocol version 3
 --connection clone_conn_1
-SET DEBUG="+d,clone_across_lts_8_0_across_backport_patch_mismatch";
+SET DEBUG="+d,clone_set_to_protocol_version_3";
+SET DEBUG="+d,clone_one_lts_to_next_lts";
 --let $clone_remote_err = ER_CLONE_DONOR_VERSION
 --let $clone_err = ER_CLONE_DONOR_VERSION
 --source ../include/clone_command.inc
-SET DEBUG="-d,clone_across_lts_8_0_across_backport_patch_mismatch";
-SET DEBUG="+d,clone_across_lts_8_0_after_backport_patch_mismatch";
+SET DEBUG="-d,clone_one_lts_to_next_lts";
+
+SET DEBUG="-d,clone_set_to_protocol_version_3";
+
+--echo # Cloning from one LTS to next LTS is supported in Clone protocol version > 3
+SET DEBUG="+d,clone_one_lts_to_next_lts";
 --let $clone_remote_err =
 --let $clone_err =
 --source ../include/clone_command.inc
-SET DEBUG="-d,clone_across_lts_8_0_after_backport_patch_mismatch";
+SET DEBUG="-d,clone_one_lts_to_next_lts";
 --let $clone_remote_err = 0
 --echo # In connection default - Finished Cloning
 

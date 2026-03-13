@@ -117,6 +117,10 @@ class Server {
   @return error code */
   int send_configs(Command_Response rcmd);
 
+  /** Send upgrade related configurations.
+  @return error code */
+  int send_upgrade_configs(Command_Response rcmd);
+
   /** @return true iff need to send only plugin name for old clone version. */
   bool send_only_plugin_name() const {
     return m_protocol_version < CLONE_PROTOCOL_VERSION_V2;
@@ -125,6 +129,11 @@ class Server {
   /** @return true iff skip sending additional configurations. */
   bool skip_other_configs() const {
     return m_protocol_version < CLONE_PROTOCOL_VERSION_V3;
+  }
+
+  /** @return true iff skip sending upgrade related configurations. */
+  bool skip_upgrade_configs() const {
+    return m_protocol_version < CLONE_PROTOCOL_VERSION_V4;
   }
 
  private:
