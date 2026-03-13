@@ -109,6 +109,11 @@ class span : private detail::span_base<T>, detail::span_extent<Extent> {
       : detail::span_base<T>(arr) {
     static_assert(Extent != dynamic_extent);
   }
+  template <std::size_t N>
+  constexpr span(element_type (&arr)[N]) noexcept
+      : detail::span_base<T>(arr), detail::span_extent<Extent>(N) {
+    static_assert(Extent == dynamic_extent);
+  }
   template <class U>
   constexpr span(std::array<U, Extent> &arr) noexcept
       : detail::span_base<T>(arr.data()) {}
