@@ -353,7 +353,7 @@ EXPLAIN
         -> Nested loop inner join (FirstMatch)  (rows=0.1)
             -> Limit: 1 row(s)  (rows=0.1)
                 -> Filter: (((t3.f1 = t2.f2) and (t2.f2 = t4.f1)) or (t3.f2 >= t3.f1))  (rows=0.1)
-                    -> Left hash join (no condition)  (rows=0.1)
+                    -> Left hash join (no condition), extra conditions: true  (rows=0.1)
                         -> Inner hash join (t3.f1 = t2.f2)  (rows=0.1)
                             -> Table scan on t2  (rows=1)
                             -> Hash
@@ -429,7 +429,7 @@ EXPLAIN
                 -> Table scan on t1  (rows=1)
             -> Hash
                 -> Filter: (t2.f2 = t4.f2)  (rows=100e-6)
-                    -> Left hash join (no condition)  (rows=0.001)
+                    -> Left hash join (no condition), extra conditions: true  (rows=0.001)
                         -> Filter: (t3.f1 = t2.f2)  (rows=0.001)
                             -> Inner hash join (t2.f2 = t3.f1), (t3.f1 = t2.f2)  (rows=0.01)
                                 -> Table scan on t2  (rows=1)
@@ -3182,3 +3182,33 @@ SELECT * FROM t5 WHERE a = 10 ORDER BY b;
 id	a	b
 1	10	100
 DROP TABLE t5;
+#
+# Bug#39062785: Assertion `tl->join_cond_optim() != nullptr'
+#               failed.
+#
+CREATE TABLE t1 (f1 INTEGER, f2 INTEGER, KEY (f2));
+EXPLAIN FORMAT=TREE SELECT 1 FROM t1
+WHERE (t1.f2 < ANY (SELECT t2.f1 FROM t1 AS t2
+WHERE t2.f1 = t1.f1 AND
+NOT EXISTS (SELECT t2.f1
+FROM t1 AS t3 )));
+EXPLAIN
+-> Filter: <nop>(<in_optimizer>(t1.f2,<exists>(select #2)))  (rows=1)
+    -> Table scan on t1  (rows=1)
+    -> Select #2 (subquery in condition; dependent)
+        -> Hash antijoin (no condition), extra conditions: true  (rows=0.00333)
+            -> Filter: ((t2.f1 = t1.f1) and (<cache>(t1.f2) < t2.f1))  (rows=0.0333)
+                -> Table scan on t2  (rows=1)
+            -> Hash
+                -> Covering index scan on t3 using f2  (rows=1)
+
+Warnings:
+Note	1276	Field or reference 'test.t1.f1' of SELECT #2 was resolved in SELECT #1
+Note	1276	Field or reference 'test.t2.f1' of SELECT #3 was resolved in SELECT #2
+SELECT 1 FROM t1
+WHERE (t1.f2 < ANY (SELECT t2.f1 FROM t1 AS t2
+WHERE t2.f1 = t1.f1 AND
+NOT EXISTS (SELECT t2.f1
+FROM t1 AS t3 )));
+1
+DROP TABLE t1;

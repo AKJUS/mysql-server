@@ -3848,7 +3848,7 @@ b
 explain format=tree SELECT v >ALL (SELECT val FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -3867,7 +3867,7 @@ b
 explain format=tree SELECT v >=ALL (SELECT val FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -3886,7 +3886,7 @@ b
 explain format=tree SELECT v <ALL (SELECT val FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -3905,7 +3905,7 @@ b
 explain format=tree SELECT v <=ALL (SELECT val FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -3964,7 +3964,7 @@ b
 explain format=tree SELECT v >ANY (SELECT val FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -3983,7 +3983,7 @@ b
 explain format=tree SELECT v >=ANY (SELECT val FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4002,7 +4002,7 @@ b
 explain format=tree SELECT v <ANY (SELECT val FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4021,7 +4021,7 @@ b
 explain format=tree SELECT v <=ANY (SELECT val FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4040,7 +4040,7 @@ b
 explain format=tree SELECT v =ALL (SELECT v FROM t0row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4059,7 +4059,7 @@ b
 explain format=tree SELECT v =ALL (SELECT v FROM t1row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4078,7 +4078,7 @@ b
 explain format=tree SELECT v =ALL (SELECT v FROM t2row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4097,7 +4097,7 @@ b
 explain format=tree SELECT v =ALL (SELECT v FROM t4row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4116,7 +4116,7 @@ b
 explain format=tree SELECT v <>ANY (SELECT v FROM t0row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4135,7 +4135,7 @@ b
 explain format=tree SELECT v <>ANY (SELECT v FROM t1row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4154,7 +4154,7 @@ b
 explain format=tree SELECT v <>ANY (SELECT v FROM t2row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4173,7 +4173,7 @@ b
 explain format=tree SELECT v <>ANY (SELECT v FROM t4row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4234,7 +4234,7 @@ NULL
 explain format=tree SELECT vn >ALL (SELECT val FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4253,7 +4253,7 @@ NULL
 explain format=tree SELECT vn >=ALL (SELECT val FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4272,7 +4272,7 @@ NULL
 explain format=tree SELECT vn <ALL (SELECT val FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4291,7 +4291,7 @@ NULL
 explain format=tree SELECT vn <=ALL (SELECT val FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4347,7 +4347,7 @@ NULL
 explain format=tree SELECT vn >ANY (SELECT val FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4366,7 +4366,7 @@ NULL
 explain format=tree SELECT vn >=ANY (SELECT val FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4385,7 +4385,7 @@ NULL
 explain format=tree SELECT vn <ANY (SELECT val FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4404,7 +4404,7 @@ NULL
 explain format=tree SELECT vn <=ANY (SELECT val FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4423,7 +4423,7 @@ b
 explain format=tree SELECT vn =ALL (SELECT v FROM t0row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4442,7 +4442,7 @@ NULL
 explain format=tree SELECT vn =ALL (SELECT v FROM t1row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4461,7 +4461,7 @@ NULL
 explain format=tree SELECT vn =ALL (SELECT v FROM t2row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4480,7 +4480,7 @@ NULL
 explain format=tree SELECT vn =ALL (SELECT v FROM t4row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4499,7 +4499,7 @@ b
 explain format=tree SELECT vn <>ANY (SELECT v FROM t0row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4518,7 +4518,7 @@ NULL
 explain format=tree SELECT vn <>ANY (SELECT v FROM t1row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4537,7 +4537,7 @@ NULL
 explain format=tree SELECT vn <>ANY (SELECT v FROM t2row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4556,7 +4556,7 @@ NULL
 explain format=tree SELECT vn <>ANY (SELECT v FROM t4row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4617,7 +4617,7 @@ NULL
 explain format=tree SELECT v >ALL (SELECT valn FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4636,7 +4636,7 @@ NULL
 explain format=tree SELECT v >=ALL (SELECT valn FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4655,7 +4655,7 @@ NULL
 explain format=tree SELECT v <ALL (SELECT valn FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4674,7 +4674,7 @@ NULL
 explain format=tree SELECT v <=ALL (SELECT valn FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4730,7 +4730,7 @@ NULL
 explain format=tree SELECT v >ANY (SELECT valn FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4749,7 +4749,7 @@ NULL
 explain format=tree SELECT v >=ANY (SELECT valn FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4768,7 +4768,7 @@ NULL
 explain format=tree SELECT v <ANY (SELECT valn FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4787,7 +4787,7 @@ NULL
 explain format=tree SELECT v <=ANY (SELECT valn FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4806,7 +4806,7 @@ NULL
 explain format=tree SELECT v =ALL (SELECT n FROM t1row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4825,7 +4825,7 @@ NULL
 explain format=tree SELECT v =ALL (SELECT vn FROM t2row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4844,7 +4844,7 @@ NULL
 explain format=tree SELECT v =ALL (SELECT vn FROM t3row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4863,7 +4863,7 @@ b
 explain format=tree SELECT v =ALL (SELECT vn FROM t4row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4882,7 +4882,7 @@ NULL
 explain format=tree SELECT v <>ANY (SELECT n FROM t1row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4901,7 +4901,7 @@ NULL
 explain format=tree SELECT v <>ANY (SELECT vn FROM t2row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4920,7 +4920,7 @@ NULL
 explain format=tree SELECT v <>ANY (SELECT vn FROM t3row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -4939,7 +4939,7 @@ b
 explain format=tree SELECT v <>ANY (SELECT vn FROM t4row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -5000,7 +5000,7 @@ NULL
 explain format=tree SELECT vn >ALL (SELECT valn FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -5019,7 +5019,7 @@ NULL
 explain format=tree SELECT vn >=ALL (SELECT valn FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -5038,7 +5038,7 @@ NULL
 explain format=tree SELECT vn <ALL (SELECT valn FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -5057,7 +5057,7 @@ NULL
 explain format=tree SELECT vn <=ALL (SELECT valn FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -5113,7 +5113,7 @@ NULL
 explain format=tree SELECT vn >ANY (SELECT valn FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -5132,7 +5132,7 @@ NULL
 explain format=tree SELECT vn >=ANY (SELECT valn FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -5151,7 +5151,7 @@ NULL
 explain format=tree SELECT vn <ANY (SELECT valn FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -5170,7 +5170,7 @@ NULL
 explain format=tree SELECT vn <=ANY (SELECT valn FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -5189,7 +5189,7 @@ NULL
 explain format=tree SELECT vn =ALL (SELECT n FROM t1row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -5208,7 +5208,7 @@ NULL
 explain format=tree SELECT vn =ALL (SELECT vn FROM t2row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -5227,7 +5227,7 @@ NULL
 explain format=tree SELECT vn =ALL (SELECT vn FROM t3row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -5246,7 +5246,7 @@ NULL
 explain format=tree SELECT vn =ALL (SELECT vn FROM t4row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -5265,7 +5265,7 @@ NULL
 explain format=tree SELECT vn <>ANY (SELECT n FROM t1row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -5284,7 +5284,7 @@ NULL
 explain format=tree SELECT vn <>ANY (SELECT vn FROM t2row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -5303,7 +5303,7 @@ NULL
 explain format=tree SELECT vn <>ANY (SELECT vn FROM t3row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -5322,7 +5322,7 @@ NULL
 explain format=tree SELECT vn <>ANY (SELECT vn FROM t4row) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -6884,7 +6884,7 @@ b
 explain format=tree SELECT v >=ALL (SELECT val FROM it) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -6902,7 +6902,7 @@ explain format=tree SELECT DISTINCT v >=ALL (SELECT val FROM it) AS b
 FROM ot;
 EXPLAIN
 -> Sort with duplicate removal: b  (rows=2.24)
-    -> Left hash join (no condition)  (rows=5)
+    -> Left hash join (no condition), extra conditions: true  (rows=5)
         -> Table scan on ot  (rows=5)
         -> Hash
             -> Table scan on derived_1_2  (rows=1)
@@ -6923,7 +6923,7 @@ GROUP BY b;
 EXPLAIN
 -> Group aggregate: count(0)  (rows=2.24)
     -> Sort: b  (rows=5)
-        -> Left hash join (no condition)  (rows=5)
+        -> Left hash join (no condition), extra conditions: true  (rows=5)
             -> Table scan on ot  (rows=5)
             -> Hash
                 -> Table scan on derived_1_2  (rows=1)
@@ -6946,7 +6946,7 @@ EXPLAIN
 -> Filter: (b > 0)  (rows=2.24)
     -> Group aggregate: count(0)  (rows=2.24)
         -> Sort: b  (rows=5)
-            -> Left hash join (no condition)  (rows=5)
+            -> Left hash join (no condition), extra conditions: true  (rows=5)
                 -> Table scan on ot  (rows=5)
                 -> Hash
                     -> Table scan on derived_1_2  (rows=1)
@@ -6969,7 +6969,7 @@ FROM ot
 ORDER BY b;
 EXPLAIN
 -> Sort: b  (rows=5)
-    -> Left hash join (no condition)  (rows=5)
+    -> Left hash join (no condition), extra conditions: true  (rows=5)
         -> Table scan on ot  (rows=5)
         -> Hash
             -> Table scan on derived_1_2  (rows=1)
@@ -6992,7 +6992,7 @@ ORDER BY b DESC;
 EXPLAIN
 -> Group aggregate: count(0)  (rows=2.24)
     -> Sort: b DESC  (rows=5)
-        -> Left hash join (no condition)  (rows=5)
+        -> Left hash join (no condition), extra conditions: true  (rows=5)
             -> Table scan on ot  (rows=5)
             -> Hash
                 -> Table scan on derived_1_2  (rows=1)
@@ -7147,7 +7147,7 @@ b
 explain format=tree SELECT v >ALL (SELECT val FROM it GROUP BY val) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -7248,7 +7248,7 @@ b
 explain format=tree SELECT v >ALL (SELECT val FROM it ORDER BY val DESC) AS b
 FROM ot;
 EXPLAIN
--> Left hash join (no condition)  (rows=5)
+-> Left hash join (no condition), extra conditions: true  (rows=5)
     -> Table scan on ot  (rows=5)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -7953,7 +7953,7 @@ i	i >ANY (SELECT i FROM t_null)
 2	1
 explain format=tree SELECT i, i >ANY (SELECT i FROM t_null) FROM t_outer;
 EXPLAIN
--> Left hash join (no condition)  (rows=3)
+-> Left hash join (no condition), extra conditions: true  (rows=3)
     -> Table scan on t_outer  (rows=3)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -7969,7 +7969,7 @@ result
 0
 explain format=tree SELECT NULL >ANY (SELECT i FROM t_empty) AS result FROM t_null;
 EXPLAIN
--> Left hash join (no condition)  (rows=4)
+-> Left hash join (no condition), extra conditions: true  (rows=4)
     -> Table scan on t_null  (rows=4)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)
@@ -7985,7 +7985,7 @@ NULL
 NULL
 explain format=tree SELECT i <>ANY (SELECT NULL FROM t_null) FROM t_null;
 EXPLAIN
--> Left hash join (no condition)  (rows=4)
+-> Left hash join (no condition), extra conditions: true  (rows=4)
     -> Table scan on t_null  (rows=4)
     -> Hash
         -> Table scan on derived_1_2  (rows=1)

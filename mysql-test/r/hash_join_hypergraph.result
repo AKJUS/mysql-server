@@ -3582,7 +3582,7 @@ test.t1	analyze	status	OK
 test.t2	analyze	status	OK
 EXPLAIN FORMAT=tree SELECT * FROM t1 LEFT JOIN t2 ON 1=1;
 EXPLAIN
--> Left hash join (no condition)  (rows=1)
+-> Left hash join (no condition), extra conditions: true  (rows=1)
     -> Table scan on t1  (rows=1)
     -> Hash
         -> Table scan on t2  (rows=1)
@@ -4041,13 +4041,13 @@ EXPLAIN
 -> Left hash join (no condition), extra conditions: (t.c = 1)  (rows=1)
     -> Table scan on t  (rows=1)
     -> Hash
-        -> Left hash join (no condition)  (rows=1)
+        -> Left hash join (no condition), extra conditions: true  (rows=1)
             -> Table scan on d  (rows=1)
             -> Hash
-                -> Left hash join (no condition)  (rows=1)
+                -> Left hash join (no condition), extra conditions: true  (rows=1)
                     -> Table scan on c  (rows=1)
                     -> Hash
-                        -> Left hash join (no condition)  (rows=1)
+                        -> Left hash join (no condition), extra conditions: true  (rows=1)
                             -> Table scan on b  (rows=1)
                             -> Hash
                                 -> Table scan on a  (rows=1)
@@ -4168,7 +4168,7 @@ test.t1	analyze	status	OK
 EXPLAIN ANALYZE SELECT t1.a FROM t1 LEFT JOIN t1 AS t2 ON TRUE WHERE t2.a IS NULL;
 EXPLAIN
 -> Filter: (t2.a is null)  (rows=2.5) (actual rows=0 loops=1)
-    -> Left hash join (no condition)  (rows=25) (actual rows=25 loops=1)
+    -> Left hash join (no condition), extra conditions: true  (rows=25) (actual rows=25 loops=1)
         -> Table scan on t1  (rows=5) (actual rows=5 loops=1)
         -> Hash
             -> Table scan on t2  (rows=5) (actual rows=5 loops=1)

@@ -2492,8 +2492,14 @@ bool EarlyNormalizeConditions(THD *thd, const RelationalExpression *join,
     }
 
     if (res == Item::COND_TRUE) {
-      // Remove always true conditions from the conjunction.
-      it = conditions->erase(it);
+      // If this is the last remaining condition, keep an explicit TRUE
+      // to satisfy downstream checks that the condition list is non-empty.
+      auto next_it = conditions->erase(it);
+      if (conditions->empty()) {
+        conditions->push_back(new Item_func_true());
+        return false;
+      }
+      it = next_it;
     } else if (res == Item::COND_FALSE) {
       // One always false condition makes the entire conjunction always false.
       conditions->clear();

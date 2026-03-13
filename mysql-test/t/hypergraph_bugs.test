@@ -2697,4 +2697,20 @@ eval $query;
 
 DROP TABLE t5;
 
+--echo #
+--echo # Bug#39062785: Assertion `tl->join_cond_optim() != nullptr'
+--echo #               failed.
+--echo #
+
+CREATE TABLE t1 (f1 INTEGER, f2 INTEGER, KEY (f2));
+let $query = SELECT 1 FROM t1
+             WHERE (t1.f2 < ANY (SELECT t2.f1 FROM t1 AS t2
+                                 WHERE t2.f1 = t1.f1 AND
+                                       NOT EXISTS (SELECT t2.f1
+                                                   FROM t1 AS t3 )));
+--replace_regex $elide_costs
+eval EXPLAIN FORMAT=TREE $query;
+eval $query;
+DROP TABLE t1;
+
 --source include/disable_hypergraph.inc

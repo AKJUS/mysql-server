@@ -1053,76 +1053,76 @@ INSERT INTO t VALUES (1);
 SET optimizer_switch='block_nested_loop=on';
 EXPLAIN SELECT 1 FROM t t1 LEFT JOIN t t2 ON 1 LEFT JOIN (t t3 LEFT JOIN t t4 ON 1) ON 1;
 EXPLAIN
--> Left hash join (no condition)  (rows=1)
-    -> Left hash join (no condition)  (rows=1)
+-> Left hash join (no condition), extra conditions: true  (rows=1)
+    -> Left hash join (no condition), extra conditions: true  (rows=1)
         -> Table scan on t1  (rows=1)
         -> Hash
             -> Table scan on t2  (rows=1)
     -> Hash
-        -> Left hash join (no condition)  (rows=1)
+        -> Left hash join (no condition), extra conditions: true  (rows=1)
             -> Table scan on t3  (rows=1)
             -> Hash
                 -> Table scan on t4  (rows=1)
 
 EXPLAIN SELECT /*+ NO_BNL(t1) */ 1 FROM t t1 LEFT JOIN t t2 ON 1 LEFT JOIN (t t3 LEFT JOIN t t4 ON 1) ON 1;
 EXPLAIN
--> Left hash join (no condition)  (rows=1)
-    -> Left hash join (no condition)  (rows=1)
+-> Left hash join (no condition), extra conditions: true  (rows=1)
+    -> Left hash join (no condition), extra conditions: true  (rows=1)
         -> Table scan on t1  (rows=1)
         -> Hash
             -> Table scan on t2  (rows=1)
     -> Hash
-        -> Left hash join (no condition)  (rows=1)
+        -> Left hash join (no condition), extra conditions: true  (rows=1)
             -> Table scan on t3  (rows=1)
             -> Hash
                 -> Table scan on t4  (rows=1)
 
 EXPLAIN SELECT /*+ NO_BNL(t2) */ 1 FROM t t1 LEFT JOIN t t2 ON 1 LEFT JOIN (t t3 LEFT JOIN t t4 ON 1) ON 1;
 EXPLAIN
--> Left hash join (no condition)  (rows=1)
-    -> Left hash join (no condition)  (rows=1)
+-> Left hash join (no condition), extra conditions: true  (rows=1)
+    -> Left hash join (no condition), extra conditions: true  (rows=1)
         -> Table scan on t1  (rows=1)
         -> Hash
             -> Table scan on t2  (rows=1)
     -> Hash
-        -> Left hash join (no condition)  (rows=1)
+        -> Left hash join (no condition), extra conditions: true  (rows=1)
             -> Table scan on t3  (rows=1)
             -> Hash
                 -> Table scan on t4  (rows=1)
 
 EXPLAIN SELECT /*+ NO_BNL(t3) */ 1 FROM t t1 LEFT JOIN t t2 ON 1 LEFT JOIN (t t3 LEFT JOIN t t4 ON 1) ON 1;
 EXPLAIN
--> Left hash join (no condition)  (rows=1)
-    -> Left hash join (no condition)  (rows=1)
+-> Left hash join (no condition), extra conditions: true  (rows=1)
+    -> Left hash join (no condition), extra conditions: true  (rows=1)
         -> Table scan on t1  (rows=1)
         -> Hash
             -> Table scan on t2  (rows=1)
     -> Hash
-        -> Left hash join (no condition)  (rows=1)
+        -> Left hash join (no condition), extra conditions: true  (rows=1)
             -> Table scan on t3  (rows=1)
             -> Hash
                 -> Table scan on t4  (rows=1)
 
 EXPLAIN SELECT /*+ NO_BNL(t4) */ 1 FROM t t1 LEFT JOIN t t2 ON 1 LEFT JOIN (t t3 LEFT JOIN t t4 ON 1) ON 1;
 EXPLAIN
--> Left hash join (no condition)  (rows=1)
-    -> Left hash join (no condition)  (rows=1)
+-> Left hash join (no condition), extra conditions: true  (rows=1)
+    -> Left hash join (no condition), extra conditions: true  (rows=1)
         -> Table scan on t1  (rows=1)
         -> Hash
             -> Table scan on t2  (rows=1)
     -> Hash
-        -> Left hash join (no condition)  (rows=1)
+        -> Left hash join (no condition), extra conditions: true  (rows=1)
             -> Table scan on t3  (rows=1)
             -> Hash
                 -> Table scan on t4  (rows=1)
 
 EXPLAIN SELECT /*+ NO_BNL(t3) */ 1 FROM t t1 LEFT JOIN (t t2 LEFT JOIN t t3 ON 1 LEFT JOIN t t4 ON 1) ON 1 WHERE 1;
 EXPLAIN
--> Left hash join (no condition)  (rows=1)
+-> Left hash join (no condition), extra conditions: true  (rows=1)
     -> Table scan on t1  (rows=1)
     -> Hash
-        -> Left hash join (no condition)  (rows=1)
-            -> Left hash join (no condition)  (rows=1)
+        -> Left hash join (no condition), extra conditions: true  (rows=1)
+            -> Left hash join (no condition), extra conditions: true  (rows=1)
                 -> Table scan on t2  (rows=1)
                 -> Hash
                     -> Table scan on t3  (rows=1)
@@ -1138,104 +1138,104 @@ SELECT /*+ NO_BNL(t3) */ 1 FROM t t1 LEFT JOIN (t t2 LEFT JOIN t t3 ON 1 LEFT JO
 SET optimizer_switch='block_nested_loop=off';
 EXPLAIN SELECT 1 FROM t t1 LEFT JOIN (t t2 LEFT JOIN t t3 ON 1 INNER JOIN t t4 ON 1) ON 1;
 EXPLAIN
--> Left hash join (no condition)  (rows=1)
+-> Left hash join (no condition), extra conditions: true  (rows=1)
     -> Table scan on t1  (rows=1)
     -> Hash
         -> Inner hash join (no condition)  (rows=1)
             -> Table scan on t4  (rows=1)
             -> Hash
-                -> Left hash join (no condition)  (rows=1)
+                -> Left hash join (no condition), extra conditions: true  (rows=1)
                     -> Table scan on t2  (rows=1)
                     -> Hash
                         -> Table scan on t3  (rows=1)
 
 EXPLAIN SELECT /*+ BNL(t1) */ 1 FROM t t1 LEFT JOIN (t t2 LEFT JOIN t t3 ON 1 INNER JOIN t t4 ON 1) ON 1;
 EXPLAIN
--> Left hash join (no condition)  (rows=1)
+-> Left hash join (no condition), extra conditions: true  (rows=1)
     -> Table scan on t1  (rows=1)
     -> Hash
         -> Inner hash join (no condition)  (rows=1)
             -> Table scan on t4  (rows=1)
             -> Hash
-                -> Left hash join (no condition)  (rows=1)
+                -> Left hash join (no condition), extra conditions: true  (rows=1)
                     -> Table scan on t2  (rows=1)
                     -> Hash
                         -> Table scan on t3  (rows=1)
 
 EXPLAIN SELECT /*+ BNL(t2) */ 1 FROM t t1 LEFT JOIN (t t2 LEFT JOIN t t3 ON 1 INNER JOIN t t4 ON 1) ON 1;
 EXPLAIN
--> Left hash join (no condition)  (rows=1)
+-> Left hash join (no condition), extra conditions: true  (rows=1)
     -> Table scan on t1  (rows=1)
     -> Hash
         -> Inner hash join (no condition)  (rows=1)
             -> Table scan on t4  (rows=1)
             -> Hash
-                -> Left hash join (no condition)  (rows=1)
+                -> Left hash join (no condition), extra conditions: true  (rows=1)
                     -> Table scan on t2  (rows=1)
                     -> Hash
                         -> Table scan on t3  (rows=1)
 
 EXPLAIN SELECT /*+ BNL(t3) */ 1 FROM t t1 LEFT JOIN (t t2 LEFT JOIN t t3 ON 1 INNER JOIN t t4 ON 1) ON 1;
 EXPLAIN
--> Left hash join (no condition)  (rows=1)
+-> Left hash join (no condition), extra conditions: true  (rows=1)
     -> Table scan on t1  (rows=1)
     -> Hash
         -> Inner hash join (no condition)  (rows=1)
             -> Table scan on t4  (rows=1)
             -> Hash
-                -> Left hash join (no condition)  (rows=1)
+                -> Left hash join (no condition), extra conditions: true  (rows=1)
                     -> Table scan on t2  (rows=1)
                     -> Hash
                         -> Table scan on t3  (rows=1)
 
 EXPLAIN SELECT /*+ BNL(t4) */ 1 FROM t t1 LEFT JOIN (t t2 LEFT JOIN t t3 ON 1 INNER JOIN t t4 ON 1) ON 1;
 EXPLAIN
--> Left hash join (no condition)  (rows=1)
+-> Left hash join (no condition), extra conditions: true  (rows=1)
     -> Table scan on t1  (rows=1)
     -> Hash
         -> Inner hash join (no condition)  (rows=1)
             -> Table scan on t4  (rows=1)
             -> Hash
-                -> Left hash join (no condition)  (rows=1)
+                -> Left hash join (no condition), extra conditions: true  (rows=1)
                     -> Table scan on t2  (rows=1)
                     -> Hash
                         -> Table scan on t3  (rows=1)
 
 EXPLAIN SELECT /*+ BNL(t2, t3) */ 1 FROM t t1 LEFT JOIN (t t2 LEFT JOIN t t3 ON 1 INNER JOIN t t4 ON 1) ON 1;
 EXPLAIN
--> Left hash join (no condition)  (rows=1)
+-> Left hash join (no condition), extra conditions: true  (rows=1)
     -> Table scan on t1  (rows=1)
     -> Hash
         -> Inner hash join (no condition)  (rows=1)
             -> Table scan on t4  (rows=1)
             -> Hash
-                -> Left hash join (no condition)  (rows=1)
+                -> Left hash join (no condition), extra conditions: true  (rows=1)
                     -> Table scan on t2  (rows=1)
                     -> Hash
                         -> Table scan on t3  (rows=1)
 
 EXPLAIN SELECT /*+ BNL(t3, t4) */ 1 FROM t t1 LEFT JOIN (t t2 LEFT JOIN t t3 ON 1 INNER JOIN t t4 ON 1) ON 1;
 EXPLAIN
--> Left hash join (no condition)  (rows=1)
+-> Left hash join (no condition), extra conditions: true  (rows=1)
     -> Table scan on t1  (rows=1)
     -> Hash
         -> Inner hash join (no condition)  (rows=1)
             -> Table scan on t4  (rows=1)
             -> Hash
-                -> Left hash join (no condition)  (rows=1)
+                -> Left hash join (no condition), extra conditions: true  (rows=1)
                     -> Table scan on t2  (rows=1)
                     -> Hash
                         -> Table scan on t3  (rows=1)
 
 EXPLAIN SELECT /*+ BNL(t2, t3, t4) */ 1 FROM t t1 LEFT JOIN (t t2 LEFT JOIN t t3 ON 1 INNER JOIN t t4 ON 1) ON 1;
 EXPLAIN
--> Left hash join (no condition)  (rows=1)
+-> Left hash join (no condition), extra conditions: true  (rows=1)
     -> Table scan on t1  (rows=1)
     -> Hash
         -> Inner hash join (no condition)  (rows=1)
             -> Table scan on t4  (rows=1)
             -> Hash
-                -> Left hash join (no condition)  (rows=1)
+                -> Left hash join (no condition), extra conditions: true  (rows=1)
                     -> Table scan on t2  (rows=1)
                     -> Hash
                         -> Table scan on t3  (rows=1)
