@@ -788,7 +788,6 @@ ndbd_start_backup_nowait_reply(Uint32 x)
  * With bug#39029290 heartbeats are sent twice per configured heartbeat
  * interval.
  */
-#define NDB_HEARTBEAT_SEND_TWICE_PER_INTERVAL_76 NDB_MAKE_VERSION(7,6,38)
 #define NDB_HEARTBEAT_SEND_TWICE_PER_INTERVAL_80 NDB_MAKE_VERSION(8,0,46)
 #define NDB_HEARTBEAT_SEND_TWICE_PER_INTERVAL_84 NDB_MAKE_VERSION(8,4,9)
 #define NDB_HEARTBEAT_SEND_TWICE_PER_INTERVAL_97 NDB_MAKE_VERSION(9,7,0)
@@ -804,8 +803,6 @@ ndb_heartbeat_send_twice_per_interval(Uint32 x)
   if (x >= NDB_HEARTBEAT_SEND_TWICE_PER_INTERVAL_84) return 1;
   if (major == 8 && minor > 0) return 0;
   if (x >= NDB_HEARTBEAT_SEND_TWICE_PER_INTERVAL_80) return 1;
-  if (major > 7) return 0;
-  if (x >= NDB_HEARTBEAT_SEND_TWICE_PER_INTERVAL_76) return 1;
   return 0;
 }
 
