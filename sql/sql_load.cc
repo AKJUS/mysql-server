@@ -981,6 +981,8 @@ bool Sql_cmd_load_table::execute_inner(THD *thd,
       (table_list->lock_descriptor().type == TL_WRITE_CONCURRENT_INSERT);
 
   if (m_opt_fields_or_vars.empty()) {
+    // Column list is omitted, create a list consisting of all columns in table
+
     Field_iterator_table_ref field_iterator;
     field_iterator.set(table_list);
     for (; !field_iterator.end_of_fields(); field_iterator.next()) {
@@ -989,8 +991,8 @@ bool Sql_cmd_load_table::execute_inner(THD *thd,
           field_iterator.field()->is_hidden())
         continue;
 
-      Item *item;
-      if (!(item = field_iterator.create_item(thd))) return true;
+      Item *item = field_iterator.create_item(thd);
+      if (item == nullptr) return true;
 
       if (item->field_for_view_update() == nullptr) {
         my_error(ER_NONUPDATEABLE_COLUMN, MYF(0), item->item_name.ptr());
@@ -999,87 +1001,96 @@ bool Sql_cmd_load_table::execute_inner(THD *thd,
       m_opt_fields_or_vars.push_back(item->real_item());
     }
     bitmap_set_all(table->write_set);
-    /*
-      Let us also prepare SET clause, although it is probably empty
-      in this case.
-    */
-    if (setup_fields(thd, /*want_privilege=*/INSERT_ACL,
-                     /*allow_sum_func=*/false, /*split_sum_funcs=*/false,
-                     /*column_update=*/true, /*typed_items=*/nullptr,
-                     &m_opt_set_fields, Ref_item_array()) ||
-        setup_fields(thd, /*want_privilege=*/SELECT_ACL,
-                     /*allow_sum_func=*/false, /*split_sum_funcs=*/false,
-                     /*column_update=*/false, /*typed_items=*/nullptr,
-                     &m_opt_set_exprs, Ref_item_array()))
-      return true;
-  } else {  // Part field list
-    /*
-      Because m_opt_fields_or_vars may contain user variables,
-      pass false for column_update in first call below.
-    */
-    if (setup_fields(thd, /*want_privilege=*/INSERT_ACL,
-                     /*allow_sum_func=*/false, /*split_sum_funcs=*/false,
-                     /*column_update=*/false, /*typed_items=*/nullptr,
-                     &m_opt_fields_or_vars, Ref_item_array()) ||
-        setup_fields(thd, /*want_privilege=*/INSERT_ACL,
-                     /*allow_sum_func=*/false, /*split_sum_funcs=*/false,
-                     /*column_update=*/true, /*typed_items=*/nullptr,
-                     &m_opt_set_fields, Ref_item_array()))
-      return true;
+  }
 
-    /*
-      Special updatability test is needed because m_opt_fields_or_vars may
-      contain a mix of column references and user variables.
-    */
-    for (Item *item : m_opt_fields_or_vars) {
-      if ((item->type() == Item::FIELD_ITEM ||
-           item->type() == Item::REF_ITEM) &&
-          item->field_for_view_update() == nullptr) {
-        my_error(ER_NONUPDATEABLE_COLUMN, MYF(0), item->item_name.ptr());
+  // Create a list of all fields that will be assigned values
+  mem_root_deque<Item *> set_fields(thd->mem_root);
+
+  // .. and a list of variables that will be assigned values
+  mem_root_deque<Item *> set_vars(thd->mem_root);
+
+  for (Item *item : m_opt_fields_or_vars) {
+    if (item->type() == Item::FIELD_ITEM || item->type() == Item::REF_ITEM) {
+      if (set_fields.push_back(item)) {
         return true;
       }
-      if (item->type() == Item::STRING_ITEM) {
-        /*
-          This item represents a user variable. Create a new item with the
-          same name that can be added to LEX::set_var_list. This ensures
-          that corresponding Item_func_get_user_var items are resolved as
-          non-const items.
-        */
-        Item_func_set_user_var *user_var =
-            new (thd->mem_root) Item_func_set_user_var(item->item_name, item);
-        if (user_var == nullptr) return true;
-        thd->lex->set_var_list.push_back(user_var);
+    } else if (item->type() == Item::STRING_ITEM) {
+      if (set_vars.push_back(item)) {
+        return true;
       }
+      /*
+        This item represents a user variable. Create a new item with the
+        same name that can be added to LEX::set_var_list. This ensures
+        that corresponding Item_func_get_user_var items are resolved as
+        non-const items.
+      */
+      Item_func_set_user_var *user_var =
+          new (thd->mem_root) Item_func_set_user_var(item->item_name, item);
+      if (user_var == nullptr) return true;
+      thd->lex->set_var_list.push_back(user_var);
     }
-
-    // Consider the following table:
-    //
-    //   CREATE TABLE t1 (x DOUBLE, y DOUBLE, g POINT SRID 4326 NOT NULL);
-    //
-    // If the user wants to load a file which only contains two values (x and y
-    // coordinates), it is possible to do it by executing the following
-    // statement:
-    //
-    //  LOAD DATA INFILE 'data' (@x, @y)
-    //    SET x = @x, y = @y, g = ST_SRID(POINT(@x, @y));
-    //
-    // However, the columns that are specified in the SET clause are only marked
-    // in the write set, and not in fields_set_during_insert. The latter is the
-    // bitmap used during check_that_all_fields_are_given_values(), so we need
-    // to copy the bits from the write set over to said bitmap. If not, the
-    // server will return an error saying that column 'g' doesn't have a default
-    // value.
-    bitmap_union(table->fields_set_during_insert, table->write_set);
-
-    if (check_that_all_fields_are_given_values(thd, table, table_list))
-      return true;
-    /* Fix the expressions in SET clause */
-    if (setup_fields(thd, /*want_privilege=*/SELECT_ACL,
-                     /*allow_sum_func=*/false, /*split_sum_funcs=*/false,
-                     /*column_update=*/false, /*typed_items=*/nullptr,
-                     &m_opt_set_exprs, Ref_item_array()))
-      return true;
   }
+  // Add fields from "m_opt_set_fields"
+  for (Item *item : m_opt_set_fields) {
+    assert(item->type() == Item::FIELD_ITEM || item->type() == Item::REF_ITEM);
+    if (set_fields.push_back(item)) {
+      return true;
+    }
+  }
+
+  // Prepare list of columns for insertion
+  if (setup_fields(thd, /*want_privilege=*/INSERT_ACL, /*allow_sum_func=*/false,
+                   /*split_sum_funcs=*/false, /*column_update=*/true,
+                   /*typed_items=*/nullptr, &set_fields, Ref_item_array())) {
+    return true;
+  }
+
+  // Prepare list of set variables (arguments are mostly irrelevant)
+  if (setup_fields(thd, /*want_privilege=*/SELECT_ACL, /*allow_sum_func=*/false,
+                   /*split_sum_funcs=*/false, /*column_update=*/false,
+                   /*typed_items=*/nullptr, &set_vars, Ref_item_array())) {
+    return true;
+  }
+  // Prepare the expressions in the SET clause
+  if (setup_fields(thd, /*want_privilege=*/SELECT_ACL, /*allow_sum_func=*/false,
+                   /*split_sum_funcs=*/false, /*column_update=*/false,
+                   /*typed_items=*/nullptr, &m_opt_set_exprs,
+                   Ref_item_array())) {
+    return true;
+  }
+
+  // Resolving may have replaced item pointers, copy them back
+  auto transformed = set_fields.begin();
+  for (auto it = m_opt_fields_or_vars.begin(); it != m_opt_fields_or_vars.end();
+       ++it) {
+    if ((*it)->type() == Item::FIELD_ITEM || (*it)->type() == Item::REF_ITEM) {
+      *it = *transformed++;
+    }
+  }
+  for (auto it = m_opt_set_fields.begin(); it != m_opt_set_fields.end(); it++) {
+    *it = *transformed++;
+  }
+
+  // Consider the following table:
+  //
+  //   CREATE TABLE t1 (x DOUBLE, y DOUBLE, g POINT SRID 4326 NOT NULL);
+  //
+  // If the user wants to load a file which only contains two values (x and y
+  // coordinates), it is possible to do it by executing the following statement:
+  //
+  //  LOAD DATA INFILE 'data' (@x, @y)
+  //    SET x = @x, y = @y, g = ST_SRID(POINT(@x, @y));
+  //
+  // However, the columns that are specified in the SET clause are only marked
+  // in the write set, and not in fields_set_during_insert. The latter is the
+  // bitmap used during check_that_all_fields_are_given_values(), so we need
+  // to copy the bits from the write set over to said bitmap. If not, the
+  // server will return an error saying that column 'g' doesn't have a default
+  // value.
+
+  bitmap_union(table->fields_set_during_insert, table->write_set);
+  if (check_that_all_fields_are_given_values(thd, table, table_list))
+    return true;
 
   const int escape_char =
       (escaped->length() &&
