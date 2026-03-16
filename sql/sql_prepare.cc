@@ -3853,7 +3853,15 @@ void Prepared_statement::psi_execute_instrumentation(THD *thd) {
   MYSQL_SET_STATEMENT_TEXT(statement_locker, display_query_string,
                            display_query_length);
 
-  MYSQL_DIGEST_SET(statement_locker, &m_execute_digest);
+  /*
+   * We need to copy the execute digest into THD,
+   * to allow inspection of the THD state.
+   */
+  sql_digest_state *dest_digest = thd->m_digest;
+  if (dest_digest != nullptr) {
+    dest_digest->m_digest_storage.copy(&m_execute_digest);
+    MYSQL_DIGEST_SET(statement_locker, &dest_digest->m_digest_storage);
+  }
 }
 
 void Prepared_statement::psi_deallocate_instrumentation(THD *thd) {
