@@ -158,7 +158,7 @@ class Xcom_member_state {
    @param[in,out] buffer_len Pointer to the variable that holds the
    header's size and has the buffer's len as input.
 
-   @return true if nothing went wrong. Otherwise, false.
+   @return true in case of error. Otherwise, false.
    */
   bool decode_header(const uchar *buffer, uint64_t buffer_len);
 
