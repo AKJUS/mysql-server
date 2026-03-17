@@ -4007,11 +4007,11 @@ String *Item_func_get_format::val_str_ascii(String *str) {
   const char *format_name;
   const Known_date_time_format *format;
   String *val = args[0]->val_str_ascii(str);
-  size_t val_len;
-
-  if ((null_value = args[0]->null_value)) return nullptr;
-
-  val_len = val->length();
+  if (val == nullptr) {
+    null_value = args[0]->null_value;
+    return nullptr;
+  }
+  size_t val_len = val->length();
   for (format = &known_date_time_formats[0];
        (format_name = format->format_name); format++) {
     size_t format_name_len;
@@ -4136,6 +4136,7 @@ bool Item_func_str_to_temporal::resolve_type(THD *thd) {
     char format_buff[64];
     String format_str(format_buff, sizeof(format_buff), &my_charset_bin);
     String *format = args[1]->val_str(&format_str);
+    if (format == nullptr) return thd->is_error();
     if (!args[1]->null_value) fix_from_format(format->ptr(), format->length());
   }
   return false;

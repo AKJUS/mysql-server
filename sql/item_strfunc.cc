@@ -1522,9 +1522,12 @@ bool Item_func_upper::resolve_type(THD *thd) {
 
 String *Item_func_left::val_str(String *str) {
   assert(fixed);
+  null_value = false;
   String *res = args[0]->val_str(str);
-  if ((null_value = args[0]->null_value)) return error_str();
-
+  if (res == nullptr) {
+    null_value = args[0]->null_value;
+    return error_str();
+  }
   /* must be longlong to avoid truncation */
   const longlong length = args[1]->val_int();
   if ((null_value = args[1]->null_value)) return error_str();
@@ -1579,9 +1582,12 @@ bool Item_func_left::resolve_type(THD *thd) {
 
 String *Item_func_right::val_str(String *str) {
   assert(fixed);
+  null_value = false;
   String *res = args[0]->val_str(str);
-  if ((null_value = args[0]->null_value)) return error_str();
-
+  if (res == nullptr) {
+    null_value = args[0]->null_value;
+    return error_str();
+  }
   /* must be longlong to avoid truncation */
   const longlong length = args[1]->val_int();
   if ((null_value = args[1]->null_value)) return error_str();
@@ -1711,10 +1717,12 @@ bool Item_func_substr_index::resolve_type(THD *thd) {
 
 String *Item_func_substr_index::val_str(String *str) {
   assert(fixed);
-
+  null_value = false;
   String *res = args[0]->val_str(str);
-  if ((null_value = args[0]->null_value)) return error_str();
-
+  if (res == nullptr) {
+    null_value = args[0]->null_value;
+    return error_str();
+  }
   const longlong count = args[2]->val_int();
   if ((null_value = args[2]->null_value)) return error_str();
 
@@ -2165,15 +2173,17 @@ static bool my_uni_isalpha(int wc) {
 
 String *Item_func_soundex::val_str(String *str) {
   assert(fixed);
+  null_value = false;
   String *res = args[0]->val_str(str);
+  if (res == nullptr) {
+    null_value = args[0]->null_value;
+    return nullptr;
+  }
   char last_ch, ch;
   const CHARSET_INFO *cs = collation.collation;
   my_wc_t wc;
   uint nchars;
   int rc;
-
-  if ((null_value = args[0]->null_value))
-    return nullptr; /* purecov: inspected */
 
   if (tmp_value.alloc(
           max(res->length(), static_cast<size_t>(4 * cs->mbminlen))))
@@ -2628,14 +2638,16 @@ end:
 String *Item_func_repeat::val_str(String *str) {
   assert(fixed);
 
+  null_value = false;
+
+  String *res = args[0]->val_str(str);
+  if (res == nullptr) {
+    null_value = args[0]->null_value;
+    return error_str();
+  }
   /* must be longlong to avoid truncation */
   longlong count = args[1]->val_int();
   if (args[1]->null_value) return error_str();
-
-  String *res = args[0]->val_str(str);
-  if (args[0]->null_value) return error_str();
-
-  null_value = false;
 
   if (count <= 0 && (count == 0 || !args[1]->unsigned_flag))
     return make_empty_result();
@@ -3044,9 +3056,12 @@ bool Item_func_conv::resolve_type(THD *thd) {
 
 String *Item_func_conv::val_str(String *str) {
   assert(fixed);
+  null_value = false;
   String *res = args[0]->val_str(str);
-  if ((null_value = args[0]->null_value)) return error_str();
-
+  if (res == nullptr) {
+    null_value = args[0]->null_value;
+    return error_str();
+  }
   const int from_base = args[1]->val_int();
   if ((null_value = args[1]->null_value)) return error_str();
 
@@ -4124,7 +4139,7 @@ String *Item_func_compress::val_str(String *str) {
 
   if (!(res = args[0]->val_str(str))) {
     null_value = true;
-    return nullptr;
+    return error_str();
   }
   null_value = false;
   if (res->is_empty()) return res;
@@ -4302,7 +4317,7 @@ String *Item_func_uncompress::val_str(String *str) {
 
 err:
   null_value = true;
-  return nullptr;
+  return error_str();
 }
 
 /*

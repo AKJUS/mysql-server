@@ -3216,7 +3216,7 @@ longlong Item_func_interval::val_int() {
 
   if (use_decimal_comparison) {
     dec = row->element_index(0)->val_decimal(&dec_buf);
-    if (row->element_index(0)->null_value) return -1;
+    if (dec == nullptr) return -1;
     my_decimal2double(E_DEC_FATAL_ERROR, dec, &value);
   } else {
     value = row->element_index(0)->val_real();
@@ -5351,8 +5351,8 @@ void cmp_item_decimal::store_value(Item *item) {
 int cmp_item_decimal::cmp(Item *arg) {
   my_decimal tmp_buf;
   my_decimal *tmp = arg->val_decimal(&tmp_buf);
-  return (m_null_value || arg->null_value) ? UNKNOWN
-                                           : (my_decimal_cmp(&value, tmp) != 0);
+  return (m_null_value || tmp == nullptr) ? UNKNOWN
+                                          : (my_decimal_cmp(&value, tmp) != 0);
 }
 
 int cmp_item_decimal::compare(const cmp_item *arg) const {
@@ -6001,9 +6001,9 @@ longlong Item_func_in::val_int() {
       if (current_thd->is_error()) return error_int();
     }
     const int rc = in_item->cmp(args[i]);
+    if (current_thd->is_error()) return error_int();
     if (rc == false) return (longlong)(!negated);
     have_null |= (rc == UNKNOWN);
-    if (current_thd->is_error()) return error_int();
   }
 
   null_value = have_null;
