@@ -882,16 +882,21 @@ bool Histogram::extract_json_dom_value(const Json_dom *json_dom, ulonglong *out,
 template <>
 bool Histogram::extract_json_dom_value(const Json_dom *json_dom, longlong *out,
                                        Error_context *context) {
-  if (json_dom->json_type() != enum_json_type::J_INT) {
-    if (json_dom->json_type() == enum_json_type::J_UINT)
+  if (json_dom->json_type() == enum_json_type::J_INT)
+    *out = down_cast<const Json_int *>(json_dom)->value();
+  else if (!context->binary() &&
+           json_dom->json_type() == enum_json_type::J_UINT) {
+    ulonglong val = down_cast<const Json_uint *>(json_dom)->value();
+    if (val > LLONG_MAX) {
       context->report_node(json_dom, Message::JSON_VALUE_OUT_OF_RANGE);
-    else
-      context->report_node(json_dom, Message::JSON_WRONG_ATTRIBUTE_TYPE);
-
+      return true;
+    }
+    *out = static_cast<longlong>(val);
+  } else {
+    context->report_node(json_dom, Message::JSON_WRONG_ATTRIBUTE_TYPE);
     return true;
   }
 
-  *out = down_cast<const Json_int *>(json_dom)->value();
   return false;
 }
 
