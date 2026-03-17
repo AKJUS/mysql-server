@@ -798,6 +798,7 @@ bool FTS::Parser::doc_tokenize(doc_id_t doc_id, fts_doc_t *doc,
     cur_len += t_str.f_len < 128 ? 2 : 3;
 
     if (!key_buffer->will_fit(cur_len)) {
+      key_buffer->pop_unfinished_tuple();
       buf_full = true;
       break;
     }
