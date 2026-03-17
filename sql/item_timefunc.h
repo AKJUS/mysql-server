@@ -1176,7 +1176,9 @@ class Item_func_sysdate_local final : public Item_datetime_func {
 
 class Item_func_from_days final : public Item_date_func {
  public:
-  Item_func_from_days(const POS &pos, Item *a) : Item_date_func(pos, a) {}
+  Item_func_from_days(const POS &pos, Item *a) : Item_date_func(pos, a) {
+    set_nullable(true);
+  }
   const char *func_name() const override { return "from_days"; }
   bool resolve_type(THD *thd) override;
   bool val_date(Date_val *date, my_time_flags_t flags) override;

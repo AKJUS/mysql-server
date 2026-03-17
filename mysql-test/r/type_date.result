@@ -875,3 +875,32 @@ SELECT STR_TO_DATE(COT(' ;D( c+%'), sleep(0));
 ERROR 22003: DOUBLE value is out of range in 'cot(' ;D( c+%')'
 SELECT STR_TO_DATE(EXP(9223372036854775808), 1);
 ERROR 22003: DOUBLE value is out of range in 'exp(9223372036854775808)'
+#
+# Bug#39038617: CAST asserts: Item_typecast_unsigned::val_int()
+#
+SELECT CAST(FROM_DAYS(-11797) AS UNSIGNED) ^ SLEEP(0);
+CAST(FROM_DAYS(-11797) AS UNSIGNED) ^ SLEEP(0)
+NULL
+Warnings:
+Warning	6527	DATE value is out of range in 'from_days(-(11797))'
+SELECT CAST(CAST(FROM_DAYS(CURRENT_DATE()) AS UNSIGNED) AS SIGNED INTEGER);
+CAST(CAST(FROM_DAYS(CURRENT_DATE()) AS UNSIGNED) AS SIGNED INTEGER)
+NULL
+Warnings:
+Warning	6527	DATE value is out of range in 'from_days(curdate())'
+SELECT CAST((FROM_DAYS(-9223372036854775807)) AS SIGNED INTEGER);
+CAST((FROM_DAYS(-9223372036854775807)) AS SIGNED INTEGER)
+NULL
+Warnings:
+Warning	6527	DATE value is out of range in 'from_days(-(9223372036854775807))'
+SELECT INET6_NTOA((SELECT CONVERT(FROM_DAYS(-15050), SIGNED)));
+INET6_NTOA((SELECT CONVERT(FROM_DAYS(-15050), SIGNED)))
+NULL
+Warnings:
+Warning	6527	DATE value is out of range in 'from_days(-(15050))'
+SELECT STD(CONVERT(FROM_DAYS("-479:27:44.090745"), SIGNED INTEGER));
+STD(CONVERT(FROM_DAYS("-479:27:44.090745"), SIGNED INTEGER))
+NULL
+Warnings:
+Warning	1292	Truncated incorrect INTEGER value: '-479:27:44.090745'
+Warning	6527	DATE value is out of range in 'from_days('-479:27:44.090745')'
