@@ -201,10 +201,9 @@ static bool json_schema_exceeds_expansion_depth(
   exit as soon as the limit is exceeded.
 
   If the limit is exceeded (`JSON_SCHEMA_MAX_EXPANSION_DEPTH`),
-  `depth_handler()` is called and the schema is rejected.
+  ER_JSON_DOCUMENT_TOO_DEEP is reported.
 
   @param schema_document Parsed JSON schema document.
-  @param depth_handler Error handler invoked when the limit is exceeded.
   @retval true The schema exceeded the limit and an error was reported.
   @retval false No expansion path exceeds the limit.
 */
