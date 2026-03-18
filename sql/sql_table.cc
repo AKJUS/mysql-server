@@ -13087,7 +13087,6 @@ static bool fill_alter_inplace_info(THD *thd, TABLE *table,
     field->clear_flag(FIELD_IS_DROPPED);
 
     /* Use transformed info to evaluate flags for storage engine. */
-    uint new_field_index = 0;
     uint new_field_index_without_vgc = 0;
     uint new_field_index_vgc = 0;
     new_field_it.init(alter_info->create_list);
@@ -13097,7 +13096,6 @@ static bool fill_alter_inplace_info(THD *thd, TABLE *table,
         new_field_index_without_vgc++;
       else
         new_field_index_vgc++;
-      new_field_index++;
     }
 
     if (new_field) {
