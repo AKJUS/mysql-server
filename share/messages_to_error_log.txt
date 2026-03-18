@@ -13440,6 +13440,13 @@ ER_COMPONENT_OBJECT_POLICY_DEINIT_FAILED
 
 ER_RPL_STMT_FORCE_DISABLE_CASCADE_TRIGGERS
   eng "Executing triggers on foreign key cascade operations is supported only with SQL Foreign Key Handling. State of the variable \'enable_cascade_triggers\' is logged as OFF in binlog for an event in this case."
+
+ER_WARN_AUDIT_LOG_SYSVAR_ADJUSTED
+  eng "Variable '%s' was adjusted to value '%lld', to make pruning slower than rotation."
+
+ER_WARN_AUDIT_LOG_SYSVAR_DISCARDED
+  eng "Variable '%s' value change was discarded, to make pruning slower than rotation."
+
 ################################################################################
 # Error numbers 50000 to 51999 are reserved. Please do not use them for
 # other error messages.
