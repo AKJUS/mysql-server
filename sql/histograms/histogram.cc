@@ -1797,6 +1797,7 @@ static void write_diagnostics_area_to_error_log(THD *thd, std::string db_name,
 */
 static void prepare_session_context(THD *thd) {
   thd->reset_for_next_command();
+  thd->get_stmt_da()->reset_condition_info(thd);
   lex_start(thd);
 }
 
@@ -1970,8 +1971,6 @@ bool auto_update_table_histograms_from_background_thread(
   Table_ref table(db_name.c_str(), table_name.c_str(), thr_lock_type::TL_UNLOCK,
                   enum_mdl_type::MDL_SHARED_READ);
   if (open_and_lock_tables(thd, &table, MYSQL_OPEN_HAS_MDL_LOCK)) return true;
-  error_handler_guard.release();
-  thd->pop_internal_handler();
 
   if (!supports_histogram_updates(thd, &table)) return false;
 
@@ -1994,6 +1993,8 @@ bool auto_update_table_histograms_from_background_thread(
                      false);
     return true;
   }
+  error_handler_guard.release();
+  thd->pop_internal_handler();
   rollback_guard.release();
 
   // The update succeeded and has been committed. Mark cached TABLE objects for
