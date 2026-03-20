@@ -182,11 +182,11 @@ When one supplies long data for a placeholder:
 #include "sql/sql_profile.h"
 #include "sql/sql_query_rewrite.h"
 #include "sql/sql_rewrite.h"  // mysql_rewrite_query
+#include "sql/sql_table.h"    // prepare_check_constraints_for_create
 #include "sql/sql_view.h"     // create_view_precheck
 #include "sql/sql_yacc.h"
 #include "sql/statement/statement_runnable.h"
 #include "sql/system_variables.h"
-#include "sql/table.h"
 #include "sql/thd_raii.h"
 #include "sql/transaction.h"  // trans_rollback_implicit
 #include "sql_string.h"
@@ -2551,8 +2551,11 @@ bool Prepared_statement::prepare(THD *thd, const char *query_str,
     invoke_post_parse_rewrite_plugins(thd, true);
     error |= thd->is_error();
   }
-  if (!error && m_lex->param_list.elements > 0 && m_lex->m_sql_cmd != nullptr &&
-      !m_lex->m_sql_cmd->are_dynamic_parameters_allowed()) {
+  if (!error && m_lex->param_list.elements != 0 &&
+      ((m_lex->m_sql_cmd != nullptr &&
+        !m_lex->m_sql_cmd->are_dynamic_parameters_allowed()) ||
+       (m_lex->m_sql_cmd == nullptr &&
+        m_lex->sql_command != SQLCOM_SET_OPTION))) {
     my_error(ER_NON_DML_DYNAMIC_PARAMETERS, MYF(0));
     error = true;
   }
@@ -3144,6 +3147,18 @@ bool Prepared_statement::execute_loop(THD *thd, String *expanded_query,
     if (!check_parameter_types()) {
       // Only one reprepare is required in case of parameter mismatch
       assert(!reprepared_for_types);
+      /*
+        Infinite loop protection mechanism.
+        When prepared statement parameter types mismatch, re-preparation should
+        be triggered. However, if types still mismatch after re-preparation,
+        it may lead to infinite loops.
+        DEBUG mode: Assert failure generates core dump for debugging (above).
+        RELEASE mode: Return error code to ensure service stability
+      */
+      if (unlikely(reprepared_for_types)) {
+        my_error(ER_UNKNOWN_ERROR, MYF(0));
+        return true;
+      }
       reprepared_for_types = true;
       need_reprepare = true;
       continue;

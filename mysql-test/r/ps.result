@@ -4220,4 +4220,43 @@ EXECUTE ps1;
 PREPARE ps2 FROM 'UPDATE t0 SET v1 = NULL WHERE v2 <> 999;';
 EXECUTE ps2;
 DROP TABLE t0;
+#
+# Bug#38600714: The SQL reprepare bug results in 100% CPU load
+#
+SET @val = 0;
+PREPARE ps FROM "KILL QUERY ?";
+ERROR HY000: Dynamic parameters can only be used in DML statements.
+PREPARE ps FROM "PURGE BINARY LOGS BEFORE ?";
+ERROR HY000: Dynamic parameters can only be used in DML statements.
+PREPARE ps FROM "CREATE TABLE t(a INTEGER DEFAULT (?))";
+ERROR HY000: Default value expression of column 'a' contains a disallowed function.
+PREPARE ps FROM "CREATE TABLE t(a INTEGER, b INTEGER AS (a + ?))";
+ERROR HY000: Expression of generated column 'b' contains a disallowed function.
+CREATE TABLE t(a INTEGER);
+PREPARE ps FROM "ALTER TABLE t ALTER a SET DEFAULT (?)";
+ERROR HY000: Dynamic parameters can only be used in DML statements.
+PREPARE ps FROM "ALTER TABLE t ADD COLUMN b INTEGER AS (a + ?)";
+ERROR HY000: Expression of generated column 'b' contains a disallowed function.
+PREPARE ps FROM "ALTER TABLE t ADD CHECK (a > ?)";
+ERROR HY000: Dynamic parameters can only be used in DML statements.
+PREPARE ps FROM "ALTER TABLE t ADD INDEX ix ((a + ?))";
+ERROR HY000: Dynamic parameters can only be used in DML statements.
+PREPARE ps FROM "CREATE INDEX ix ON t((a + ?))";
+ERROR HY000: Dynamic parameters can only be used in DML statements.
+DROP TABLE t;
+# SET statement allows dynamic variables, but is not DML by inheritance.
+PREPARE ps FROM "SET @var = ?";
+SET @param = 'Parameter for SET statement';
+EXECUTE ps USING @param;
+SELECT @var;
+@var
+Parameter for SET statement
+PREPARE ps FROM "
+CREATE TABLE t(c VARCHAR(100)) AS SELECT ? AS c";
+SET @param = 'Parameter for CREATE TABLE statement';
+EXECUTE ps USING @param;
+SELECT * FROM t;
+c
+Parameter for CREATE TABLE statement
+DROP TABLE t;
 include/rpl/set_gtid_mode_on.inc
