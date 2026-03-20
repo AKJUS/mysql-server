@@ -6750,7 +6750,7 @@ class Item_default_value final : public Item_field {
   bool eq(const Item *item) const override;
   bool fix_fields(THD *, Item **) override;
   void bind_fields() override;
-  void cleanup() override { Item::cleanup(); }
+  void cleanup() override;
   void print(const THD *thd, String *str,
              enum_query_type query_type) const override;
   uint64_t hash() override;
