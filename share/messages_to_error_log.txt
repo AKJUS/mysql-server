@@ -12823,45 +12823,6 @@ ER_DD_UPDATE_DATADIR_FLAG_FAIL
 ER_IB_MSG_FIL_STATE_MOVED_PREV
   eng "%s DD ID: %llu - Tablespace %u, name '%s', found at '%s' outside default data directory, but DD misses info about DATA DIRECTORY"
 
-ER_LOAD_BULK_JSON_ERROR
-  eng "Bulk CSV parser reports JSON error: %s at %zu"
-
-ER_IB_BULK_LOAD_STATS_INFO
-  eng "%s: %s: Saving statistics for table=%s err=%zu trx_err=%zu"
-
-ER_AUTHENTICATION_OPENID_INVALID_TOKEN
-  eng "Invalid identity token provided by '%s' for '%s'@'%s': %s."
-
-ER_AUTHENTICATION_OPENID_ISSUER_MISMATCH
-  eng "Issuer (%s) found in identity token provided by '%s' for '%s'@'%s' does not match the issuer in the configuration."
-
-ER_AUTHENTICATION_OPENID_USER_MISMATCH
-  eng "Unknown subject (%s) found in identity token provided by '%s' for '%s'@'%s'."
-
-ER_AUTHENTICATION_OPENID_INVALID_CONFIGURATION
-  eng "The configuration for authentication_openid_connect is invalid. %s."
-
-ER_AUTHENTICATION_OPENID_TOKEN_NOT_VERIFIED
-  eng "Verification failed for identity token provided by '%s' for '%s'@'%s' : %s."
-
-ER_AUTHENTICATION_OPENID_INSECURE_CONNECTION
-  eng "The Client-Server connection is not secure. Please make sure either a TLS, socket or shared memory connection is established between the client and the server."
-
-ER_AUTHENTICATION_OPENID_READ_PACKET
-  eng "An error occurred during the client server handshake."
-
-ER_AUTHENTICATION_OPENID_INVALID_TOKEN_SIZE
-  eng "The ID token is not acceptable. Token size should be less than 10k."
-
-ER_AUTHENTICATION_OPENID_INVALID_IDENTITY_PROVIDER
-  eng "The provided identity provider in the auth string is not supported."
-
-ER_AUTHENTICATION_OPENID_CONFIGURATION_NOT_SET
-  eng "The configuration for the plugin is not set. Please set authentication_openid_connect_configuration before a login attempt or user creation."
-
-ER_AUTHENTICATION_OPENID_FAILED_TO_UPDATE_CONFIGURATION
-  eng "Failed to update authentication_openid_connect_configuration to a new value and the old value is lost too. Please set it to avoid unexpected results."
-
 ER_SIMPLE_ERROR_LOG_COMPONENT_STATUS
   eng "%s"
 
@@ -12874,8 +12835,8 @@ ER_RPL_MTA_ALLOW_COMMIT_OUT_OF_ORDER
 ER_TEMPTABLE_ENGINE_ERROR
   eng "Temptable: %s"
 
-ER_AUDIT_LOG_INVALID_ROTATE_ON_TIME_VALUE
-   eng "Invalid audit_log_rotate_on_time interval specified: %lu. Valid values are 0 (off) or greater than or equal to %d. Adjusting to %d"
+OBSOLETE_ER_AUTH_INITIAL_PLUGIN_OVERRIDE
+  eng "Plugin '%s' from authentication policy cannot be used for initial handshake, using '%s' default instead"
 
 # DO NOT add server-to-client messages here;
 # they go in messages_to_clients.txt
@@ -12899,6 +12860,12 @@ ER_AUDIT_LOG_INVALID_ROTATE_ON_TIME_VALUE
 #
 
 start-error-number 15500
+
+ER_LOAD_BULK_JSON_ERROR
+  eng "Bulk CSV parser reports JSON error: %s at %zu"
+
+ER_IB_BULK_LOAD_STATS_INFO
+  eng "%s: %s: Saving statistics for table=%s err=%zu trx_err=%zu"
 
 ER_INVALID_METER
   eng "Invalid meter name or value for performance_schema_meter '%s'."
@@ -13004,6 +12971,39 @@ ER_AUTHENTICATION_OPENID_OPTION_REGISTER
 
 ER_AUTHENTICATION_OPENID_OPTION_DEREGISTER
   eng "Option deregistration failed."
+
+ER_AUTHENTICATION_OPENID_INVALID_TOKEN
+  eng "Invalid identity token provided by '%s' for '%s'@'%s': %s."
+
+ER_AUTHENTICATION_OPENID_ISSUER_MISMATCH
+  eng "Issuer (%s) found in identity token provided by '%s' for '%s'@'%s' does not match the issuer in the configuration."
+
+ER_AUTHENTICATION_OPENID_USER_MISMATCH
+  eng "Unknown subject (%s) found in identity token provided by '%s' for '%s'@'%s'."
+
+ER_AUTHENTICATION_OPENID_INVALID_CONFIGURATION
+  eng "The configuration for authentication_openid_connect is invalid. %s."
+
+ER_AUTHENTICATION_OPENID_TOKEN_NOT_VERIFIED
+  eng "Verification failed for identity token provided by '%s' for '%s'@'%s' : %s."
+
+ER_AUTHENTICATION_OPENID_INSECURE_CONNECTION
+  eng "The Client-Server connection is not secure. Please make sure either a TLS, socket or shared memory connection is established between the client and the server."
+
+ER_AUTHENTICATION_OPENID_READ_PACKET
+  eng "An error occurred during the client server handshake."
+
+ER_AUTHENTICATION_OPENID_INVALID_TOKEN_SIZE
+  eng "The ID token is not acceptable. Token size should be less than 10k."
+
+ER_AUTHENTICATION_OPENID_INVALID_IDENTITY_PROVIDER
+  eng "The provided identity provider in the auth string is not supported."
+
+ER_AUTHENTICATION_OPENID_CONFIGURATION_NOT_SET
+  eng "The configuration for the plugin is not set. Please set authentication_openid_connect_configuration before a login attempt or user creation."
+
+ER_AUTHENTICATION_OPENID_FAILED_TO_UPDATE_CONFIGURATION
+  eng "Failed to update authentication_openid_connect_configuration to a new value and the old value is lost too. Please set it to avoid unexpected results."
 
 ER_BULK_PARSER_UNEXPECTED_ENCLOSED_BY_CHARACTER_LOG
   eng "Unexpected enclosed by character found inside unenclosed string at row %ld in file '%s' resulting in malformed CSV."
@@ -13181,6 +13181,9 @@ ER_SERVER_MEMORY_OPTION_INVALID
 
 ER_WARN_KEYRING_PLUGIN_DEPRECTED
   eng "Plugin %s is of the deprecated keyring plugin type. Please use the corresponding keyring component instead."
+
+ER_AUDIT_LOG_INVALID_ROTATE_ON_TIME_VALUE
+   eng "Invalid audit_log_rotate_on_time interval specified: %lu. Valid values are 0 (off) or greater than or equal to %d. Adjusting to %d"
 
 ER_AUDIT_LOG_OFFLOAD_INFO
   eng "%s"
