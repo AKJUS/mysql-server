@@ -4748,40 +4748,39 @@ longlong Item_func_find_in_set::val_int() {
   String *buffer = args[1]->val_str(&value2);
   if (buffer == nullptr) return error_int();
 
-  if (buffer->length() >= find->length()) {
-    my_wc_t wc = 0;
-    const CHARSET_INFO *cs = cmp_collation.collation;
-    const char *str_begin = buffer->ptr();
-    const char *str_end = buffer->ptr();
-    const char *real_end = str_end + buffer->length();
-    const uchar *find_str = (const uchar *)find->ptr();
-    const size_t find_str_len = find->length();
-    int position = 0;
-    while (true) {
-      int symbol_len;
-      if ((symbol_len =
-               cs->cset->mb_wc(cs, &wc, pointer_cast<const uchar *>(str_end),
-                               pointer_cast<const uchar *>(real_end))) > 0) {
-        const char *substr_end = str_end + symbol_len;
-        const bool is_last_item = (substr_end == real_end);
-        const bool is_separator = (wc == (my_wc_t)separator);
-        if (is_separator || is_last_item) {
-          position++;
-          if (is_last_item && !is_separator) str_end = substr_end;
-          if (!my_strnncoll(cs, (const uchar *)str_begin,
-                            (uint)(str_end - str_begin), find_str,
-                            find_str_len))
-            return (longlong)position;
-          else
-            str_begin = substr_end;
+  my_wc_t wc = 0;
+  const CHARSET_INFO *cs = cmp_collation.collation;
+  const char *str_begin = buffer->ptr();
+  const char *str_end = buffer->ptr();
+  const char *real_end = str_end + buffer->length();
+  const uchar *find_str = (const uchar *)find->ptr();
+  const size_t find_str_len = find->length();
+  int position = 0;
+  while (true) {
+    const int symbol_len =
+        cs->cset->mb_wc(cs, &wc, pointer_cast<const uchar *>(str_end),
+                        pointer_cast<const uchar *>(real_end));
+    if (symbol_len > 0) {
+      const char *substr_end = str_end + symbol_len;
+      const bool is_last_item = (substr_end == real_end);
+      const bool is_separator = (wc == static_cast<my_wc_t>(separator));
+      if (is_separator || is_last_item) {
+        position++;
+        if (is_last_item && !is_separator) str_end = substr_end;
+        if (!my_strnncoll(cs, pointer_cast<const uchar *>(str_begin),
+                          static_cast<uint>(str_end - str_begin), find_str,
+                          find_str_len)) {
+          return position;
+        } else {
+          str_begin = substr_end;
         }
-        str_end = substr_end;
-      } else if (str_end - str_begin == 0 && find_str_len == 0 &&
-                 wc == (my_wc_t)separator) {
-        return ++position;
-      } else {
-        return 0;
       }
+      str_end = substr_end;
+    } else if (str_end - str_begin == 0 && find_str_len == 0 &&
+               wc == static_cast<my_wc_t>(separator)) {
+      return ++position;
+    } else {
+      return 0;
     }
   }
   return 0;

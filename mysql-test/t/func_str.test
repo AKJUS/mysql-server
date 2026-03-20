@@ -3114,3 +3114,15 @@ SELECT ST_POINTATDISTANCE(ST_GEOMCOLLFROMWKB(ST_ASWKB(POINT(4389, -24885)), 0,
                                             ),
                           ST_ASBINARY(- ROW_COUNT(), 'axis-order=srid-defined')
                          );
+
+--echo #
+--echo # Bug39056621: Function find_in_set returns wrong result
+--echo #
+
+SET collation_connection = 'utf8mb4_0900_ai_ci';
+
+SELECT FIND_IN_SET('ắ', 'a');
+
+SELECT FIND_IN_SET('ắ', 'a,b,c');
+
+SET collation_connection = default;

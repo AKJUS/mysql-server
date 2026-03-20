@@ -6248,3 +6248,14 @@ SELECT ST_POINTATDISTANCE(ST_GEOMCOLLFROMWKB(ST_ASWKB(POINT(4389, -24885)), 0,
 ST_ASBINARY(- ROW_COUNT(), 'axis-order=srid-defined')
 );
 ERROR 22S01: WKB value is a geometry of unexpected type POINT in st_geomcollfromwkb.
+#
+# Bug39056621: Function find_in_set returns wrong result
+#
+SET collation_connection = 'utf8mb4_0900_ai_ci';
+SELECT FIND_IN_SET('ắ', 'a');
+FIND_IN_SET('ắ', 'a')
+1
+SELECT FIND_IN_SET('ắ', 'a,b,c');
+FIND_IN_SET('ắ', 'a,b,c')
+1
+SET collation_connection = default;
