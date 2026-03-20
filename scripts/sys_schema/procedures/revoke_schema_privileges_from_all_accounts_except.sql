@@ -98,8 +98,8 @@ BEGIN
     IF done > 0 THEN
       LEAVE read_loop;
     END IF;
-    SET @sql = CONCAT("REVOKE ", privilege_out, " ON ",
-                      in_schema_name, ".* FROM ", grantee_out);
+    SET @sql = CONCAT('REVOKE ', privilege_out, ' ON ',
+                      in_schema_name, '.* FROM ', grantee_out);
     prepare statement from @sql;
     execute statement;
     deallocate prepare statement;
@@ -115,8 +115,8 @@ BEGIN
     IF done > 0 THEN
       LEAVE read_loop;
     END IF;
-    SET @sql = CONCAT("REVOKE ", privilege_out, " ON ",
-                      in_schema_name, ".* FROM ", grantee_out);
+    SET @sql = CONCAT('REVOKE ', privilege_out, ' ON ',
+                      in_schema_name, '.* FROM ', grantee_out);
     prepare statement from @sql;
     execute statement;
     deallocate prepare statement;
